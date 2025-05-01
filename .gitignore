@@ -5,12 +5,9 @@
 *.swp
 .DS_Store
 .atom/
-.build/
 .buildlog/
 .history
 .svn/
-.swiftpm/
-migrate_working_dir/
 
 # IntelliJ related
 *.iml
@@ -18,28 +15,59 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# The dart_tool directory symbolizes a necessary tooling dependency. It MUST be checked into version control. It is here only to prevent stray files from being checked in. For more details read the documentation: https://dart.dev/guides/libraries/private-files
 .dart_tool/
+#.dart_tool/**/!(package_config.json) # Kommentiert standardmäßig, aber sicherheitshalber alles ignorieren außer ggf. package_config
+
+# Language server specific files
+.lsp_cache/
+
+# Flutter/Dart packages
+.packages
+pubspec.lock # Es wird empfohlen, pubspec.lock NICHT zu ignorieren, damit alle die gleichen Paketversionen haben. Falls du es doch willst: aktiviere diese Zeile.
+
+# Flutter build artifacts
+build/
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
 
-# Symbolication related
-app.*.symbols
+# Ignore generated files for different platforms
+ios/Pods/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/ephemeral/
+ios/.symlinks/
+ios/Flutter/flutter_assets/
+android/.gradle/
+android/app/build/
+android/gradle* # Gradle executables
+*.keystore
+*.jks
 
-# Obfuscation related
-app.*.map.json
+# Linux generated files
+linux/flutter/ephemeral/
+linux/flutter/flutter_assets/
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# macOS generated files
+macos/Flutter/ephemeral/
+macos/Flutter/Flutter-Debug.xcconfig
+macos/Flutter/Flutter-Release.xcconfig
+macos/Flutter/flutter_assets/
+macos/Pods/
+macos/.symlinks/
+
+# Windows generated files
+windows/flutter/ephemeral/
+windows/flutter/flutter_assets/
+windows/runner/Debug/
+windows/runner/Release/
+windows/runner/Profile/
+windows/.vs/
+
+# VSCode related
+.vscode/
+
+# --- HIER UNSERE ZUSÄTZLICHE REGEL ---
+# Große OSM Rohdaten ignorieren
+*.osm.pbf
+# -------------------------------------
