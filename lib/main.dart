@@ -44,7 +44,7 @@ class _MapScreenState extends State<MapScreen> {
   // State für GeoJSON Daten
   List<Polygon> _polygons = [];
   List<Polyline> _polylines = [];
-  List<Marker> _poiMarkers = [];
+  List<Marker> _poiMarkers = []; // Liste für POI-Marker (Bus, Gate etc.)
   bool _geoJsonLoading = true;
   String? _geoJsonError;
 
@@ -62,7 +62,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initializeLocation() async {
-    // Standort-Logik unverändert
     setState(() {
       _locationLoading = true;
       _locationError = null;
@@ -106,7 +105,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadAndParseGeoJson() async {
-    // Laden-Logik unverändert
     print("Versuche GeoJSON zu laden...");
     setState(() {
       _geoJsonLoading = true;
@@ -116,7 +114,7 @@ class _MapScreenState extends State<MapScreen> {
       _poiMarkers = [];
     });
     try {
-      final String assetPath = 'assets/export.geojson';
+      final String assetPath = 'assets/export.geojson'; // Bestätigter Dateiname
       print("Lade Asset: $assetPath");
       final String geoJsonString = await rootBundle.loadString(assetPath);
       print("GeoJSON String geladen...");
@@ -155,7 +153,9 @@ class _MapScreenState extends State<MapScreen> {
         if (feature is Map<String, dynamic> &&
             feature['geometry'] is Map<String, dynamic>) {
           final geometry = feature['geometry'];
-          final properties = feature['properties'] ?? <String, dynamic>{};
+          // Wichtig: Properties kopieren für den Callback
+          final properties = Map<String, dynamic>.from(
+              feature['properties'] ?? <String, dynamic>{});
           final type = geometry['type'];
           final coordinates = geometry['coordinates'];
 
@@ -169,7 +169,7 @@ class _MapScreenState extends State<MapScreen> {
                       .toList();
                   if (points.isNotEmpty) {
                     polygons.add(Polygon(
-                      /* Polygon definition unverändert */ points: points,
+                      points: points,
                       color: _getColorFromProperties(
                           properties, Colors.grey.withOpacity(0.2)),
                       borderColor: _getColorFromProperties(
@@ -204,20 +204,24 @@ class _MapScreenState extends State<MapScreen> {
                   final lat = coordinates[1].toDouble();
                   final lon = coordinates[0].toDouble();
                   final pointLatLng = LatLng(lat, lon);
-                  Widget? markerWidget;
+                  Icon? markerIcon; // Temporäre Variable für das Icon
 
                   if (properties['highway'] == 'bus_stop') {
-                    markerWidget = Icon(Icons.directions_bus,
+                    markerIcon = Icon(Icons.directions_bus,
                         color: Colors.indigo, size: 24.0);
                   } else if (properties['barrier'] == 'gate') {
-                    // --- KORREKTUR HIER ---
-                    markerWidget = Icon(Icons.fence,
-                        color: Colors.brown.shade700,
-                        size: 20.0); // Zaun-Icon statt Gate
-                    // --- ENDE KORREKTUR ---
-                  }
+                    markerIcon = Icon(Icons.fence,
+                        color: Colors.brown.shade700, size: 20.0);
+                  } // Füge hier ggf. weitere `else if` für andere Icons hinzu
 
-                  if (markerWidget != null) {
+                  if (markerIcon != null) {
+                    // Erstelle das finale Widget mit GestureDetector
+                    final markerWidget = GestureDetector(
+                      onTap: () => _handleMarkerTap(
+                          properties), // Ruft State-Methode auf
+                      child: markerIcon, // Das eigentliche Icon
+                    );
+                    // Füge den Marker mit dem GestureDetector als Kind hinzu
                     poiMarkers.add(Marker(
                       point: pointLatLng,
                       width: 30.0,
@@ -246,6 +250,74 @@ class _MapScreenState extends State<MapScreen> {
         _poiMarkers = poiMarkers;
       });
     }
+  }
+
+  // Wird vom GestureDetector aufgerufen
+  void _handleMarkerTap(Map<String, dynamic> properties) {
+    _showFeatureDetails(context, properties);
+  }
+
+  // Zeigt das Bottom Sheet mit den Feature-Details an
+  void _showFeatureDetails(
+      BuildContext context, Map<String, dynamic> properties) {
+    final List<Widget> details = [];
+    if (properties['name'] != null) {
+      details.add(Text(properties['name'].toString(),
+          style: Theme.of(context).textTheme.headlineSmall));
+      details.add(const SizedBox(height: 8));
+    }
+    properties.forEach((key, value) {
+      if (!key.startsWith('@') &&
+          !key.startsWith('ref:') &&
+          value != null &&
+          value.toString().isNotEmpty &&
+          key != 'name') {
+        details.add(ListTile(
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          title: Text(key, style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text(value.toString()),
+        ));
+      }
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+      ),
+      builder: (builderContext) {
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.5),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                    child: details.isEmpty
+                        ? const Center(child: Text("Keine Details verfügbar."))
+                        : ListView(
+                            children: details,
+                            shrinkWrap: true,
+                          )),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    child: const Text('Schliessen'),
+                    onPressed: () => Navigator.pop(builderContext),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Color _getColorFromProperties(

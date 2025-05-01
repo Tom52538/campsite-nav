@@ -1,0 +1,64 @@
+Dokument 1: Zusammenfassung des aktuellen Entwicklungsstands (Stand: 01.05.2025)
+
+Projektziel: Entwicklung einer einfachen Navigations-App (Web PWA) für ein spezifisches Firmengelände (ursprünglich Campingplatz) zur Orientierung vor Ort.
+Technologie:
+Framework: Flutter
+Kartendarstellung: flutter_map Paket mit OpenStreetMap (OSM) Kacheln.
+Standortbestimmung: geolocator Paket.
+Hilfspakete: latlong2.
+Datenquelle & Verarbeitung:
+Basis: OpenStreetMap-Daten.
+Abfrage: Mittels Overpass API (über Overpass Turbo) für einen Radius von 150m um einen definierten Mittelpunkt (Collé Gebäude, lat=51.024370, lon=5.861582).
+Format: Die abgefragten Daten wurden als GeoJSON (export.geojson) exportiert und als Asset in das Flutter-Projekt integriert.
+Parsing: Die App lädt die GeoJSON-Datei beim Start und parst die enthaltenen Features (Polygone, Linien, Punkte).
+Implementierte Funktionen:
+Kartenanzeige: Interaktive OSM-Karte wird angezeigt, zentriert auf das Zielgebiet. Zoomen und Verschieben ist möglich.
+Standortanzeige: Die aktuelle Position des Nutzers wird ermittelt und als roter Marker auf der Karte angezeigt. Ein Button erlaubt das Zentrieren auf die eigene Position.
+Gelände-Overlays: Folgende Objekte aus der GeoJSON-Datei werden auf der Karte dargestellt:
+Gebäude (als gefüllte Polygone, teilweise mit Namen, unterschiedliche Farben je nach Typ/Tag).
+Wege/Straßen (als Linien, unterschiedliche Farben/Stärken je nach Typ).
+Parkplätze (als gefüllte graue Polygone).
+POI-Marker: Spezifische Punkte werden als Icons dargestellt:
+Bushaltestellen (Bus-Icon, Name "Dalderhaag" aus Daten).
+Tore (Zaun-Icon).
+Basis-Interaktion: Die POI-Marker (Bus, Tor) sind anklickbar. Bei einem Klick öffnet sich ein Bottom Sheet, das die zugehörigen OSM-Tags (Properties) anzeigt.
+Version Control:
+Das Projekt wurde als lokales Git-Repository initialisiert.
+Der aktuelle Code-Stand wurde erfolgreich auf das GitHub-Repository des Nutzers (github.com/Tom52538/campsite-nav) hochgeladen (gepusht).
+Eine .gitignore-Datei nach Flutter-Standard (inkl. Ignorieren von .osm.pbf-Dateien) ist vorhanden und eingecheckt.
+Bekannte Punkte / Offene Fragen:
+Die aktuelle Datenbasis deckt nur einen 150m-Radius ab; es ist unklar, ob das gesamte relevante Gelände erfasst ist.
+Viele Gebäude und einige POIs (Tore) in den aktuellen Daten haben keine spezifischen Namen, was die Detailanzeige und spätere Suche einschränkt.
+Kleinere Code-Warnungen (deprecated_member_use) sind vorhanden.
+Dokument 2: Mögliche nächste Schritte
+
+Basierend auf dem aktuellen Stand und dem ursprünglichen Konzept gibt es folgende logische nächste Schritte und Entwicklungsrichtungen (Reihenfolge zur Diskussion):
+
+Datenbasis vervollständigen/verfeinern (Basis für weitere Features):
+
+Gesamtes Gelände erfassen: Den relevanten Bereich klar definieren (ggf. durch Bounding Box statt Radius) und die Overpass-Abfrage entsprechend anpassen, um eine vollständige GeoJSON-Datei für das gesamte Gelände zu erhalten und die export.geojson-Datei im Projekt zu aktualisieren.
+Daten anreichern (Namen etc.): Wichtige, aktuell namenlose Objekte (Gebäude, Tore, ggf. Parkplätze, Eingänge) identifizieren und mit Namen/Bezeichnern versehen. Entscheidung treffen: Sollen diese Änderungen in OSM gemacht werden (falls sinnvoll/öffentlich) oder nur lokal in der GeoJSON-Datei / im App-Code?
+Weitere POIs hinzufügen: Fehlende, aber wichtige Punkte (z.B. spezifische Eingänge, Kantine, Erste Hilfe) identifizieren und hinzufügen (via OSM oder manuell).
+Interaktion erweitern:
+
+Polygone anklickbar machen: Ermöglichen, dass auch auf Gebäude- und Parkplatzflächen getippt werden kann, um deren Informationen im Bottom Sheet anzuzeigen (technisch aufwändiger als bei Markern).
+Info-Anzeige verbessern: Das Layout und die Auswahl der angezeigten Informationen im Bottom Sheet verfeinern (z.B. unwichtige Tags ausblenden, Formatierung verbessern). Eventuell alternative Anzeigeformen wie Pop-ups prüfen (benötigt ggf. Zusatzpakete).
+Suchfunktion implementieren:
+
+Eine Suchleiste in die Benutzeroberfläche integrieren.
+Logik entwickeln, um die geladenen GeoJSON-Features (anhand ihrer Namen oder anderer Tags) zu durchsuchen.
+Anzeige der Suchergebnisse (z.B. als Liste).
+Funktion implementieren, um bei Auswahl eines Suchergebnisses die Karte auf das entsprechende Feature zu zentrieren und es ggf. hervorzuheben oder dessen Info-Sheet zu öffnen.
+Navigation/Routing (Kernfunktion "Navi"):
+
+Das Wegenetz (highway-Linien aus GeoJSON) in eine Graphenstruktur überführen.
+Einen Wegfindungs-Algorithmus (z.B. A* oder Dijkstra) auswählen und implementieren.
+Eine Zielauswahl ermöglichen (z.B. durch Suche oder Klick auf ein Objekt).
+Die berechnete Route als Linie auf der Karte visualisieren.
+Optional: Abbiegehinweise oder Fortschrittsanzeige während der Navigation.
+Code-Pflege & Sonstiges:
+
+Die deprecated_member_use-Warnungen im Code beheben.
+Den Code strukturieren/refaktorisieren (z.B. GeoJSON-Parsing in eine eigene Klasse auslagern).
+Generelles UI/UX-Design verbessern.
+Offline-Fähigkeit prüfen/implementieren (z.B. Kartendaten und GeoJSON cachen).
