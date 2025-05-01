@@ -72,35 +72,40 @@ class _MapScreenState extends State<MapScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied)
+        if (permission == LocationPermission.denied) {
           throw Exception('Standortberechtigung wurde verweigert.');
+        }
       }
-      if (permission == LocationPermission.deniedForever)
+      if (permission == LocationPermission.deniedForever) {
         throw Exception('Standortberechtigung wurde dauerhaft verweigert.');
+      }
       await _positionStreamSubscription?.cancel();
       _positionStreamSubscription = Geolocator.getPositionStream(
               locationSettings: const LocationSettings(
                   accuracy: LocationAccuracy.high, distanceFilter: 10))
           .listen((Position position) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _currentLatLng = LatLng(position.latitude, position.longitude);
             _locationLoading = false;
             _locationError = null;
           });
+        }
       }, onError: (error) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _locationError = "Standortupdates fehlgeschlagen: $error";
             _locationLoading = false;
           });
+        }
       });
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _locationError = e.toString();
           _locationLoading = false;
         });
+      }
     }
   }
 
@@ -114,7 +119,7 @@ class _MapScreenState extends State<MapScreen> {
       _poiMarkers = [];
     });
     try {
-      final String assetPath = 'assets/export.geojson'; // Bestätigter Dateiname
+      const String assetPath = 'assets/export.geojson'; // Bestätigter Dateiname
       print("Lade Asset: $assetPath");
       final String geoJsonString = await rootBundle.loadString(assetPath);
       print("GeoJSON String geladen...");
@@ -126,16 +131,18 @@ class _MapScreenState extends State<MapScreen> {
       }
     } catch (e) {
       print("Fehler beim Laden/Parsen: $e");
-      if (mounted)
+      if (mounted) {
         setState(() {
           _geoJsonError = "Lade-/Parse-Fehler: $e";
         });
+      }
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _geoJsonLoading = false;
           print("GeoJSON Verarbeitung abgeschlossen");
         });
+      }
     }
   }
 
@@ -207,7 +214,7 @@ class _MapScreenState extends State<MapScreen> {
                   Icon? markerIcon; // Temporäre Variable für das Icon
 
                   if (properties['highway'] == 'bus_stop') {
-                    markerIcon = Icon(Icons.directions_bus,
+                    markerIcon = const Icon(Icons.directions_bus,
                         color: Colors.indigo, size: 24.0);
                   } else if (properties['barrier'] == 'gate') {
                     markerIcon = Icon(Icons.fence,
@@ -301,8 +308,8 @@ class _MapScreenState extends State<MapScreen> {
                     child: details.isEmpty
                         ? const Center(child: Text("Keine Details verfügbar."))
                         : ListView(
-                            children: details,
                             shrinkWrap: true,
+                            children: details,
                           )),
                 const SizedBox(height: 10),
                 Align(
@@ -324,11 +331,13 @@ class _MapScreenState extends State<MapScreen> {
       Map<String, dynamic> properties, Color defaultColor,
       {bool border = false}) {
     // Farb-Logik unverändert
-    if (properties['amenity'] == 'parking')
+    if (properties['amenity'] == 'parking') {
       return border ? Colors.grey.shade600 : Colors.grey.withOpacity(0.4);
+    }
     if (properties['building'] != null) {
-      if (properties['building'] == 'construction')
+      if (properties['building'] == 'construction') {
         return border ? Colors.orangeAccent : Colors.orange.withOpacity(0.3);
+      }
       return border ? Colors.blueGrey : Colors.blueGrey.withOpacity(0.3);
     }
     if (properties['highway'] != null) {
@@ -363,8 +372,8 @@ class _MapScreenState extends State<MapScreen> {
                           )))
                   : FlutterMap(
                       mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter: const LatLng(51.024370, 5.861582),
+                      options: const MapOptions(
+                        initialCenter: LatLng(51.024370, 5.861582),
                         initialZoom: 17.0,
                         minZoom: 12.0,
                         maxZoom: 19.0,
@@ -399,8 +408,9 @@ class _MapScreenState extends State<MapScreen> {
               right: 20,
               child: FloatingActionButton(
                 onPressed: () {
-                  if (_currentLatLng != null)
+                  if (_currentLatLng != null) {
                     _mapController.move(_currentLatLng!, 17.0);
+                  }
                 },
                 tooltip: 'Auf meine Position zentrieren',
                 child: const Icon(Icons.my_location),
