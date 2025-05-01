@@ -8,7 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 
-import 'package:camping_osm_navi/models/searchable_feature.dart'; // Korrekter Import
+import 'package:camping_osm_navi/models/searchable_feature.dart';
 
 void main() {
   runApp(const MyApp());
@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const MapScreen(),
-      debugShowCheckedModeBanner: false, // Entfernt das Debug-Banner
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -39,52 +39,44 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  // --- State für Standort ---
+  // States für Standort, GeoJSON, Suche (unverändert)
   LatLng? _currentLatLng;
   StreamSubscription<Position>? _positionStreamSubscription;
   final MapController _mapController = MapController();
   bool _locationLoading = true;
   String? _locationError;
-
-  // --- State für GeoJSON Daten ---
   List<Polygon> _polygons = [];
   List<Polyline> _polylines = [];
   List<Marker> _poiMarkers = [];
   bool _geoJsonLoading = true;
   String? _geoJsonError;
   List<SearchableFeature> _searchableFeatures = [];
-
-  // --- NEU: State für die Suche ---
-  final TextEditingController _searchController =
-      TextEditingController(); // Controller für das Suchfeld
-  List<SearchableFeature> _searchResults =
-      []; // Liste der aktuellen Suchergebnisse
-  bool _isSearching = false; // Zustand, ob die Such-AppBar aktiv ist
-  final FocusNode _searchFocusNode = FocusNode(); // Um den Fokus zu steuern
+  final TextEditingController _searchController = TextEditingController();
+  List<SearchableFeature> _searchResults = [];
+  bool _isSearching = false;
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _initializeLocation();
     _loadAndParseGeoJson();
-
-    // NEU: Listener für das Suchfeld hinzufügen
     _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
     _positionStreamSubscription?.cancel();
-    _searchController
-        .removeListener(_onSearchChanged); // NEU: Listener entfernen
-    _searchController.dispose(); // NEU: Controller freigeben
-    _searchFocusNode.dispose(); // NEU: FocusNode freigeben
-    _mapController.dispose(); // MapController auch freigeben
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
-  // --- Standort-Logik (unverändert) ---
+  // Standort-Logik (unverändert)
   Future<void> _initializeLocation() async {
+    /* ... unverändert ... */
     setState(() {
       _locationLoading = true;
       _locationError = null;
@@ -127,8 +119,9 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // --- GeoJSON Lade- und Parse-Logik (unverändert) ---
+  // GeoJSON Lade- und Parse-Logik (unverändert)
   Future<void> _loadAndParseGeoJson() async {
+    /* ... unverändert ... */
     print("Versuche GeoJSON zu laden...");
     setState(() {
       _geoJsonLoading = true;
@@ -162,6 +155,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _parseGeoJsonFeatures(Map<String, dynamic> geoJsonData) {
+    /* ... unverändert ... */
     print("Beginne Parsing...");
     final List<Polygon> tempPolygons = [];
     final List<Polyline> tempPolylines = [];
@@ -350,13 +344,14 @@ class _MapScreenState extends State<MapScreen> {
       });
   }
 
-  // --- Marker Tap & Details Sheet (unverändert) ---
+  // Marker Tap & Details Sheet (unverändert)
   void _handleMarkerTap(Map<String, dynamic> properties) {
-    _showFeatureDetails(context, properties);
+    /* ... unverändert ... */ _showFeatureDetails(context, properties);
   }
 
   void _showFeatureDetails(
       BuildContext context, Map<String, dynamic> properties) {
+    /* ... unverändert ... */
     final List<Widget> details = [];
     if (properties['name'] != null) {
       details.add(Text(properties['name'].toString(),
@@ -407,10 +402,11 @@ class _MapScreenState extends State<MapScreen> {
         });
   }
 
-  // --- Farb-Logik (unverändert) ---
+  // Farb-Logik (unverändert)
   Color _getColorFromProperties(
       Map<String, dynamic> properties, Color defaultColor,
       {bool border = false}) {
+    /* ... unverändert ... */
     if (properties['amenity'] == 'parking')
       return border ? Colors.grey.shade600 : Colors.grey.withOpacity(0.4);
     if (properties['building'] != null) {
@@ -429,74 +425,80 @@ class _MapScreenState extends State<MapScreen> {
     return defaultColor;
   }
 
-  // --- NEU: Suchlogik (Platzhalter, wird in Schritt 3 implementiert) ---
+  // Suchlogik (Platzhalter)
   void _onSearchChanged() {
+    /* ... unverändert ... */
     String query = _searchController.text.toLowerCase().trim();
     if (query.isEmpty) {
       if (_searchResults.isNotEmpty) {
         setState(() {
-          _searchResults = []; // Leere Ergebnisse, wenn Suche leer ist
+          _searchResults = [];
         });
       }
       return;
     }
-
-    // Hier kommt die eigentliche Filterlogik in Schritt 3
-    // Vorerst: Dummy-Implementierung zum Testen der UI
     List<SearchableFeature> filteredResults =
         _searchableFeatures.where((feature) {
       return feature.name.toLowerCase().contains(query);
     }).toList();
-
     setState(() {
       _searchResults = filteredResults;
     });
   }
 
-  // --- NEU: Such-AppBar bauen ---
+  // MODIFIZIERT: Such-AppBar bauen
   AppBar _buildSearchAppBar() {
+    // Hol die Farben vom aktuellen Theme
+    final ThemeData theme = Theme.of(context);
+    final Color? foregroundColor =
+        theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary;
+    final Color? hintColor = theme.hintColor;
+
     return AppBar(
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
+        icon: Icon(Icons.arrow_back, color: foregroundColor), // Farbe vom Theme
         tooltip: 'Suche verlassen',
         onPressed: () {
           setState(() {
             _isSearching = false;
-            _searchController.clear(); // Suchtext löschen
-            _searchResults = []; // Ergebnisse löschen
-            _searchFocusNode.unfocus(); // Tastatur ausblenden
+            _searchController.clear();
+            _searchResults = [];
+            _searchFocusNode.unfocus();
           });
         },
       ),
       title: TextField(
         controller: _searchController,
-        focusNode: _searchFocusNode, // Fokus zuweisen
-        autofocus: true, // Fokus direkt auf das Feld setzen
-        decoration: const InputDecoration(
+        focusNode: _searchFocusNode,
+        autofocus: true,
+        decoration: InputDecoration(
           hintText: 'Ort suchen...',
           border: InputBorder.none,
-          hintStyle: TextStyle(color: Colors.white70),
+          // MODIFIZIERT: Hint-Style vom Theme oder Fallback
+          hintStyle: TextStyle(color: hintColor ?? Colors.black54),
         ),
-        style: const TextStyle(color: Colors.white, fontSize: 18.0),
-        cursorColor: Colors.white,
+        // MODIFIZIERT: Text-Style vom Theme oder Fallback (Standard ist meistens gut)
+        // style: TextStyle(color: foregroundColor ?? Colors.black, fontSize: 18.0), // Explizite Farbe entfernt
+        cursorColor: foregroundColor ??
+            Colors.black, // MODIFIZIERT: Cursor-Farbe vom Theme
       ),
       actions: [
-        // Button zum Löschen des Suchtextes
         if (_searchController.text.isNotEmpty)
           IconButton(
-            icon: const Icon(Icons.clear),
+            // MODIFIZIERT: Icon-Farbe vom Theme
+            icon: Icon(Icons.clear, color: foregroundColor),
             tooltip: 'Suche löschen',
             onPressed: () {
               _searchController.clear();
-              // _onSearchChanged wird durch den Listener automatisch aufgerufen
             },
           ),
       ],
     );
   }
 
-  // --- NEU: Normale AppBar bauen ---
+  // Normale AppBar bauen (unverändert)
   AppBar _buildNormalAppBar() {
+    /* ... unverändert ... */
     return AppBar(
       title: const Text('Campground Navi'),
       actions: [
@@ -507,7 +509,6 @@ class _MapScreenState extends State<MapScreen> {
             setState(() {
               _isSearching = true;
             });
-            // Kleiner Delay, damit das Feld sichtbar ist, bevor der Fokus gesetzt wird
             Future.delayed(const Duration(milliseconds: 100), () {
               _searchFocusNode.requestFocus();
             });
@@ -517,18 +518,17 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // --- MODIFIZIERT: Build-Methode ---
+  // Build-Methode (unverändert)
   @override
   Widget build(BuildContext context) {
+    /* ... unverändert ... */
     final bool isLoading = _locationLoading || _geoJsonLoading;
     final String? errorMessage = _locationError ?? _geoJsonError;
-
     return Scaffold(
-      // MODIFIZIERT: Wählt die AppBar basierend auf _isSearching
       appBar: _isSearching ? _buildSearchAppBar() : _buildNormalAppBar(),
       body: Stack(
         children: [
-          // --- Kartenanzeige ---
+          // Kartenanzeige
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : errorMessage != null
@@ -544,13 +544,9 @@ class _MapScreenState extends State<MapScreen> {
                         initialZoom: 17.0,
                         minZoom: 12.0,
                         maxZoom: 19.0,
-                        // NEU: Bei Tap auf die Karte die Suche beenden/Tastatur ausblenden
                         onTap: (tapPosition, point) {
                           if (_isSearching) {
-                            _searchFocusNode
-                                .unfocus(); // Fokus wegnehmen blendet Tastatur aus
-                            // Optional: Suche komplett beenden
-                            // setState(() { _isSearching = false; _searchController.clear(); _searchResults = []; });
+                            _searchFocusNode.unfocus();
                           }
                         },
                       ),
@@ -574,12 +570,10 @@ class _MapScreenState extends State<MapScreen> {
                           ]),
                       ],
                     ),
-
-          // --- NEU: Suchergebnisliste ---
-          // Wird nur angezeigt, wenn gesucht wird UND Ergebnisse vorhanden sind
+          // Suchergebnisliste
           if (_isSearching && _searchResults.isNotEmpty)
             Positioned(
-              top: 0, // Direkt unter der AppBar
+              top: 0,
               left: 10,
               right: 10,
               child: Card(
@@ -587,29 +581,22 @@ class _MapScreenState extends State<MapScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.0)),
                 child: Container(
-                  // Begrenzt die Höhe der Ergebnisliste
                   constraints: BoxConstraints(
                       maxHeight: MediaQuery.of(context).size.height * 0.4),
                   child: ListView.builder(
-                    shrinkWrap:
-                        true, // Passt die Höhe an den Inhalt an (bis maxHeight)
+                    shrinkWrap: true,
                     itemCount: _searchResults.length,
                     itemBuilder: (context, index) {
                       final feature = _searchResults[index];
                       return ListTile(
-                        dense: true, // Kompakteres Layout
+                        dense: true,
                         leading: Icon(_getIconForFeatureType(feature.type),
-                            size: 20), // Icon basierend auf Typ
+                            size: 20),
                         title: Text(feature.name),
-                        subtitle:
-                            Text(feature.type), // Zeigt den Typ unter dem Namen
+                        subtitle: Text(feature.type),
                         onTap: () {
-                          // --- Aktion bei Klick auf Ergebnis (wird in Schritt 5 implementiert) ---
                           print('Tapped on: ${feature.name}');
-                          _mapController.move(feature.center,
-                              18.0); // Zentriere Karte (Zoom 18)
-
-                          // Suche beenden und Tastatur ausblenden
+                          _mapController.move(feature.center, 18.0);
                           setState(() {
                             _isSearching = false;
                             _searchController.clear();
@@ -623,28 +610,26 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
             ),
-
-          // --- Zentrierungsbutton (unverändert) ---
+          // Zentrierungsbutton
           if (!isLoading && _currentLatLng != null)
             Positioned(
-              bottom: 20,
-              right: 20,
-              child: FloatingActionButton(
-                onPressed: () {
-                  if (_currentLatLng != null)
-                    _mapController.move(_currentLatLng!, 17.0);
-                },
-                tooltip: 'Auf meine Position zentrieren',
-                child: const Icon(Icons.my_location),
-              ),
-            ),
+                bottom: 20,
+                right: 20,
+                child: FloatingActionButton(
+                    onPressed: () {
+                      if (_currentLatLng != null)
+                        _mapController.move(_currentLatLng!, 17.0);
+                    },
+                    tooltip: 'Auf meine Position zentrieren',
+                    child: const Icon(Icons.my_location))),
         ],
       ),
     );
   }
 
-  // --- NEU: Hilfsfunktion für Icons in Suchergebnissen ---
+  // Hilfsfunktion für Icons (unverändert)
   IconData _getIconForFeatureType(String type) {
+    /* ... unverändert ... */
     switch (type) {
       case 'Building':
         return Icons.business;
@@ -659,17 +644,17 @@ class _MapScreenState extends State<MapScreen> {
       case 'Cycleway':
         return Icons.directions_bike;
       case 'Service Road':
-        return Icons.minor_crash_outlined; // Beispiel
+        return Icons.minor_crash_outlined;
       case 'Platform':
-        return Icons.train; // Beispiel
+        return Icons.train;
       case 'Tertiary Road':
-        return Icons.traffic; // Beispiel
+        return Icons.traffic;
       case 'Unclassified Road':
-        return Icons.edit_road; // Beispiel
+        return Icons.edit_road;
       case 'Point of Interest':
         return Icons.place;
       default:
-        return Icons.location_pin; // Standard-Icon
+        return Icons.location_pin;
     }
   }
 }
