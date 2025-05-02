@@ -9,7 +9,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 
+// Eigene Imports
 import 'package:camping_osm_navi/models/searchable_feature.dart';
+import 'package:camping_osm_navi/models/routing_graph.dart'; // <-- NEU
+import 'package:camping_osm_navi/services/geojson_parser_service.dart'; // <-- NEU
 
 void main() {
   runApp(const MyApp());
@@ -57,6 +60,9 @@ class _MapScreenState extends State<MapScreen> {
   bool _isSearching = false;
   final FocusNode _searchFocusNode = FocusNode();
 
+  // NEU: State für den Routing-Graphen
+  RoutingGraph? _routingGraph;
+
   @override
   void initState() {
     super.initState();
@@ -71,21 +77,19 @@ class _MapScreenState extends State<MapScreen> {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _mapController.dispose(); // MapController auch disposen
+    _mapController.dispose();
     super.dispose();
   }
 
-  // Standort-Logik (Angepasst: curly_braces)
+  // Standort-Logik
   Future<void> _initializeLocation() async {
     setState(() {
       _locationLoading = true;
       _locationError = null;
     });
-
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        // KORRIGIERT: curly_braces
         throw Exception('Standortdienste sind deaktiviert.');
       }
 
@@ -132,10 +136,9 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // GeoJSON Lade- und Parse-Logik (Angepasst: avoid_print)
+  // GeoJSON Lade- und Parse-Logik (Angepasst)
   Future<void> _loadAndParseGeoJson() async {
     if (kDebugMode) {
-      // KORRIGIERT: avoid_print
       print("Versuche GeoJSON zu laden...");
     }
     setState(() {
@@ -145,6 +148,7 @@ class _MapScreenState extends State<MapScreen> {
       _polylines = [];
       _poiMarkers = [];
       _searchableFeatures = [];
+      _routingGraph = null; // NEU: Graph zurücksetzen
     });
 
     try {
@@ -153,7 +157,15 @@ class _MapScreenState extends State<MapScreen> {
       final decodedJson = jsonDecode(geoJsonString);
 
       if (decodedJson is Map<String, dynamic>) {
-        _parseGeoJsonFeatures(decodedJson);
+        // Ersten Parse-Durchlauf für Kartenlayer und Suchfeatures
+        _parseGeoJsonForDisplay(decodedJson);
+
+        // NEU: Zweiten Parse-Durchlauf für den Routing-Graphen starten
+        _routingGraph = GeojsonParserService.parseGeoJson(geoJsonString);
+        if (kDebugMode) {
+          print(
+              "Routing Graph nach dem Parsen: Nodes=${_routingGraph?.nodes.length ?? 0}");
+        }
       } else {
         throw Exception("GeoJSON-Struktur ungültig");
       }
@@ -162,25 +174,27 @@ class _MapScreenState extends State<MapScreen> {
         setState(() {
           _geoJsonError = "Lade-/Parse-Fehler: $e";
         });
+        if (kDebugMode) {
+          print("Fehler beim Laden/Parsen: $e");
+        }
       }
     } finally {
       if (mounted) {
         setState(() {
           _geoJsonLoading = false;
           if (kDebugMode) {
-            // KORRIGIERT: avoid_print
-            print("GeoJSON Verarbeitung abgeschlossen");
+            print("GeoJSON Verarbeitung abgeschlossen (Display & Routing)");
           }
         });
       }
     }
   }
 
-  // (Angepasst: avoid_print, curly_braces)
-  void _parseGeoJsonFeatures(Map<String, dynamic> geoJsonData) {
+  // Bisherige Parse-Methode umbenannt zu _parseGeoJsonForDisplay
+  // (Diese Methode erstellt Polygone, Polylines, Marker für die Anzeige)
+  void _parseGeoJsonForDisplay(Map<String, dynamic> geoJsonData) {
     if (kDebugMode) {
-      // KORRIGIERT: avoid_print
-      print("Beginne Parsing...");
+      print("Beginne Display-Parsing...");
     }
     final List<Polygon> tempPolygons = [];
     final List<Polyline> tempPolylines = [];
@@ -191,8 +205,7 @@ class _MapScreenState extends State<MapScreen> {
         geoJsonData['features'] is List) {
       List features = geoJsonData['features'];
       if (kDebugMode) {
-        // KORRIGIERT: avoid_print
-        print("Parsing ${features.length} Features...");
+        print("Parsing ${features.length} Features für Display...");
       }
       for (var feature in features) {
         if (feature is Map<String, dynamic> &&
@@ -212,7 +225,7 @@ class _MapScreenState extends State<MapScreen> {
             String featureType = 'Unknown';
             LatLng? centerPoint;
 
-            // KORRIGIERT: curly_braces für alle else if Zweige
+            // Typ bestimmen (wie bisher)
             if (properties['building'] != null) {
               featureType = 'Building';
             } else if (properties['amenity'] == 'parking') {
@@ -225,7 +238,10 @@ class _MapScreenState extends State<MapScreen> {
               featureType = 'Gate';
             } else if (properties['amenity'] == 'bus_station') {
               featureType = 'Bus Stop';
-            } else if (properties['highway'] == 'cycleway') {
+            } else if (properties['highway'] == 'bus_stop') {
+              featureType = 'Bus Stop';
+            } // Ergänzt für Nodes
+            else if (properties['highway'] == 'cycleway') {
               featureType = 'Cycleway';
             } else if (properties['highway'] == 'platform') {
               featureType = 'Platform';
@@ -238,6 +254,7 @@ class _MapScreenState extends State<MapScreen> {
             }
 
             try {
+              // Centroid-Berechnung (wie bisher)
               if (type == 'Point') {
                 if (coordinates is List &&
                     coordinates.length >= 2 &&
@@ -292,7 +309,6 @@ class _MapScreenState extends State<MapScreen> {
               }
             } catch (e) {
               if (kDebugMode) {
-                // KORRIGIERT: avoid_print
                 print(
                     "Fehler bei Centroid-Berechnung für Feature $featureId: $e");
               }
@@ -306,8 +322,7 @@ class _MapScreenState extends State<MapScreen> {
             }
           }
 
-          // --- Kartenlayer-Teil ---
-          // (Angepasst: deprecated_member_use)
+          // --- Kartenlayer-Teil (wie bisher) ---
           if (coordinates is List) {
             try {
               if (type == 'Polygon') {
@@ -319,7 +334,6 @@ class _MapScreenState extends State<MapScreen> {
                   if (points.isNotEmpty) {
                     tempPolygons.add(Polygon(
                         points: points,
-                        // KORRIGIERT: deprecated_member_use
                         color: _getColorFromProperties(properties,
                             Colors.grey.withAlpha((0.2 * 255).round())),
                         borderColor: _getColorFromProperties(
@@ -352,6 +366,7 @@ class _MapScreenState extends State<MapScreen> {
                   final pointLatLng = LatLng(
                       coordinates[1].toDouble(), coordinates[0].toDouble());
                   Icon? markerIcon;
+                  // Icons definieren (wie bisher)
                   if (properties['highway'] == 'bus_stop') {
                     markerIcon = const Icon(Icons.directions_bus,
                         color: Colors.indigo, size: 24.0);
@@ -359,13 +374,13 @@ class _MapScreenState extends State<MapScreen> {
                     markerIcon = Icon(Icons.fence,
                         color: Colors.brown.shade700, size: 20.0);
                   }
+                  // Weitere POI Icons hier hinzufügen falls nötig
 
                   if (markerIcon != null) {
                     // Wrap Icon with GestureDetector for tap handling
                     final markerWidget = GestureDetector(
                         onTap: () => _handleMarkerTap(properties),
                         child: markerIcon);
-
                     tempPoiMarkers.add(Marker(
                         point: pointLatLng,
                         width: 30.0,
@@ -376,7 +391,6 @@ class _MapScreenState extends State<MapScreen> {
               }
             } catch (e) {
               if (kDebugMode) {
-                // KORRIGIERT: avoid_print
                 print(
                     "Fehler beim Verarbeiten eines Karten-Layers für Feature: $e");
               }
@@ -385,13 +399,17 @@ class _MapScreenState extends State<MapScreen> {
         }
       }
     } else {
-      throw Exception("GeoJSON ist keine gültige FeatureCollection");
+      if (kDebugMode) {
+        print("GeoJSON ist keine gültige FeatureCollection für Display.");
+      }
+      // Kein Fehler werfen, nur loggen
     }
+
     if (kDebugMode) {
-      // KORRIGIERT: avoid_print
       print(
-          "Parsing beendet: ${tempPolygons.length} Polygone, ${tempPolylines.length} Polylinien, ${tempPoiMarkers.length} POI-Marker, ${tempSearchableFeatures.length} durchsuchbare Features gefunden.");
+          "Display-Parsing beendet: ${tempPolygons.length} Polygone, ${tempPolylines.length} Polylinien, ${tempPoiMarkers.length} POI-Marker, ${tempSearchableFeatures.length} durchsuchbare Features gefunden.");
     }
+    // Den State nur aktualisieren, wenn die Komponente noch gemountet ist
     if (mounted) {
       setState(() {
         _polygons = tempPolygons;
@@ -407,6 +425,7 @@ class _MapScreenState extends State<MapScreen> {
     _showFeatureDetails(context, properties);
   }
 
+  // Details Sheet anzeigen (Unverändert)
   void _showFeatureDetails(
       BuildContext context, Map<String, dynamic> properties) {
     final List<Widget> details = [];
@@ -468,30 +487,26 @@ class _MapScreenState extends State<MapScreen> {
         });
   }
 
-  // Farb-Logik (Angepasst: curly_braces, deprecated_member_use)
+  // Farb-Logik (Unverändert)
   Color _getColorFromProperties(
       Map<String, dynamic> properties, Color defaultColor,
       {bool border = false}) {
     if (properties['amenity'] == 'parking') {
-      // KORRIGIERT: deprecated_member_use
       return border
           ? Colors.grey.shade600
           : Colors.grey.withAlpha((0.4 * 255).round());
     }
     if (properties['building'] != null) {
       if (properties['building'] == 'construction') {
-        // KORRIGIERT: deprecated_member_use
         return border
             ? Colors.orangeAccent
             : Colors.orange.withAlpha((0.3 * 255).round());
       }
-      // KORRIGIERT: deprecated_member_use
       return border
           ? Colors.blueGrey
           : Colors.blueGrey.withAlpha((0.3 * 255).round());
     }
     if (properties['highway'] != null) {
-      // KORRIGIERT: curly_braces
       if (properties['highway'] == 'cycleway') {
         return Colors.deepPurpleAccent;
       }
@@ -514,38 +529,32 @@ class _MapScreenState extends State<MapScreen> {
     return defaultColor;
   }
 
-  // Suchlogik (Angepasst: curly_braces)
+  // Suchlogik (Unverändert)
   void _onSearchChanged() {
     String query = _searchController.text.toLowerCase().trim();
     if (query.isEmpty) {
-      // KORRIGIERT: curly_braces (obwohl setState schon ein Block ist, schadet es nicht)
       if (_searchResults.isNotEmpty) {
         setState(() {
           _searchResults = [];
         });
       }
-      return; // Frühzeitiger Ausstieg
+      return;
     }
-
-    // Filtere die Features basierend auf der Suchanfrage
     List<SearchableFeature> filteredResults =
         _searchableFeatures.where((feature) {
-      // Einfache Namensprüfung (könnte erweitert werden)
       return feature.name.toLowerCase().contains(query);
     }).toList();
-
     setState(() {
       _searchResults = filteredResults;
     });
   }
 
-  // KORRIGIERTE VERSION: Such-AppBar bauen
+  // Such-AppBar bauen (Unverändert)
   AppBar _buildSearchAppBar() {
-    // Hol die Farben vom aktuellen Theme
     final ThemeData theme = Theme.of(context);
     final Color foregroundColor =
         theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary;
-    final Color? hintColor = theme.hintColor; // Bleibt Nullable (Color?)
+    final Color? hintColor = theme.hintColor;
 
     return AppBar(
       leading: IconButton(
@@ -569,13 +578,12 @@ class _MapScreenState extends State<MapScreen> {
           border: InputBorder.none,
           hintStyle: TextStyle(color: hintColor ?? Colors.black54),
         ),
-        cursorColor: foregroundColor, // Korrektur: dead_null_aware entfernt
+        style: TextStyle(color: foregroundColor), // Style für die Texteingabe
+        cursorColor: foregroundColor,
       ),
       actions: [
-        // KORRIGIERT: Die {} um den IconButton wurden entfernt!
         if (_searchController.text.isNotEmpty)
           IconButton(
-            // Direkt der IconButton, ohne umgebende {}
             icon: Icon(Icons.clear, color: foregroundColor),
             tooltip: 'Suche löschen',
             onPressed: () {
@@ -598,7 +606,6 @@ class _MapScreenState extends State<MapScreen> {
             setState(() {
               _isSearching = true;
             });
-            // Fokus setzen nach kurzer Verzögerung, damit das Textfeld sichtbar ist
             Future.delayed(const Duration(milliseconds: 100), () {
               _searchFocusNode.requestFocus();
             });
@@ -608,7 +615,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Build-Methode (Angepasst: curly_braces)
+  // Build-Methode (Unverändert, zeigt noch keine Route an)
   @override
   Widget build(BuildContext context) {
     final bool isLoading = _locationLoading || _geoJsonLoading;
@@ -636,10 +643,16 @@ class _MapScreenState extends State<MapScreen> {
                         minZoom: 12.0,
                         maxZoom: 19.0,
                         onTap: (tapPosition, point) {
-                          // KORRIGIERT: curly_braces
                           if (_isSearching) {
-                            _searchFocusNode
-                                .unfocus(); // Tastatur ausblenden bei Klick auf Karte
+                            _searchFocusNode.unfocus(); // Tastatur ausblenden
+                          }
+                          // HIER könnte später das Ziel für die Route ausgewählt werden
+                          if (kDebugMode) {
+                            print("Map tapped at: $point");
+                            // Test: Nächsten Knoten im Graph finden
+                            final nearestNode =
+                                _routingGraph?.findNearestNode(point);
+                            print("Nearest graph node: ${nearestNode?.id}");
                           }
                         },
                       ),
@@ -662,10 +675,11 @@ class _MapScreenState extends State<MapScreen> {
                                 child: const Icon(Icons.location_pin,
                                     color: Colors.redAccent, size: 40.0))
                           ]),
+                        // HIER wird später die Route als PolylineLayer hinzugefügt
                       ],
                     ),
 
-          // Suchergebnisliste (Angepasst: avoid_print)
+          // Suchergebnisliste (Unverändert)
           if (_isSearching && _searchResults.isNotEmpty)
             Positioned(
               top: 0, // Direkt unter der AppBar
@@ -677,10 +691,9 @@ class _MapScreenState extends State<MapScreen> {
                     borderRadius: BorderRadius.circular(8.0)),
                 child: Container(
                   constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height *
-                          0.4), // Begrenzte Höhe
+                      maxHeight: MediaQuery.of(context).size.height * 0.4),
                   child: ListView.builder(
-                    shrinkWrap: true, // Passt Höhe an Inhalt an (bis maxHeight)
+                    shrinkWrap: true,
                     itemCount: _searchResults.length,
                     itemBuilder: (context, index) {
                       final feature = _searchResults[index];
@@ -692,8 +705,12 @@ class _MapScreenState extends State<MapScreen> {
                         subtitle: Text(feature.type),
                         onTap: () {
                           if (kDebugMode) {
-                            // KORRIGIERT: avoid_print
-                            print('Tapped on: ${feature.name}');
+                            print('Tapped on search result: ${feature.name}');
+                            // Test: Nächsten Knoten für Suchergebnis finden
+                            final nearestNode =
+                                _routingGraph?.findNearestNode(feature.center);
+                            print(
+                                "Nearest graph node for search result: ${nearestNode?.id}");
                           }
                           _mapController.move(feature.center, 18.0);
                           setState(() {
@@ -702,6 +719,7 @@ class _MapScreenState extends State<MapScreen> {
                             _searchResults = [];
                             _searchFocusNode.unfocus();
                           });
+                          // HIER könnte später die Route zum Suchergebnis gestartet werden
                         },
                       );
                     },
@@ -710,14 +728,13 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
 
-          // Zentrierungsbutton (Angepasst: curly_braces)
+          // Zentrierungsbutton (Unverändert)
           if (!isLoading && _currentLatLng != null)
             Positioned(
                 bottom: 20,
                 right: 20,
                 child: FloatingActionButton(
                     onPressed: () {
-                      // KORRIGIERT: curly_braces
                       if (_currentLatLng != null) {
                         _mapController.move(_currentLatLng!, 17.0);
                       }

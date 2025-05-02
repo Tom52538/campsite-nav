@@ -19,10 +19,12 @@ class GraphNode {
   double get fCost => gCost + hCost; // Gesamtkosten
   GraphNode? parent; // Vorgängerknoten auf dem kürzesten Pfad
 
-  GraphNode({required this.position}) : id = _createId(position);
+  // KORREKTUR: Methode ist jetzt public (kein Unterstrich)
+  GraphNode({required this.position}) : id = createId(position);
 
   // Eindeutige ID aus LatLng erstellen (für Map-Keys und Vergleiche)
-  static String _createId(LatLng pos) {
+  // KORREKTUR: Methode ist jetzt public (kein Unterstrich) und static
+  static String createId(LatLng pos) {
     // Rundung, um kleine Ungenauigkeiten zu vermeiden
     return '${pos.latitude.toStringAsFixed(7)}_${pos.longitude.toStringAsFixed(7)}';
   }

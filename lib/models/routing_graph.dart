@@ -1,7 +1,9 @@
 // lib/models/routing_graph.dart
 
 import 'graph_node.dart';
+import 'graph_edge.dart';
 import 'package:latlong2/latlong.dart';
+// import 'package:flutter/foundation.dart'; // <-- Entfernt, da kDebugMode hier nicht mehr genutzt wird
 
 /// Repräsentiert den gesamten Routing-Graphen, bestehend aus Knoten und Kanten.
 class RoutingGraph {
@@ -33,8 +35,7 @@ class RoutingGraph {
       }
     } else {
       // Optional: Fehlerbehandlung oder Log, falls Knoten nicht gefunden wurden
-      print(
-          "Warnung: Knoten nicht im Graph gefunden beim Hinzufügen der Kante.");
+      // (Print wurde bereits entfernt)
     }
   }
 
@@ -44,19 +45,21 @@ class RoutingGraph {
     double minDistance = double.infinity;
     const Distance distance = Distance(); // Für Distanzberechnungen
 
-    nodes.values.forEach((node) {
+    for (final node in nodes.values) {
       final double dist = distance(point, node.position);
       if (dist < minDistance) {
         minDistance = dist;
         nearestNode = node;
       }
-    });
+    }
     return nearestNode;
   }
 
   // Setzt die Kosten aller Knoten zurück (wichtig vor jeder neuen Routenberechnung)
   void resetAllNodeCosts() {
-    nodes.values.forEach((node) => node.resetCosts());
+    for (final node in nodes.values) {
+      node.resetCosts();
+    }
   }
 
   @override
