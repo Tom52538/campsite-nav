@@ -5,21 +5,21 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0' 
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  geolocator: ^12.0.0      
-  flutter_map: ^6.1.0     
-  latlong2: ^0.9.1        
-  # cupertino_icons: ^1.0.6 
+  geolocator: ^12.0.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.1
+  collection: ^1.18.0 # <-- HINZUGEFÜGT/AKTUALISIERT
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0 
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -28,26 +28,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # --- HIER HINZUGEFÜGT ---
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/ # Deklariert den gesamten Ordner
   #   - assets/site_data.geojson # Alternative: Einzelne Datei deklarieren
-  # --------------------------
 
-  # To add custom fonts to your application, add a fonts section here,
-  # in this "flutter" section. Each entry in this list should have a
-  # "family" key with the font family name, and a "fonts" key with a
-  # list giving the asset and other descriptors for the font. For
-  # example:
-  # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
-  #       - asset: fonts/Schyler-Italic.ttf
-  #         style: italic
-  #   - family: Trajan Pro
-  #     fonts:
-  #       - asset: fonts/TrajanPro.ttf
-  #       - asset: fonts/TrajanPro_Bold.ttf
-  #         weight: 700
+  # An example of declaring fonts from package dependencies,
+  # see https://flutter.dev/custom-fonts/#from-packages
