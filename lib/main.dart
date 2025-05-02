@@ -87,35 +87,40 @@ class _MapScreenState extends State<MapScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied)
+        if (permission == LocationPermission.denied) {
           throw Exception('Standortberechtigung wurde verweigert.');
+        }
       }
-      if (permission == LocationPermission.deniedForever)
+      if (permission == LocationPermission.deniedForever) {
         throw Exception('Standortberechtigung wurde dauerhaft verweigert.');
+      }
       await _positionStreamSubscription?.cancel();
       _positionStreamSubscription = Geolocator.getPositionStream(
               locationSettings: const LocationSettings(
                   accuracy: LocationAccuracy.high, distanceFilter: 10))
           .listen((Position position) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _currentLatLng = LatLng(position.latitude, position.longitude);
             _locationLoading = false;
             _locationError = null;
           });
+        }
       }, onError: (error) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _locationError = "Standortupdates fehlgeschlagen: $error";
             _locationLoading = false;
           });
+        }
       });
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _locationError = e.toString();
           _locationLoading = false;
         });
+      }
     }
   }
 
@@ -141,16 +146,18 @@ class _MapScreenState extends State<MapScreen> {
         throw Exception("GeoJSON-Struktur ungültig");
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _geoJsonError = "Lade-/Parse-Fehler: $e";
         });
+      }
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _geoJsonLoading = false;
           print("GeoJSON Verarbeitung abgeschlossen");
         });
+      }
     }
   }
 
@@ -181,9 +188,9 @@ class _MapScreenState extends State<MapScreen> {
             final String featureName = properties['name'];
             String featureType = 'Unknown';
             LatLng? centerPoint;
-            if (properties['building'] != null)
+            if (properties['building'] != null) {
               featureType = 'Building';
-            else if (properties['amenity'] == 'parking')
+            } else if (properties['amenity'] == 'parking')
               featureType = 'Parking';
             else if (properties['highway'] == 'footway')
               featureType = 'Footway';
@@ -207,9 +214,10 @@ class _MapScreenState extends State<MapScreen> {
                 if (coordinates is List &&
                     coordinates.length >= 2 &&
                     coordinates[0] is num &&
-                    coordinates[1] is num)
+                    coordinates[1] is num) {
                   centerPoint = LatLng(
                       coordinates[1].toDouble(), coordinates[0].toDouble());
+                }
               } else if (type == 'Polygon') {
                 if (coordinates is List &&
                     coordinates.isNotEmpty &&
@@ -228,9 +236,10 @@ class _MapScreenState extends State<MapScreen> {
                         pointCount++;
                       }
                     }
-                    if (pointCount > 0)
+                    if (pointCount > 0) {
                       centerPoint =
                           LatLng(totalLat / pointCount, totalLng / pointCount);
+                    }
                   }
                 }
               } else if (type == 'LineString') {
@@ -247,21 +256,23 @@ class _MapScreenState extends State<MapScreen> {
                       pointCount++;
                     }
                   }
-                  if (pointCount > 0)
+                  if (pointCount > 0) {
                     centerPoint =
                         LatLng(totalLat / pointCount, totalLng / pointCount);
+                  }
                 }
               }
             } catch (e) {
               print(
                   "Fehler bei Centroid-Berechnung für Feature $featureId: $e");
             }
-            if (centerPoint != null)
+            if (centerPoint != null) {
               tempSearchableFeatures.add(SearchableFeature(
                   id: featureId,
                   name: featureName,
                   type: featureType,
                   center: centerPoint));
+            }
           }
           // --- Kartenlayer-Teil ---
           if (coordinates is List) {
@@ -272,7 +283,7 @@ class _MapScreenState extends State<MapScreen> {
                       .map((coord) =>
                           LatLng(coord[1].toDouble(), coord[0].toDouble()))
                       .toList();
-                  if (points.isNotEmpty)
+                  if (points.isNotEmpty) {
                     tempPolygons.add(Polygon(
                         points: points,
                         color: _getColorFromProperties(
@@ -282,13 +293,14 @@ class _MapScreenState extends State<MapScreen> {
                         borderStrokeWidth:
                             (properties['amenity'] == 'parking') ? 1.0 : 1.5,
                         isFilled: true));
+                  }
                 }
               } else if (type == 'LineString') {
                 final List<LatLng> points = coordinates
                     .map((coord) =>
                         LatLng(coord[1].toDouble(), coord[0].toDouble()))
                     .toList();
-                if (points.length >= 2)
+                if (points.length >= 2) {
                   tempPolylines.add(Polyline(
                       points: points,
                       color:
@@ -298,6 +310,7 @@ class _MapScreenState extends State<MapScreen> {
                               properties['highway'] == 'platform')
                           ? 2.0
                           : 3.0));
+                }
               } else if (type == 'Point') {
                 if (coordinates.length >= 2 &&
                     coordinates[0] is num &&
@@ -305,10 +318,10 @@ class _MapScreenState extends State<MapScreen> {
                   final pointLatLng = LatLng(
                       coordinates[1].toDouble(), coordinates[0].toDouble());
                   Icon? markerIcon;
-                  if (properties['highway'] == 'bus_stop')
+                  if (properties['highway'] == 'bus_stop') {
                     markerIcon = const Icon(Icons.directions_bus,
                         color: Colors.indigo, size: 24.0);
-                  else if (properties['barrier'] == 'gate')
+                  } else if (properties['barrier'] == 'gate')
                     markerIcon = Icon(Icons.fence,
                         color: Colors.brown.shade700, size: 20.0);
                   if (markerIcon != null) {
@@ -335,13 +348,14 @@ class _MapScreenState extends State<MapScreen> {
     }
     print(
         "Parsing beendet: ${tempPolygons.length} Polygone, ${tempPolylines.length} Polylinien, ${tempPoiMarkers.length} POI-Marker, ${tempSearchableFeatures.length} durchsuchbare Features gefunden.");
-    if (mounted)
+    if (mounted) {
       setState(() {
         _polygons = tempPolygons;
         _polylines = tempPolylines;
         _poiMarkers = tempPoiMarkers;
         _searchableFeatures = tempSearchableFeatures;
       });
+    }
   }
 
   // Marker Tap & Details Sheet (unverändert)
@@ -363,13 +377,14 @@ class _MapScreenState extends State<MapScreen> {
           !key.startsWith('ref:') &&
           value != null &&
           value.toString().isNotEmpty &&
-          key != 'name')
+          key != 'name') {
         details.add(ListTile(
             dense: true,
             visualDensity: VisualDensity.compact,
             title:
                 Text(key, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(value.toString())));
+      }
     });
     showModalBottomSheet(
         context: context,
@@ -407,11 +422,13 @@ class _MapScreenState extends State<MapScreen> {
       Map<String, dynamic> properties, Color defaultColor,
       {bool border = false}) {
     /* ... unverändert ... */
-    if (properties['amenity'] == 'parking')
+    if (properties['amenity'] == 'parking') {
       return border ? Colors.grey.shade600 : Colors.grey.withOpacity(0.4);
+    }
     if (properties['building'] != null) {
-      if (properties['building'] == 'construction')
+      if (properties['building'] == 'construction') {
         return border ? Colors.orangeAccent : Colors.orange.withOpacity(0.3);
+      }
       return border ? Colors.blueGrey : Colors.blueGrey.withOpacity(0.3);
     }
     if (properties['highway'] != null) {
@@ -450,9 +467,9 @@ class _MapScreenState extends State<MapScreen> {
   AppBar _buildSearchAppBar() {
     // Hol die Farben vom aktuellen Theme
     final ThemeData theme = Theme.of(context);
-    final Color? foregroundColor =
+    final Color foregroundColor =
         theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary;
-    final Color? hintColor = theme.hintColor;
+    final Color hintColor = theme.hintColor;
 
     return AppBar(
       leading: IconButton(
@@ -617,8 +634,9 @@ class _MapScreenState extends State<MapScreen> {
                 right: 20,
                 child: FloatingActionButton(
                     onPressed: () {
-                      if (_currentLatLng != null)
+                      if (_currentLatLng != null) {
                         _mapController.move(_currentLatLng!, 17.0);
+                      }
                     },
                     tooltip: 'Auf meine Position zentrieren',
                     child: const Icon(Icons.my_location))),
