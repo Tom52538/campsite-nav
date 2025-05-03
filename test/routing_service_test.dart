@@ -1,8 +1,8 @@
-// test/routing_service_test.dart
+// test/routing_service_test.dart (Bereinigt - ohne unused import)
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:camping_osm_navi/models/graph_node.dart';
+// import 'package:camping_osm_navi/models/graph_node.dart'; // Entfernt, da nicht direkt genutzt
 // import 'package:camping_osm_navi/models/graph_edge.dart'; // Nicht direkt benötigt für diesen Test
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
