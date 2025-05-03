@@ -1,4 +1,4 @@
-// lib/main.dart (Mit allem bisherigen UND Mock-Location-Toggle)
+// lib/main.dart (Mit allem bisherigen UND Mock-Toggle oben links)
 
 import 'dart:async';
 import 'dart:convert';
@@ -45,11 +45,9 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  // --- NEUER STATE ---
-  bool _useMockLocation = true; // Standardmäßig Mock-Position verwenden
-  final LatLng mockStartPosition =
-      const LatLng(51.024370, 5.861582); // Feste Mock-Position
-  // -----------------
+  // State für Mock-Location
+  bool _useMockLocation = true;
+  final LatLng mockStartPosition = const LatLng(51.024370, 5.861582);
 
   // Bestehende States
   LatLng? _currentLatLng;
@@ -92,7 +90,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // _initializeLocation, _loadAndParseGeoJson, _parseGeoJsonForDisplay (unverändert)
   Future<void> _initializeLocation() async {
-    /* ... wie in Schritt 12 ... */ setState(() {
+    /* ... wie in Schritt 13 ... */ setState(() {
       _locationLoading = true;
       _locationError = null;
     });
@@ -135,7 +133,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadAndParseGeoJson() async {
-    /* ... wie in Schritt 12 ... */ if (kDebugMode)
+    /* ... wie in Schritt 13 ... */ if (kDebugMode)
       print("Versuche GeoJSON zu laden...");
     setState(() {
       _geoJsonLoading = true;
@@ -172,7 +170,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _parseGeoJsonForDisplay(Map<String, dynamic> geoJsonData) {
-    /* ... wie in Schritt 12 ... */ if (kDebugMode)
+    /* ... wie in Schritt 13 ... */ if (kDebugMode)
       print("Beginne Display-Parsing...");
     final List<Polygon> tempPolygons = [];
     final List<Polyline> tempPolylines = [];
@@ -366,12 +364,12 @@ class _MapScreenState extends State<MapScreen> {
 
   // _handleMarkerTap, _showFeatureDetails, _getColorFromProperties, _onSearchChanged, _buildSearchAppBar, _buildNormalAppBar, _getIconForFeatureType (unverändert)
   void _handleMarkerTap(Map<String, dynamic> properties) {
-    /* ... wie in Schritt 12 ... */ _showFeatureDetails(context, properties);
+    /* ... wie in Schritt 13 ... */ _showFeatureDetails(context, properties);
   }
 
   void _showFeatureDetails(
       BuildContext context, Map<String, dynamic> properties) {
-    /* ... wie in Schritt 12 ... */ final List<Widget> details = [];
+    /* ... wie in Schritt 13 ... */ final List<Widget> details = [];
     if (properties['name'] != null) {
       details.add(Text(properties['name'].toString(),
           style: Theme.of(context).textTheme.headlineSmall));
@@ -421,7 +419,7 @@ class _MapScreenState extends State<MapScreen> {
   Color _getColorFromProperties(
       Map<String, dynamic> properties, Color defaultColor,
       {bool border = false}) {
-    /* ... wie in Schritt 12 ... */ if (properties['amenity'] == 'parking')
+    /* ... wie in Schritt 13 ... */ if (properties['amenity'] == 'parking')
       return border
           ? Colors.grey.shade600
           : Colors.grey.withAlpha((0.4 * 255).round());
@@ -446,7 +444,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _onSearchChanged() {
-    /* ... wie in Schritt 12 ... */ String query =
+    /* ... wie in Schritt 13 ... */ String query =
         _searchController.text.toLowerCase().trim();
     if (query.isEmpty) {
       if (_searchResults.isNotEmpty) setState(() => _searchResults = []);
@@ -459,7 +457,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   AppBar _buildSearchAppBar() {
-    /* ... wie in Schritt 12 ... */ final ThemeData theme = Theme.of(context);
+    /* ... wie in Schritt 13 ... */ final ThemeData theme = Theme.of(context);
     final Color foregroundColor =
         theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary;
     final Color? hintColor = theme.hintColor;
@@ -498,7 +496,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   AppBar _buildNormalAppBar() {
-    /* ... wie in Schritt 12 ... */ return AppBar(
+    /* ... wie in Schritt 13 ... */ return AppBar(
       title: const Text('Campground Navi'),
       actions: [
         IconButton(
@@ -515,7 +513,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   IconData _getIconForFeatureType(String type) {
-    /* ... wie in Schritt 12 ... */ switch (type) {
+    /* ... wie in Schritt 13 ... */ switch (type) {
       case 'Building':
         return Icons.business;
       case 'Parking':
@@ -553,14 +551,10 @@ class _MapScreenState extends State<MapScreen> {
         duration: Duration(seconds: 2)));
   }
 
-  // --- NEUE METHODE ZUM UMSCHALTEN DES MOCK-MODUS ---
   void _toggleMockLocation() {
-    setState(() {
-      _useMockLocation = !_useMockLocation;
-    });
-    if (kDebugMode) {
-      print("Mock location usage toggled: $_useMockLocation");
-    }
+    // Unverändert
+    setState(() => _useMockLocation = !_useMockLocation);
+    if (kDebugMode) print("Mock location usage toggled: $_useMockLocation");
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(_useMockLocation
           ? "Startpunkt: Mock-Position (Sittard)"
@@ -569,9 +563,8 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: _useMockLocation ? Colors.orange : Colors.blue,
     ));
   }
-  // --- ENDE NEUE METHODE ---
 
-  // Build-Methode JETZT MIT Mock-Toggle-Button
+  // Build-Methode JETZT MIT geänderter Button-Positionierung
   @override
   Widget build(BuildContext context) {
     final bool isLoading = _locationLoading || _geoJsonLoading;
@@ -581,7 +574,7 @@ class _MapScreenState extends State<MapScreen> {
       appBar: _isSearching ? _buildSearchAppBar() : _buildNormalAppBar(),
       body: Stack(
         children: [
-          // Kartenanzeige (wie in Schritt 12)
+          // Kartenanzeige (wie in Schritt 13)
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : errorMessage != null
@@ -653,7 +646,7 @@ class _MapScreenState extends State<MapScreen> {
                       ],
                     ),
 
-          // Suchergebnisliste (wie in Schritt 12)
+          // Suchergebnisliste (wie in Schritt 13)
           if (_isSearching && _searchResults.isNotEmpty)
             Positioned(
               top: 0,
@@ -697,49 +690,42 @@ class _MapScreenState extends State<MapScreen> {
                   )),
             ),
 
-          // --- UI ELEMENTE UNTEN ---
-          Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Row(
-              // Row, um Buttons nebeneinander zu platzieren
-              mainAxisAlignment: MainAxisAlignment
-                  .spaceBetween, // Buttons an die Enden schieben
-              children: [
-                // --- NEU: Mock Location Toggle Button ---
-                FloatingActionButton(
-                  onPressed: _toggleMockLocation,
-                  tooltip: 'Toggle Mock Location',
-                  backgroundColor: _useMockLocation
-                      ? Colors.orangeAccent
-                      : Colors.lightBlueAccent,
-                  mini: true, // Kleiner Button
-                  child: Icon(
-                    _useMockLocation
-                        ? Icons.location_off
-                        : Icons.location_on, // Icon wechselt
-                    color: Colors.white,
-                  ),
-                ),
-                // --- Ende Mock Location Toggle Button ---
+          // --- GEÄNDERT: Positionierung der unteren Buttons ---
+          // Zentrierungsbutton unten rechts (unverändert)
+          if (_currentLatLng != null)
+            Positioned(
+                bottom: 20,
+                right: 20,
+                child: FloatingActionButton(
+                    onPressed: () {
+                      if (_currentLatLng != null)
+                        _mapController.move(_currentLatLng!, 17.0);
+                    },
+                    tooltip: 'Auf meine Position zentrieren',
+                    child: const Icon(Icons.my_location))),
 
-                // --- Bestehender Zentrierungsbutton ---
-                // Wird nur angezeigt, wenn echter Standort vorhanden ist (macht Sinn)
-                if (_currentLatLng != null)
-                  FloatingActionButton(
-                      onPressed: () {
-                        if (_currentLatLng != null)
-                          _mapController.move(_currentLatLng!, 17.0);
-                      },
-                      tooltip: 'Auf meine Position zentrieren',
-                      child: const Icon(Icons.my_location)),
-                // --- Ende Zentrierungsbutton ---
-              ],
+          // Mock Location Toggle Button oben links
+          Positioned(
+            top: 80, // Abstand von oben (unter der AppBar)
+            left: 20, // Abstand von links
+            child: FloatingActionButton(
+              onPressed: _toggleMockLocation,
+              tooltip: 'Toggle Mock Location',
+              backgroundColor: _useMockLocation
+                  ? Colors.orangeAccent
+                  : Colors.lightBlueAccent,
+              mini: true, // Kleiner Button
+              child: Icon(
+                _useMockLocation
+                    ? Icons.location_off
+                    : Icons.location_on, // Icon wechselt
+                color: Colors.white,
+              ),
             ),
           ),
+          // --- ENDE GEÄNDERT ---
 
-          // Ladeindikator (wie in Schritt 12)
+          // Ladeindikator (wie in Schritt 13)
           if (_isCalculatingRoute)
             Positioned.fill(
               child: Container(
@@ -751,7 +737,7 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
 
-          // Löschen-Button (Position wie in Schritt 12)
+          // Löschen-Button (Position wie in Schritt 12 - top: 80, right: 20)
           if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
             Positioned(
               top: 80,
@@ -769,59 +755,41 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Methode für Routenberechnung JETZT MIT Berücksichtigung von _useMockLocation
+  // Methode für Routenberechnung (unverändert zu Schritt 13)
   Future<void> _calculateAndDisplayRoute({required LatLng destination}) async {
     if (!mounted) return;
-
-    // --- Startpunkt bestimmen: Mock oder Real? ---
-    LatLng?
-        startLatLng; // Kann null sein, wenn realer Standort benötigt wird aber fehlt
+    LatLng? startLatLng;
     if (_useMockLocation) {
-      startLatLng = mockStartPosition; // Immer die Mock-Position verwenden
+      startLatLng = mockStartPosition;
     } else {
-      startLatLng =
-          _currentLatLng; // Versuche, den echten Standort zu verwenden
+      startLatLng = _currentLatLng;
     }
-
-    // --- Prüfen, ob der benötigte Startpunkt verfügbar ist ---
     if (startLatLng == null) {
-      // Dies tritt nur auf, wenn _useMockLocation false ist UND _currentLatLng null ist
       if (kDebugMode)
         print("Echter GPS-Standort benötigt, aber nicht verfügbar.");
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Echter GPS-Standort nicht verfügbar."),
-        backgroundColor: Colors.orange,
-      ));
-      return; // Abbruch, da kein Startpunkt vorhanden
+          content: Text("Echter GPS-Standort nicht verfügbar."),
+          backgroundColor: Colors.orange));
+      return;
     }
-
-    // --- Prüfen, ob Routing-Daten geladen sind ---
     if (_routingGraph == null || _routingGraph!.nodes.isEmpty) {
       if (kDebugMode) print("Routing-Daten nicht geladen.");
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Routing-Daten nicht geladen."),
-        backgroundColor: Colors.orange,
-      ));
+          content: Text("Routing-Daten nicht geladen."),
+          backgroundColor: Colors.orange));
       return;
     }
-
-    // --- Berechnung starten ---
     setState(() {
       _isCalculatingRoute = true;
       _calculatedRoute = null;
     });
-
     List<LatLng>? path;
     try {
-      // Nächste Knoten für Start und Ziel finden
-      // WICHTIG: startLatLng ist hier garantiert nicht null!
       final GraphNode? startNode = _routingGraph!.findNearestNode(startLatLng);
       final GraphNode? endNode = _routingGraph!.findNearestNode(destination);
-
-      if (startNode == null || endNode == null) {
+      if (startNode == null || endNode == null)
         throw Exception(
             "Start- oder Endpunkt konnte keinem Weg zugeordnet werden.");
-      }
       if (startNode.id == endNode.id) {
         if (kDebugMode)
           print(
@@ -829,8 +797,6 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted) setState(() => _isCalculatingRoute = false);
         return;
       }
-
-      // Angepasste Debug-Ausgabe
       if (kDebugMode) {
         final startType = _useMockLocation
             ? "Mock-Position $startLatLng"
@@ -838,17 +804,10 @@ class _MapScreenState extends State<MapScreen> {
         print(
             ">>> Berechne Route von Knoten ${startNode.id} (ausgehend von $startType) zu Knoten ${endNode.id} (Ziel: $destination)");
       }
-
-      // Dijkstra ausführen
       _routingGraph!.resetAllNodeCosts();
       path = await RoutingService.findPath(_routingGraph!, startNode, endNode);
-
-      // Ergebnis verarbeiten (UI-Update)
       if (mounted) {
-        setState(() =>
-            _calculatedRoute = path); // Route setzen (kann auch null sein)
-
-        // Feedback
+        setState(() => _calculatedRoute = path);
         if (path == null || path.isEmpty) {
           if (kDebugMode) print("<<< Kein Pfad gefunden.");
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -872,7 +831,6 @@ class _MapScreenState extends State<MapScreen> {
             backgroundColor: Colors.red));
       }
     } finally {
-      // Ladezustand beenden
       if (mounted) {
         setState(() => _isCalculatingRoute = false);
       }
