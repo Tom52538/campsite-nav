@@ -86,14 +86,7 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  // --- Methoden (größtenteils unverändert zu deiner letzten Version/Schritt 8) ---
-  // _initializeLocation, _loadAndParseGeoJson, _parseGeoJsonForDisplay,
-  // _handleMarkerTap, _showFeatureDetails, _getColorFromProperties, _onSearchChanged,
-  // _buildSearchAppBar, _buildNormalAppBar, _getIconForFeatureType
-  // Kopiere diese Methoden aus deiner letzten funktionierenden main.dart hierher
-  // oder übernehme sie aus dem Code in Dokument 2 , falls du unsicher bist.
-
-  // Beispielhaft hier nur die Signaturen, damit nichts fehlt:
+  // --- Methoden (unverändert wie im Code aus Dokument 2) ---
   Future<void> _initializeLocation() async {
      setState(() {
       _locationLoading = true;
@@ -118,7 +111,6 @@ class _MapScreenState extends State<MapScreen> {
           .listen((Position position) {
         if (mounted)
           setState(() {
-            // Unterscheidung Mock/Real erst in späteren Schritten relevant für Anzeige
             _currentLatLng = LatLng(position.latitude, position.longitude);
             _locationLoading = false;
             _locationError = null;
@@ -133,16 +125,15 @@ class _MapScreenState extends State<MapScreen> {
             _locationLoading = false;
           });
       });
-      // Initialen Standort holen (falls Stream nicht sofort liefert)
        try {
            Position initialPosition = await Geolocator.getCurrentPosition(
              desiredAccuracy: LocationAccuracy.high,
-             timeLimit: const Duration(seconds: 5) // Timeout hinzufügen
+             timeLimit: const Duration(seconds: 5)
            );
-            if (mounted && _currentLatLng == null) { // Nur setzen, wenn Stream noch nichts geliefert hat
+            if (mounted && _currentLatLng == null) {
                  setState(() {
                     _currentLatLng = LatLng(initialPosition.latitude, initialPosition.longitude);
-                     _locationLoading = false; // Standort gefunden
+                     _locationLoading = false;
                      _locationError = null;
                       if (kDebugMode) {
                        print("Initial Position: $_currentLatLng");
@@ -150,18 +141,16 @@ class _MapScreenState extends State<MapScreen> {
                  });
             }
        } catch (e) {
-           if (mounted && _currentLatLng == null) { // Nur Fehler setzen, wenn weder Stream noch Initial erfolgreich
+           if (mounted && _currentLatLng == null) {
                setState(() {
                    _locationError = "Initialer Standort fehlgeschlagen: $e";
-                    _locationLoading = false; // Laden beendet, aber mit Fehler
+                    _locationLoading = false;
                 });
            }
             if (kDebugMode) {
              print("Error getting initial position: $e");
            }
        }
-
-
     } catch (e) {
       if (mounted)
         setState(() {
@@ -184,7 +173,7 @@ class _MapScreenState extends State<MapScreen> {
       _poiMarkers = [];
       _searchableFeatures = [];
       _routingGraph = null;
-       _calculatedRoute = null; // Route auch zurücksetzen beim Neuladen
+       _calculatedRoute = null;
     });
     try {
       const String assetPath = 'assets/export.geojson';
@@ -193,12 +182,10 @@ class _MapScreenState extends State<MapScreen> {
 
       if (decodedJson is Map<String, dynamic>) {
          if (kDebugMode) print("GeoJSON dekodiert, starte Parsing...");
-        _parseGeoJsonForDisplay(decodedJson); // Für Kartenanzeige
-        _routingGraph = GeojsonParserService.parseGeoJson(geoJsonString); // Für Routing-Graph
+        _parseGeoJsonForDisplay(decodedJson);
+        _routingGraph = GeojsonParserService.parseGeoJson(geoJsonString);
         if (kDebugMode) {
           print( "Routing Graph nach dem Parsen: Nodes=${_routingGraph?.nodes.length ?? 0}, Edges=${_routingGraph?.totalEdges ?? 0}");
-          // Optional: Mehr Debug-Infos zum Graphen
-          // _routingGraph?.printGraphSummary();
         }
       } else {
         throw Exception("GeoJSON-Struktur ungültig");
@@ -234,15 +221,12 @@ class _MapScreenState extends State<MapScreen> {
           final properties = Map<String, dynamic>.from(feature['properties'] ?? <String, dynamic>{});
           final type = geometry['type'];
           final coordinates = geometry['coordinates'];
-          final dynamic featureId = feature['id'] ?? properties['@id'] ?? DateTime.now().millisecondsSinceEpoch.toString(); // Sicherstellen, dass ID ein String ist
+          final dynamic featureId = feature['id'] ?? properties['@id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
 
-           // --- Durchsuchbare Features erstellen ---
            if (properties['name'] != null && properties['name'].isNotEmpty) {
              String featureName = properties['name'];
              String featureType = 'Unknown';
              LatLng? centerPoint;
-
-              // Typzuweisung (kann verfeinert werden)
              if (properties['building'] != null) featureType = 'Building';
              else if (properties['amenity'] == 'parking') featureType = 'Parking';
              else if (properties['highway'] == 'footway') featureType = 'Footway';
@@ -255,15 +239,12 @@ class _MapScreenState extends State<MapScreen> {
              else if (properties['highway'] == 'unclassified') featureType = 'Unclassified Road';
              else if (type == 'Point') featureType = 'Point of Interest';
 
-
-             // Mittelpunkt berechnen (vereinfacht)
              try {
                if (type == 'Point') {
                  if (coordinates is List && coordinates.length >= 2 && coordinates[0] is num && coordinates[1] is num) {
                    centerPoint = LatLng(coordinates[1].toDouble(), coordinates[0].toDouble());
                  }
                } else if (type == 'Polygon') {
-                 // Vereinfachte Mittelpunktberechnung für Polygone
                   if (coordinates is List && coordinates.isNotEmpty && coordinates[0] is List) {
                      final List polygonPoints = coordinates[0];
                      if (polygonPoints.isNotEmpty) {
@@ -282,7 +263,6 @@ class _MapScreenState extends State<MapScreen> {
                      }
                  }
                } else if (type == 'LineString') {
-                 // Vereinfachte Mittelpunktberechnung für Linien
                  if (coordinates is List && coordinates.isNotEmpty) {
                      double totalLat = 0, totalLng = 0;
                      int pointCount = 0;
@@ -304,7 +284,7 @@ class _MapScreenState extends State<MapScreen> {
 
               if (centerPoint != null) {
                  tempSearchableFeatures.add(SearchableFeature(
-                   id: featureId.toString(), // ID als String
+                   id: featureId.toString(),
                    name: featureName,
                    type: featureType,
                    center: centerPoint
@@ -312,22 +292,19 @@ class _MapScreenState extends State<MapScreen> {
              }
           }
 
-          // --- Kartenlayer erstellen ---
           if (coordinates is List) {
             try {
               if (type == 'Polygon') {
                  if (coordinates.isNotEmpty && coordinates[0] is List) {
-                   // Polygonpunkte extrahieren
                    final List<LatLng> points = (coordinates[0] as List).map((coord) {
-                     // Fehlerprüfung für Koordinatenformat
                      if (coord is List && coord.length >= 2 && coord[0] is num && coord[1] is num) {
                        return LatLng(coord[1].toDouble(), coord[0].toDouble());
                      }
                      if (kDebugMode) print("Ungültiges Koordinatenformat in Polygon gefunden: $coord");
-                     return null; // Ungültige Punkte überspringen
-                   }).where((p) => p != null).cast<LatLng>().toList(); // Null-Werte entfernen
+                     return null;
+                   }).where((p) => p != null).cast<LatLng>().toList();
 
-                    if (points.length >= 3) { // Ein Polygon braucht mind. 3 Punkte
+                    if (points.length >= 3) {
                          tempPolygons.add(Polygon(
                              points: points,
                              color: _getColorFromProperties(properties, Colors.grey.withAlpha((0.2 * 255).round())),
@@ -340,7 +317,6 @@ class _MapScreenState extends State<MapScreen> {
                      }
                  }
               } else if (type == 'LineString') {
-                 // Linienpunkte extrahieren
                    final List<LatLng> points = coordinates.map((coord) {
                      if (coord is List && coord.length >= 2 && coord[0] is num && coord[1] is num) {
                        return LatLng(coord[1].toDouble(), coord[0].toDouble());
@@ -349,7 +325,7 @@ class _MapScreenState extends State<MapScreen> {
                       return null;
                    }).where((p) => p != null).cast<LatLng>().toList();
 
-                  if (points.length >= 2) { // Eine Linie braucht mind. 2 Punkte
+                  if (points.length >= 2) {
                      tempPolylines.add(Polyline(
                          points: points,
                          color: _getColorFromProperties(properties, Colors.black54),
@@ -362,23 +338,19 @@ class _MapScreenState extends State<MapScreen> {
                  if (coordinates.length >= 2 && coordinates[0] is num && coordinates[1] is num) {
                      final pointLatLng = LatLng(coordinates[1].toDouble(), coordinates[0].toDouble());
                      Icon? markerIcon;
-                     // POI-Marker hinzufügen (nur für bestimmte Typen)
                      if (properties['highway'] == 'bus_stop' || properties['amenity'] == 'bus_station') {
                          markerIcon = const Icon(Icons.directions_bus, color: Colors.indigo, size: 24.0);
                      } else if (properties['barrier'] == 'gate') {
                          markerIcon = Icon(Icons.fence, color: Colors.brown.shade700, size: 20.0);
                      }
-                     // Hier könnten weitere POI-Typen hinzugefügt werden
-
                       if (markerIcon != null) {
-                         // Klickbar machen und Details anzeigen
                          final markerWidget = GestureDetector(
                            onTap: () => _handleMarkerTap(properties),
                            child: markerIcon,
                          );
                          tempPoiMarkers.add(Marker(
                            point: pointLatLng,
-                           width: 30.0, // Größe des anklickbaren Bereichs
+                           width: 30.0,
                            height: 30.0,
                            child: markerWidget,
                          ));
@@ -403,7 +375,6 @@ class _MapScreenState extends State<MapScreen> {
 
     if (kDebugMode) print("Display-Parsing beendet: ${tempPolygons.length} Polygone, ${tempPolylines.length} Polylinien, ${tempPoiMarkers.length} POI-Marker, ${tempSearchableFeatures.length} durchsuchbare Features gefunden.");
 
-     // Sicherstellen, dass setState nur aufgerufen wird, wenn das Widget noch gemountet ist
      if (mounted) {
          setState(() {
              _polygons = tempPolygons;
@@ -422,14 +393,11 @@ class _MapScreenState extends State<MapScreen> {
 
   void _showFeatureDetails( BuildContext context, Map<String, dynamic> properties) {
      final List<Widget> details = [];
-      // Titel hinzufügen, falls vorhanden
      if (properties['name'] != null) {
          details.add(Text(properties['name'].toString(), style: Theme.of(context).textTheme.headlineSmall));
          details.add(const SizedBox(height: 8));
      }
-      // Andere relevante Tags hinzufügen
      properties.forEach((key, value) {
-         // Filtern uninteressanter oder bereits angezeigter Tags
          if (!key.startsWith('@') && !key.startsWith('ref:') && value != null && value.toString().isNotEmpty && key != 'name') {
              details.add(ListTile(
                  dense: true,
@@ -442,25 +410,25 @@ class _MapScreenState extends State<MapScreen> {
 
      showModalBottomSheet(
          context: context,
-         isScrollControlled: true, // Wichtig für variable Höhe
+         isScrollControlled: true,
          shape: const RoundedRectangleBorder(
              borderRadius: BorderRadius.vertical(top: Radius.circular(16.0))
          ),
          builder: (builderContext) => ConstrainedBox(
              constraints: BoxConstraints(
-                 maxHeight: MediaQuery.of(context).size.height * 0.6 // Maximal 60% der Bildschirmhöhe
+                 maxHeight: MediaQuery.of(context).size.height * 0.6
              ),
              child: Padding(
                  padding: const EdgeInsets.all(16.0),
                  child: Column(
-                     mainAxisSize: MainAxisSize.min, // Nimmt nur benötigte Höhe
+                     mainAxisSize: MainAxisSize.min,
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
-                         Expanded( // Lässt die Liste scrollen, wenn sie zu lang wird
+                         Expanded(
                              child: details.isEmpty
                                  ? const Center(child: Text("Keine Details verfügbar."))
                                  : ListView(
-                                     shrinkWrap: true, // Passt sich dem Inhalt an
+                                     shrinkWrap: true,
                                      children: details
                                  )
                          ),
@@ -480,19 +448,16 @@ class _MapScreenState extends State<MapScreen> {
    }
 
   Color _getColorFromProperties( Map<String, dynamic> properties, Color defaultColor, {bool border = false}) {
-     // Farben basierend auf OSM Tags anpassen
       if (properties['amenity'] == 'parking') {
          return border ? Colors.grey.shade600 : Colors.grey.withAlpha((0.4 * 255).round());
      }
      if (properties['building'] != null) {
-         // Unterscheidung nach Gebäudeart (optional)
          if (properties['building'] == 'warehouse') {
               return border ? Colors.brown.shade700 : Colors.brown.withAlpha((0.3 * 255).round());
          }
          if (properties['building'] == 'construction') {
              return border ? Colors.orangeAccent : Colors.orange.withAlpha((0.3 * 255).round());
          }
-         // Standardgebäude
          return border ? Colors.blueGrey : Colors.blueGrey.withAlpha((0.3 * 255).round());
      }
      if (properties['highway'] != null) {
@@ -500,22 +465,21 @@ class _MapScreenState extends State<MapScreen> {
              case 'footway':
              case 'path':
              case 'steps':
-                 return Colors.lime.shade900; // Grünlich für Fußwege
+                 return Colors.lime.shade900;
              case 'cycleway':
-                 return Colors.deepPurpleAccent; // Lila für Radwege
+                 return Colors.deepPurpleAccent;
              case 'service':
-                 return Colors.grey.shade700; // Dunkelgrau für Service-Wege
+                 return Colors.grey.shade700;
              case 'platform':
-                 return Colors.lightBlueAccent; // Hellblau für Plattformen
+                 return Colors.lightBlueAccent;
              case 'tertiary':
              case 'unclassified':
-             case 'residential': // ggf. auch Straßen einzeichnen
-                 return Colors.black87; // Schwarz/Dunkelgrau für Straßen
+             case 'residential':
+                 return Colors.black87;
              default:
-                 return defaultColor; // Fallback für andere highway-Typen
+                 return defaultColor;
          }
      }
-     // Weitere Typen hier hinzufügen (z.B. landuse, natural, etc.)
       if (properties['landuse'] == 'grass') {
           return border ? Colors.green.shade800 : Colors.green.withAlpha((0.2 * 255).round());
      }
@@ -523,7 +487,7 @@ class _MapScreenState extends State<MapScreen> {
          return border ? Colors.blue.shade800 : Colors.blue.withAlpha((0.4 * 255).round());
      }
 
-      return defaultColor; // Standardfarbe, wenn kein passendes Tag gefunden wurde
+      return defaultColor;
    }
 
   void _onSearchChanged() {
@@ -534,20 +498,16 @@ class _MapScreenState extends State<MapScreen> {
        }
        return;
      }
-     // Filtern der Features basierend auf der Suchanfrage
      List<SearchableFeature> filteredResults = _searchableFeatures
          .where((feature) => feature.name.toLowerCase().contains(query))
          .toList();
-     // Optional: Nach Relevanz sortieren (z.B. exakte Treffer zuerst)
-     // filteredResults.sort((a, b) => a.name.toLowerCase().startsWith(query) ? -1 : 1);
-
       setState(() => _searchResults = filteredResults);
    }
 
   AppBar _buildSearchAppBar() {
      final ThemeData theme = Theme.of(context);
      final Color foregroundColor = theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary;
-     final Color? hintColor = theme.hintColor.withOpacity(0.6); // Etwas transparenter
+     final Color? hintColor = theme.hintColor?.withOpacity(0.6);
 
       return AppBar(
        leading: IconButton(
@@ -555,8 +515,8 @@ class _MapScreenState extends State<MapScreen> {
          tooltip: 'Suche verlassen',
          onPressed: () => setState(() {
            _isSearching = false;
-           _searchController.clear(); // Löscht Text und damit Ergebnisse
-           _searchFocusNode.unfocus(); // Schließt Tastatur
+           _searchController.clear();
+           _searchFocusNode.unfocus();
          }),
        ),
        title: TextField(
@@ -565,19 +525,18 @@ class _MapScreenState extends State<MapScreen> {
          autofocus: true,
          decoration: InputDecoration(
            hintText: 'Ort suchen...',
-           border: InputBorder.none, // Kein Rand innerhalb der AppBar
+           border: InputBorder.none,
            hintStyle: TextStyle(color: hintColor),
          ),
-         style: TextStyle(color: foregroundColor, fontSize: 18), // Passende Textfarbe und Größe
+         style: TextStyle(color: foregroundColor, fontSize: 18),
          cursorColor: foregroundColor,
        ),
        actions: [
-         // "Löschen"-Button nur anzeigen, wenn Text im Feld ist
          if (_searchController.text.isNotEmpty)
            IconButton(
              icon: Icon(Icons.clear, color: foregroundColor),
              tooltip: 'Suche löschen',
-             onPressed: () => _searchController.clear(), // Controller leeren -> löst _onSearchChanged aus
+             onPressed: () => _searchController.clear(),
            ),
        ],
      );
@@ -592,9 +551,8 @@ class _MapScreenState extends State<MapScreen> {
           tooltip: 'Suche öffnen',
           onPressed: () {
             setState(() => _isSearching = true);
-             // Fokus auf Suchfeld setzen, nachdem es aufgebaut wurde
             Future.delayed(const Duration(milliseconds: 100), () {
-                 if (mounted) { // Sicherstellen, dass das Widget noch existiert
+                 if (mounted) {
                      FocusScope.of(context).requestFocus(_searchFocusNode);
                  }
             });
@@ -605,7 +563,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   IconData _getIconForFeatureType(String type) {
-    // Icons für verschiedene Feature-Typen zurückgeben
     switch (type) {
         case 'Building': return Icons.business;
         case 'Parking': return Icons.local_parking;
@@ -613,12 +570,12 @@ class _MapScreenState extends State<MapScreen> {
         case 'Bus Stop': return Icons.directions_bus;
         case 'Footway': return Icons.directions_walk;
         case 'Cycleway': return Icons.directions_bike;
-        case 'Service Road': return Icons.minor_crash_outlined; // Oder anderes passendes Icon
+        case 'Service Road': return Icons.minor_crash_outlined;
         case 'Platform': return Icons.train;
         case 'Tertiary Road': return Icons.traffic;
         case 'Unclassified Road': return Icons.edit_road;
-        case 'Point of Interest': return Icons.place; // Generisches POI Icon
-        default: return Icons.location_pin; // Fallback
+        case 'Point of Interest': return Icons.place;
+        default: return Icons.location_pin;
      }
    }
 
@@ -627,10 +584,7 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     final bool isLoading = _locationLoading || _geoJsonLoading;
     final String? errorMessage = _locationError ?? _geoJsonError;
-
-    // Verwende den Mock-Standort für die initiale Kartenansicht, wenn aktiv
-    // Oder den echten Standort, falls verfügbar, sonst einen Fallback
-    final LatLng initialMapCenter = const LatLng(51.024370, 5.861582); // Collé Sittard
+    final LatLng initialMapCenter = const LatLng(51.024370, 5.861582);
 
     return Scaffold(
       appBar: _isSearching ? _buildSearchAppBar() : _buildNormalAppBar(),
@@ -647,13 +601,12 @@ class _MapScreenState extends State<MapScreen> {
                   : FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        initialCenter: initialMapCenter, // Dynamisch oder statisch setzen
+                        initialCenter: initialMapCenter,
                         initialZoom: 17.0,
-                        minZoom: 15.0, // Verhindert zu weites Rauszoomen
-                        maxZoom: 19.0, // Verhindert zu starkes Reinzoomen
-                        // onTap löst Routenberechnung aus
+                        minZoom: 15.0,
+                        maxZoom: 19.0,
                         onTap: (tapPosition, point) {
-                          if (_isSearching) { // Suche schließen bei Kartentap
+                          if (_isSearching) {
                             setState(() {
                                 _isSearching = false;
                                 _searchController.clear();
@@ -665,24 +618,13 @@ class _MapScreenState extends State<MapScreen> {
                         },
                       ),
                       children: [
-                        // Basiskarte (OpenStreetMap Kacheln)
                         TileLayer(
                           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'com.example.camping_osm_navi',
-                          // Optional: Ladeindikator für Kacheln
-                          // tileBuilder: (context, tileWidget, tile) {
-                          //   if (tile.loading) {
-                          //     return Center(child: CircularProgressIndicator());
-                          //   }
-                          //   return tileWidget;
-                          // },
                         ),
 
-                        // Layer für Polygone (Gebäude, Parkplätze etc.)
-                         if (_polygons.isNotEmpty) PolygonLayer(polygons: _polygons),
-
-                        // Layer für Polylinien (Wege, Straßen etc. aus GeoJSON)
-                        if (_polylines.isNotEmpty) PolylineLayer(polylines: _polylines),
+                        if (_polygons.isNotEmpty) PolygonLayer(polygons: _polygons),
+                        if (_polylines.isNotEmpty) PolylineLayer(polylines: _polylines), // Wege etc. aus GeoJSON
 
                         // --- NEU: Layer für die berechnete Route ---
                         if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
@@ -690,9 +632,9 @@ class _MapScreenState extends State<MapScreen> {
                             polylines: [
                               Polyline(
                                 points: _calculatedRoute!,
-                                color: Colors.blueAccent.withOpacity(0.8), // Leicht transparent
+                                color: Colors.blueAccent.withOpacity(0.8), // Blau für die Route
                                 strokeWidth: 5.0,      // Dicke Linie
-                                isDotted: false,        // Durchgezogene Linie
+                                isDotted: false,
                                 strokeCap: StrokeCap.round, // Runde Enden
                                 strokeJoin: StrokeJoin.round, // Runde Verbindungen
                               ),
@@ -700,58 +642,48 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         // --- Ende Neuer Layer ---
 
-                         // Layer für POI Marker (Bushaltestellen etc.)
-                         if (_poiMarkers.isNotEmpty) MarkerLayer(markers: _poiMarkers),
+                         if (_poiMarkers.isNotEmpty) MarkerLayer(markers: _poiMarkers), // POIs
 
-                        // Layer für die aktuelle Nutzerposition
-                         if (_currentLatLng != null)
+                         if (_currentLatLng != null) // Aktuelle Position
                            MarkerLayer(markers: [
                              Marker(
                                point: _currentLatLng!,
-                               width: 40, // Größe des Markers
+                               width: 40,
                                height: 40,
                                child: const Icon(Icons.location_pin, color: Colors.redAccent, size: 40.0)
-                               // Optional: Richtungsanzeiger (Kompass)
-                               // rotate: true, // Marker mit Karte drehen
-                               // child: Transform.rotate(
-                               //   angle: _currentHeading ?? 0.0, // Benötigt Kompassdaten
-                               //   child: Icon(Icons.navigation, color: Colors.blue, size: 30.0),
-                               // ),
                              )
                            ]),
 
-                         // Optional: Start-/Endpunkte der Route hervorheben
-                         if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
+                         if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty) // Start-/Endpunkte
                              MarkerLayer(markers: [
-                                 Marker( // Startpunkt
+                                 Marker(
                                      point: _calculatedRoute!.first, width: 30, height: 30,
                                      child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 30), ),
-                                 Marker( // Endpunkt
+                                 Marker(
                                      point: _calculatedRoute!.last, width: 30, height: 30,
                                      child: const Icon(Icons.flag, color: Colors.red, size: 30), )
                              ]),
                       ],
                     ),
 
-          // Suchergebnisliste (über der Karte)
+          // Suchergebnisliste
            if (_isSearching && _searchResults.isNotEmpty)
              Positioned(
-               top: 0, // Direkt unter der AppBar
+               top: 0,
                left: 10,
                right: 10,
                child: Card(
                  elevation: 4.0,
                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
                  child: Container(
-                   // Begrenzte Höhe, um nicht die ganze Karte zu verdecken
                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
                    child: ListView.builder(
-                     shrinkWrap: true, // Passt sich der Anzahl der Ergebnisse an
+                     shrinkWrap: true,
                      itemCount: _searchResults.length,
                      itemBuilder: (context, index) {
                        final feature = _searchResults[index];
                        return ListTile(
-                         dense: true, // Kompakteres Layout
+                         dense: true,
                          leading: Icon(_getIconForFeatureType(feature.type), size: 20),
                          title: Text(feature.name),
                          subtitle: Text(feature.type),
@@ -759,13 +691,10 @@ class _MapScreenState extends State<MapScreen> {
                             if (kDebugMode) {
                                 print('Tapped on search result: ${feature.name}. Triggering route calculation.');
                             }
-                            // Karte auf Feature zentrieren
-                            _mapController.move(feature.center, 18.0); // Zoom-Stufe anpassen
-                            // Suche schließen und Route berechnen
+                            _mapController.move(feature.center, 18.0);
                             setState(() {
                                _isSearching = false;
                                _searchController.clear();
-                               // _searchResults = []; // Nicht löschen, damit Liste verschwindet
                                _searchFocusNode.unfocus();
                             });
                             _calculateAndDisplayRoute(destination: feature.center);
@@ -777,7 +706,7 @@ class _MapScreenState extends State<MapScreen> {
                ),
              ),
 
-          // Floating Action Button zum Zentrieren (unten rechts)
+          // Zentrierungsbutton
           if (_currentLatLng != null)
             Positioned(
               bottom: 20,
@@ -785,7 +714,7 @@ class _MapScreenState extends State<MapScreen> {
               child: FloatingActionButton(
                 onPressed: () {
                   if (_currentLatLng != null) {
-                     _mapController.move(_currentLatLng!, 17.0); // Auf aktuelle Position zoomen
+                     _mapController.move(_currentLatLng!, 17.0);
                   }
                 },
                 tooltip: 'Auf meine Position zentrieren',
@@ -793,31 +722,7 @@ class _MapScreenState extends State<MapScreen> {
              ),
             ),
 
-          // HIER kommen die Buttons für Ladeindikator (Schritt 10) und Route löschen (Schritt 11) hin
-          // Beispiel Ladeindikator (Platzhalter, wird in Schritt 10 implementiert)
-          // if (_isCalculatingRoute)
-          //   Positioned.fill(
-          //     child: Container(
-          //       color: Colors.black.withOpacity(0.3),
-          //       child: Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))),
-          //     ),
-          //   ),
-
-          // Beispiel Löschen-Button (Platzhalter, wird in Schritt 11 implementiert)
-          // if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
-          // Positioned(
-          //   top: 80, // Oder andere Position
-          //   right: 20,
-          //   child: FloatingActionButton(
-          //     onPressed: () { /* Logik zum Löschen der Route */ },
-          //     tooltip: 'Route löschen',
-          //     backgroundColor: Colors.redAccent,
-          //     mini: true,
-          //     child: Icon(Icons.close, color: Colors.white),
-          //   ),
-          // ),
-
-
+            // Platzhalter für Buttons aus Schritt 10, 11 etc.
         ],
       ),
     );
@@ -826,16 +731,12 @@ class _MapScreenState extends State<MapScreen> {
 
   // --- Methode für Routenberechnung (aus Schritt 8 übernommen) ---
   Future<void> _calculateAndDisplayRoute({required LatLng destination}) async {
-    if (!mounted) return; // Prüfen, ob das Widget noch im Baum ist
-
-     // Verwende den aktuellen Standort oder den Mock-Standort basierend auf _useMockLocation
-     // HINWEIS: Die _useMockLocation Logik wird erst in einem späteren Schritt hinzugefügt.
-     //          Hier verwenden wir vorerst immer _currentLatLng.
-     final LatLng? startLatLng = _currentLatLng; // Wird später dynamisch
+    if (!mounted) return;
+     final LatLng? startLatLng = _currentLatLng; // TODO: Später Mock-Location berücksichtigen
 
      if (startLatLng == null) {
        if (kDebugMode) print("Aktueller Standort nicht verfügbar.");
-       if (mounted) { // Prüfen vor dem Anzeigen der SnackBar
+       if (mounted) {
          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
            content: Text("Aktueller Standort nicht verfügbar."),
            backgroundColor: Colors.orange,
@@ -855,15 +756,10 @@ class _MapScreenState extends State<MapScreen> {
        return;
      }
 
-    // Ladezustand anzeigen (wird in Schritt 10 implementiert)
-    // setState(() => _isCalculatingRoute = true);
-    // Bestehende Route löschen, bevor neue berechnet wird
-    setState(() => _calculatedRoute = null);
-
+    setState(() => _calculatedRoute = null); // Alte Route löschen
 
     List<LatLng>? path;
     try {
-        // Nächste Knoten zu Start- und Zielpunkt finden
         final GraphNode? startNode = _routingGraph!.findNearestNode(startLatLng);
         final GraphNode? endNode = _routingGraph!.findNearestNode(destination);
 
@@ -873,31 +769,24 @@ class _MapScreenState extends State<MapScreen> {
 
          if (startNode.id == endNode.id) {
              if (kDebugMode) print("Start- und Zielpunkt sind identisch (oder nächster Knoten ist derselbe).");
-             // Optional: Kurze Meldung an den User
               if (mounted) {
-                 // Ladezustand beenden (wird in Schritt 10 implementiert)
-                 // setState(() => _isCalculatingRoute = false);
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                      content: Text("Start und Ziel sind zu nah beieinander."),
                      duration: Duration(seconds: 2),
                  ));
              }
-             return; // Keine Route nötig
+             return;
          }
 
         if (kDebugMode) {
            print(">>> Berechne Route von Knoten ${startNode.id} (Start: $startLatLng) zu ${endNode.id} (Ziel: $destination)");
         }
 
-         // Kosten zurücksetzen (wichtig für Dijkstra)
         _routingGraph!.resetAllNodeCosts();
-
-         // Pfad mit Dijkstra finden
-         // Hinweis: findPath ist jetzt eine asynchrone Methode!
         path = await RoutingService.findPath(_routingGraph!, startNode, endNode);
 
-        if (mounted) { // Erneut prüfen nach async Operation
-            setState(() => _calculatedRoute = path); // Ergebnis im State speichern (auch wenn null)
+        if (mounted) {
+            setState(() => _calculatedRoute = path);
 
              if (path == null || path.isEmpty) {
                  if (kDebugMode) print("<<< Kein Pfad gefunden.");
@@ -910,10 +799,8 @@ class _MapScreenState extends State<MapScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                    content: Text("Route berechnet."),
                    backgroundColor: Colors.green,
-                   duration: Duration(seconds: 2) // Kürzere Anzeige bei Erfolg
+                   duration: Duration(seconds: 2)
                  ));
-                 // Optional: Auf die Route zoomen/zentrieren
-                 // _mapController.fitBounds(LatLngBounds.fromPoints(path));
              }
         }
 
@@ -922,18 +809,15 @@ class _MapScreenState extends State<MapScreen> {
             print(">>> Fehler bei Routenberechnung: $e");
             print(stacktrace);
         }
-        if (mounted) { // Prüfen vor setState und SnackBar
-             setState(() => _calculatedRoute = null); // Sicherstellen, dass keine alte Route angezeigt wird
+        if (mounted) {
+             setState(() => _calculatedRoute = null);
              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                // Fehlermeldung verständlicher machen
                 content: Text("Routenberechnung fehlgeschlagen: ${e.toString().replaceFirst("Exception: ", "")}"),
                 backgroundColor: Colors.red,
             ));
         }
     } finally {
         if (mounted) {
-             // Ladezustand beenden (wird in Schritt 10 implementiert)
-             // setState(() => _isCalculatingRoute = false);
              if (kDebugMode) print("<<< Routenberechnungsmethode beendet.");
         }
     }
