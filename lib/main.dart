@@ -1,4 +1,4 @@
-// lib/main.dart (Code für Schritt 9)
+// lib/main.dart (Code für Schritt 9 - Korrigiert)
 
 import 'dart:async';
 import 'dart:convert';
@@ -25,9 +25,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // HINWEIS: Der MaterialApp Teil wurde hier zur Kürze weggelassen,
-    // er sollte aber dem aus deiner letzten main.dart entsprechen
-    // oder einfach gehalten sein wie dieser hier:
     return MaterialApp(
       title: 'Camping Navi App',
       theme: ThemeData(
@@ -48,7 +45,7 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  // States (inklusive _calculatedRoute, _isCalculatingRoute etc. aus Schritt 8 behalten)
+  // States
   LatLng? _currentLatLng;
   StreamSubscription<Position>? _positionStreamSubscription;
   final MapController _mapController = MapController();
@@ -86,7 +83,7 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  // --- Methoden (unverändert wie im Code aus Dokument 2) ---
+  // --- Methoden ---
   Future<void> _initializeLocation() async {
      setState(() {
       _locationLoading = true;
@@ -184,9 +181,11 @@ class _MapScreenState extends State<MapScreen> {
          if (kDebugMode) print("GeoJSON dekodiert, starte Parsing...");
         _parseGeoJsonForDisplay(decodedJson);
         _routingGraph = GeojsonParserService.parseGeoJson(geoJsonString);
+        // *** KORRIGIERTE PRINT ANWEISUNG ***
         if (kDebugMode) {
-          print( "Routing Graph nach dem Parsen: Nodes=${_routingGraph?.nodes.length ?? 0}, Edges=${_routingGraph?.totalEdges ?? 0}");
+          print( "Routing Graph nach dem Parsen: Nodes=${_routingGraph?.nodes.length ?? 0}"); // Edges Teil entfernt
         }
+        // *** ENDE KORREKTUR ***
       } else {
         throw Exception("GeoJSON-Struktur ungültig");
       }
@@ -370,7 +369,7 @@ class _MapScreenState extends State<MapScreen> {
       }
     } else {
       if (kDebugMode) print("GeoJSON ist keine gültige FeatureCollection für Display.");
-      _geoJsonError = "GeoJSON ist keine gültige FeatureCollection."; // Fehler setzen
+      _geoJsonError = "GeoJSON ist keine gültige FeatureCollection.";
     }
 
     if (kDebugMode) print("Display-Parsing beendet: ${tempPolygons.length} Polygone, ${tempPolylines.length} Polylinien, ${tempPoiMarkers.length} POI-Marker, ${tempSearchableFeatures.length} durchsuchbare Features gefunden.");
@@ -378,7 +377,7 @@ class _MapScreenState extends State<MapScreen> {
      if (mounted) {
          setState(() {
              _polygons = tempPolygons;
-             _polylines = tempPolylines; // Wege etc.
+             _polylines = tempPolylines;
              _poiMarkers = tempPoiMarkers;
              _searchableFeatures = tempSearchableFeatures;
           });
