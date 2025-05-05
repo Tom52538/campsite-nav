@@ -1,0 +1,40 @@
+{
+    "name": "Flutter (Campsite Nav)",
+    // Verwendet ein Basis-Image mit vielen Entwicklungswerkzeugen
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  
+    // Befehle, die nach dem Erstellen des Containers ausgeführt werden, um Flutter zu installieren
+    "postCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends git unzip xz-utils zip libglu1-mesa && git clone https://github.com/flutter/flutter.git -b stable /usr/local/flutter && export PATH=\"/usr/local/flutter/bin:$PATH\" && flutter precache && sudo chown -R vscode /usr/local/flutter",
+  
+    // Ports für Flutter Web und DevTools weiterleiten
+    "forwardPorts": [8080, 9100], // Port 8080 für die Web-App (kannst du ändern), 9100 für DevTools
+    "portsAttributes": {
+      "8080": {
+        "label": "Flutter App (Web)",
+        "onAutoForward": "openPreview" // Öffnet automatisch Vorschau, wenn Port verfügbar wird
+      },
+      "9100": {
+        "label": "Dart DevTools",
+        "onAutoForward": "silent" // Nur weiterleiten, nicht automatisch öffnen
+      }
+    },
+  
+    // VS Code Einstellungen und Erweiterungen für den Container anpassen
+    "customizations": {
+      "vscode": {
+        "settings": {
+          // Pfad zum Flutter SDK für die VS Code Erweiterungen setzen
+          "dart.flutterSdkPath": "/usr/local/flutter"
+        },
+        "extensions": [
+          "Dart-Code.dart-code",    // Dart Unterstützung
+          "Dart-Code.flutter",     // Flutter Unterstützung
+          "GitHub.codespaces",       // Standard Codespaces Erweiterung
+          "GitHub.vscode-pull-request-github" // Nützlich für Pull Requests
+        ]
+      }
+    },
+  
+    // Container als Standardbenutzer 'vscode' ausführen (nicht root)
+    "remoteUser": "vscode"
+  }
