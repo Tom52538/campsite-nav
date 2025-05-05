@@ -1,4 +1,4 @@
-// lib/main.dart (Stand: Nach Schritt 10, mit Fix für FAB und anderen Korrekturen)
+// lib/main.dart (Stand: Button zum Löschen oben links implementiert)
 
 import 'dart:async';
 import 'dart:convert';
@@ -106,7 +106,6 @@ class _MapScreenState extends State<MapScreen> {
         throw Exception('Standortberechtigung wurde dauerhaft verweigert.');
       }
 
-      // Bestehendes Stream-Abo kündigen, bevor ein neues gestartet wird
       await _positionStreamSubscription?.cancel();
       _positionStreamSubscription = Geolocator.getPositionStream(
               locationSettings: const LocationSettings(
@@ -115,7 +114,7 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted) {
           setState(() {
             _currentLatLng = LatLng(position.latitude, position.longitude);
-            _locationLoading = false; // Loading beenden, wenn erster Fix kommt
+            _locationLoading = false;
             _locationError = null;
           });
         }
@@ -123,30 +122,28 @@ class _MapScreenState extends State<MapScreen> {
         if (mounted) {
           setState(() {
             _locationError = "Standortupdates fehlgeschlagen: $error";
-            _locationLoading = false; // Auch bei Fehler Loading beenden
+            _locationLoading = false;
           });
         }
       });
 
-      // Versuche, eine initiale Position schneller zu bekommen
       try {
         Position initialPosition = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high,
             timeLimit: const Duration(seconds: 5));
-        if (mounted && _currentLatLng == null) { // Nur setzen, wenn Stream noch nichts geliefert hat
+        if (mounted && _currentLatLng == null) {
           setState(() {
             _currentLatLng =
                 LatLng(initialPosition.latitude, initialPosition.longitude);
-             _locationLoading = false; // Loading hier auch beenden
+             _locationLoading = false;
              _locationError = null;
           });
         }
       } catch (e) {
-         // Wenn getCurrentPosition fehlschlägt, warten wir weiter auf den Stream
-         if (mounted && _currentLatLng == null) { // Nur Fehler setzen, wenn noch keine Position da ist
+         if (mounted && _currentLatLng == null) {
             setState(() {
-                 _locationError ??= "Initialer Standort fehlgeschlagen: $e"; // Nur setzen, wenn kein anderer Fehler vorliegt
-                 _locationLoading = false; // Loading beenden
+                 _locationError ??= "Initialer Standort fehlgeschlagen: $e";
+                 _locationLoading = false;
             });
          }
         if (kDebugMode) {
@@ -186,9 +183,7 @@ class _MapScreenState extends State<MapScreen> {
 
       if (decodedJson is Map<String, dynamic>) {
         if (kDebugMode) print("GeoJSON dekodiert, starte Parsing...");
-        // Display-Features parsen
         _parseGeoJsonForDisplay(decodedJson);
-        // Routing-Graphen parsen
         _routingGraph = GeojsonParserService.parseGeoJson(geoJsonString);
         if (kDebugMode) {
           print(
@@ -217,6 +212,7 @@ class _MapScreenState extends State<MapScreen> {
   }
 
  void _parseGeoJsonForDisplay(Map<String, dynamic> geoJsonData) {
+    // ... (Code unverändert) ...
     if (kDebugMode) print("Beginne Display-Parsing...");
     final List<Polygon> tempPolygons = [];
     final List<Polyline> tempPolylines = [];
@@ -331,7 +327,6 @@ class _MapScreenState extends State<MapScreen> {
                   if (points.length >= 3) {
                      tempPolygons.add(Polygon(
                         points: points,
-                        // KORRIGIERT: withOpacity ersetzt durch withAlpha
                         color: _getColorFromProperties(properties, Colors.grey.withAlpha((0.2 * 255).round())),
                         borderColor: _getColorFromProperties(properties, Colors.grey, border: true),
                         borderStrokeWidth: (properties['amenity'] == 'parking') ? 1.0 : 1.5,
@@ -359,16 +354,13 @@ class _MapScreenState extends State<MapScreen> {
                  if (coordinates.length >= 2 && coordinates[0] is num && coordinates[1] is num) {
                    final pointLatLng = LatLng(coordinates[1].toDouble(), coordinates[0].toDouble());
                    Icon? markerIcon;
-                   // Icons für spezifische POIs
                     if (properties['highway'] == 'bus_stop' || properties['amenity'] == 'bus_station') {
                          markerIcon = const Icon(Icons.directions_bus, color: Colors.indigo, size: 24.0);
                     } else if (properties['barrier'] == 'gate') {
                          markerIcon = Icon(Icons.fence, color: Colors.brown.shade700, size: 20.0);
                     }
-                    // Weitere POI-Typen hier hinzufügen...
 
                    if (markerIcon != null) {
-                     // KORRIGIERT: GestureDetector für onTap hinzugefügt
                      final markerWidget = GestureDetector(
                        onTap: () => _handleMarkerTap(properties),
                        child: markerIcon,
@@ -395,7 +387,7 @@ class _MapScreenState extends State<MapScreen> {
       }
     } else {
       if (kDebugMode) print("GeoJSON ist keine gültige FeatureCollection für Display.");
-      _geoJsonError = "GeoJSON ist keine gültige FeatureCollection."; // Im State setzen
+      _geoJsonError = "GeoJSON ist keine gültige FeatureCollection.";
     }
 
     if (kDebugMode) {
@@ -407,25 +399,25 @@ class _MapScreenState extends State<MapScreen> {
         _polylines = tempPolylines;
         _poiMarkers = tempPoiMarkers;
         _searchableFeatures = tempSearchableFeatures;
-        // _geoJsonError hier nicht zurücksetzen, falls oben gesetzt
       });
     }
   }
 
 
   void _handleMarkerTap(Map<String, dynamic> properties) {
+    // ... (Code unverändert) ...
     _showFeatureDetails(context, properties);
   }
 
  void _showFeatureDetails(
       BuildContext context, Map<String, dynamic> properties) {
+    // ... (Code unverändert) ...
     final List<Widget> details = [];
     if (properties['name'] != null) {
        details.add(Text(properties['name'].toString(), style: Theme.of(context).textTheme.headlineSmall));
        details.add(const SizedBox(height: 8));
     }
     properties.forEach((key, value) {
-      // Schlüssel filtern, die nicht angezeigt werden sollen
       if (!key.startsWith('@') && !key.startsWith('ref:') && value != null && value.toString().isNotEmpty && key != 'name') {
          details.add(ListTile(
             dense: true,
@@ -434,30 +426,28 @@ class _MapScreenState extends State<MapScreen> {
             subtitle: Text(value.toString())));
       }
     });
-
     showModalBottomSheet(
         context: context,
-        isScrollControlled: true, // Wichtig für variable Höhe
+        isScrollControlled: true,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
         ),
         builder: (builderContext) {
            return ConstrainedBox(
-              // Maximale Höhe begrenzen
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.6,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min, // Nimmt nur benötigte Höhe ein
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded( // Lässt die Liste scrollen, wenn nötig
+                    Expanded(
                       child: details.isEmpty
                           ? const Center(child: Text("Keine Details verfügbar."))
                           : ListView(
-                              shrinkWrap: true, // Wichtig in Column/ConstrainedBox
+                              shrinkWrap: true,
                               children: details,
                             ),
                     ),
@@ -480,8 +470,7 @@ class _MapScreenState extends State<MapScreen> {
   Color _getColorFromProperties(
       Map<String, dynamic> properties, Color defaultColor,
       {bool border = false}) {
-
-    // KORRIGIERT: withOpacity durch withAlpha ersetzt
+      // ... (Code unverändert) ...
     if (properties['amenity'] == 'parking') {
       return border ? Colors.grey.shade600 : Colors.grey.withAlpha((0.4 * 255).round());
     }
@@ -496,22 +485,12 @@ class _MapScreenState extends State<MapScreen> {
     }
     if (properties['highway'] != null) {
       switch (properties['highway']) {
-        case 'footway':
-        case 'path':
-        case 'steps':
-          return Colors.lime.shade900;
-        case 'cycleway':
-          return Colors.deepPurpleAccent;
-        case 'service':
-          return Colors.grey.shade700;
-        case 'platform':
-          return Colors.lightBlueAccent;
-        case 'tertiary':
-        case 'unclassified':
-        case 'residential':
-           return Colors.black87;
-        default:
-          return defaultColor; // Fallback für unbekannte highway-Typen
+        case 'footway': case 'path': case 'steps': return Colors.lime.shade900;
+        case 'cycleway': return Colors.deepPurpleAccent;
+        case 'service': return Colors.grey.shade700;
+        case 'platform': return Colors.lightBlueAccent;
+        case 'tertiary': case 'unclassified': case 'residential': return Colors.black87;
+        default: return defaultColor;
       }
     }
      if (properties['landuse'] == 'grass') {
@@ -520,38 +499,35 @@ class _MapScreenState extends State<MapScreen> {
      if (properties['natural'] == 'water') {
          return border ? Colors.blue.shade800 : Colors.blue.withAlpha((0.4 * 255).round());
      }
-
-    return defaultColor; // Genereller Fallback
+    return defaultColor;
   }
 
   void _onSearchChanged() {
+    // ... (Code unverändert) ...
     String query = _searchController.text.toLowerCase().trim();
     if (query.isEmpty) {
-      // KORRIGIERT: Curly Braces hinzugefügt
       if (_searchResults.isNotEmpty) {
         setState(() => _searchResults = []);
       }
       return;
     }
-    // Filterung auf Basis der vorbereiteten _searchableFeatures Liste
     List<SearchableFeature> filteredResults = _searchableFeatures
         .where((feature) => feature.name.toLowerCase().contains(query))
         .toList();
     setState(() => _searchResults = filteredResults);
   }
 
-  // AppBar für den Suchmodus
   AppBar _buildSearchAppBar() {
+    // ... (Code unverändert) ...
     final ThemeData theme = Theme.of(context);
     final Color? foregroundColor = theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary;
-    // KORRIGIERT: Unnötiger Null-Aware Operator entfernt
-    final Color? hintColor = theme.hintColor.withAlpha((0.6 * 255).round()); // withOpacity ersetzt
+    final Color? hintColor = theme.hintColor.withAlpha((0.6 * 255).round());
 
     return AppBar(
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: foregroundColor),
         tooltip: 'Suche verlassen',
-        onPressed: () { // KORRIGIERT: Curly Braces hinzugefügt
+        onPressed: () {
           setState(() {
             _isSearching = false;
             _searchController.clear();
@@ -562,38 +538,36 @@ class _MapScreenState extends State<MapScreen> {
       title: TextField(
         controller: _searchController,
         focusNode: _searchFocusNode,
-        autofocus: true, // Fokus direkt auf das Textfeld
+        autofocus: true,
         decoration: InputDecoration(
           hintText: 'Ort suchen...',
-          border: InputBorder.none, // Kein Rahmen um das Textfeld in der AppBar
+          border: InputBorder.none,
           hintStyle: TextStyle(color: hintColor),
         ),
         style: TextStyle(color: foregroundColor, fontSize: 18),
         cursorColor: foregroundColor,
       ),
       actions: [
-        // 'Clear'-Button nur anzeigen, wenn Text im Feld ist
         if (_searchController.text.isNotEmpty)
           IconButton(
             icon: Icon(Icons.clear, color: foregroundColor),
             tooltip: 'Suche löschen',
-            onPressed: () => _searchController.clear(), // KORRIGIERT: Curly Braces hinzugefügt
+            onPressed: () => _searchController.clear(),
           ),
       ],
     );
   }
 
-  // Normale AppBar
   AppBar _buildNormalAppBar() {
+    // ... (Code unverändert) ...
     return AppBar(
       title: const Text('Campground Navi'),
       actions: [
         IconButton(
           icon: const Icon(Icons.search),
           tooltip: 'Suche öffnen',
-          onPressed: () { // KORRIGIERT: Curly Braces hinzugefügt
+          onPressed: () {
             setState(() => _isSearching = true);
-            // Kurze Verzögerung, damit das Textfeld sichtbar ist, bevor der Fokus gesetzt wird
             Future.delayed(const Duration(milliseconds: 100), () {
               if (mounted) {
                 FocusScope.of(context).requestFocus(_searchFocusNode);
@@ -605,9 +579,8 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  // Hilfsfunktion, um ein Icon basierend auf dem Feature-Typ zurückzugeben
-  // KORRIGIERT: Diese Funktion wird jetzt verwendet (z.B. in Suchergebnissen)
   IconData _getIconForFeatureType(String type) {
+    // ... (Code unverändert) ...
     switch (type) {
       case 'Building': return Icons.business;
       case 'Parking': return Icons.local_parking;
@@ -615,26 +588,26 @@ class _MapScreenState extends State<MapScreen> {
       case 'Bus Stop': return Icons.directions_bus;
       case 'Footway': return Icons.directions_walk;
       case 'Cycleway': return Icons.directions_bike;
-      case 'Service Road': return Icons.minor_crash_outlined; // Beispielhaft
+      case 'Service Road': return Icons.minor_crash_outlined;
       case 'Platform': return Icons.train;
       case 'Tertiary Road': return Icons.traffic;
       case 'Unclassified Road': return Icons.edit_road;
       case 'Point of Interest': return Icons.place;
-      default: return Icons.location_pin; // Fallback
+      default: return Icons.location_pin;
     }
   }
 
-  // Funktion zum Zentrieren der Karte auf den Benutzerstandort
   void _centerOnUser() {
+    // ... (Code unverändert) ...
      if (_currentLatLng != null) {
-        _mapController.move(_currentLatLng!, 17.5); // Zoom etwas näher
+        _mapController.move(_currentLatLng!, 17.5);
      }
   }
 
-  // --- NEU: Funktion zum Löschen der Route ---
   void _clearRoute() {
+    // ... (Code unverändert) ...
     setState(() {
-      _calculatedRoute = null; // Löscht die Route aus dem State
+      _calculatedRoute = null;
     });
      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -649,8 +622,6 @@ class _MapScreenState extends State<MapScreen> {
   Widget build(BuildContext context) {
     final bool isLoading = _locationLoading || _geoJsonLoading;
     final String? errorMessage = _locationError ?? _geoJsonError;
-    // Startpunkt in Sittard für die Kartenansicht
-    // KORRIGIERT: const hinzugefügt
     const LatLng initialMapCenter = LatLng(51.024370, 5.861582);
 
     return Scaffold(
@@ -663,7 +634,6 @@ class _MapScreenState extends State<MapScreen> {
               : errorMessage != null
                   ? Center(
                       child: Padding(
-                      // KORRIGIERT: const hinzugefügt
                       padding: const EdgeInsets.all(16.0),
                       child: Text('Fehler: $errorMessage', textAlign: TextAlign.center),
                     ))
@@ -672,11 +642,10 @@ class _MapScreenState extends State<MapScreen> {
                       options: MapOptions(
                         initialCenter: initialMapCenter,
                         initialZoom: 17.0,
-                        minZoom: 15.0, // Verhindert zu weites Rauszoomen
-                        maxZoom: 19.0, // Verhindert zu nahes Reinzoomen
+                        minZoom: 15.0,
+                        maxZoom: 19.0,
                         onTap: (tapPosition, point) {
-                           // Suche schließen, wenn auf Karte getippt wird
-                           if (_isSearching) { // KORRIGIERT: Curly Braces
+                           if (_isSearching) {
                              setState(() {
                                _isSearching = false;
                                _searchController.clear();
@@ -686,64 +655,46 @@ class _MapScreenState extends State<MapScreen> {
                           if (kDebugMode) {
                             print("Map tapped at: $point. Triggering route calculation.");
                           }
-                          // Routenberechnung für den getippten Punkt starten
                           _calculateAndDisplayRoute(destination: point);
                         },
                       ),
                       children: [
                         TileLayer(
-                           // TODO: CORS Problem - Temporär OSM, später prüfen
                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                            userAgentPackageName: 'com.example.camping_osm_navi',
-                           // fallbackUrl: "...", // Evtl. Fallback-URL für lokale Tiles
                         ),
-                        // Layer für Polygone (Gebäude etc.)
                         if (_polygons.isNotEmpty) PolygonLayer(polygons: _polygons),
-                        // Layer für Linien (Wege etc.)
                         if (_polylines.isNotEmpty) PolylineLayer(polylines: _polylines),
-                         // Layer für die berechnete Route
                         if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
                           PolylineLayer(
                             polylines: [
                               Polyline(
                                 points: _calculatedRoute!,
-                                // KORRIGIERT: withOpacity ersetzt
                                 color: Colors.blueAccent.withAlpha((0.8 * 255).round()),
                                 strokeWidth: 5.0,
                                 isDotted: false,
-                                strokeCap: StrokeCap.round, // Runde Enden
-                                strokeJoin: StrokeJoin.round, // Runde Ecken
+                                strokeCap: StrokeCap.round,
+                                strokeJoin: StrokeJoin.round,
                               ),
                             ],
                           ),
-                        // Layer für POI-Marker (Tore, Bushaltestellen etc.)
                         if (_poiMarkers.isNotEmpty) MarkerLayer(markers: _poiMarkers),
-                        // Marker für die aktuelle Position des Nutzers
                         if (_currentLatLng != null)
                           MarkerLayer(markers: [
                             Marker(
                               point: _currentLatLng!,
-                              width: 40,
-                              height: 40,
-                              // KORRIGIERT: const hinzugefügt
+                              width: 40, height: 40,
                               child: const Icon(Icons.location_pin, color: Colors.redAccent, size: 40.0),
                             )
                           ]),
-                          // Marker für Start- und Endpunkt der Route
                           if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
                             MarkerLayer(markers: [
-                               // Startpunkt (angenäherter Nutzerstandort)
                                Marker(
-                                  point: _calculatedRoute!.first,
-                                  width: 30, height: 30,
-                                  // KORRIGIERT: const hinzugefügt
+                                  point: _calculatedRoute!.first, width: 30, height: 30,
                                   child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 30),
                                ),
-                               // Endpunkt (Ziel)
                                Marker(
-                                 point: _calculatedRoute!.last,
-                                 width: 30, height: 30,
-                                 // KORRIGIERT: const hinzugefügt
+                                 point: _calculatedRoute!.last, width: 30, height: 30,
                                  child: const Icon(Icons.flag, color: Colors.red, size: 30),
                                )
                             ]),
@@ -753,28 +704,22 @@ class _MapScreenState extends State<MapScreen> {
           // Suchergebnisliste (über der Karte, wenn Suche aktiv)
           if (_isSearching && _searchResults.isNotEmpty)
             Positioned(
-              top: 0, // Direkt unter der AppBar
-              left: 10,
-              right: 10,
+              top: 0, left: 10, right: 10,
               child: Card(
                  elevation: 4.0,
                  child: ConstrainedBox(
-                   constraints: BoxConstraints(
-                     // Begrenzt die Höhe der Ergebnisliste
-                     maxHeight: MediaQuery.of(context).size.height * 0.4,
-                   ),
+                   constraints: BoxConstraints( maxHeight: MediaQuery.of(context).size.height * 0.4, ),
                    child: ListView.builder(
-                     shrinkWrap: true, // Nimmt nur den benötigten Platz ein
+                     shrinkWrap: true,
                      itemCount: _searchResults.length,
                      itemBuilder: (context, index) {
                        final feature = _searchResults[index];
                        return ListTile(
-                         leading: Icon(_getIconForFeatureType(feature.type)), // Icon basierend auf Typ
+                         leading: Icon(_getIconForFeatureType(feature.type)),
                          title: Text(feature.name),
-                         subtitle: Text(feature.type), // Zeigt den Typ unter dem Namen
+                         subtitle: Text(feature.type),
                          onTap: () {
-                            // Bei Auswahl: Zoom auf Feature und Suche schließen
-                            _mapController.move(feature.center, 18.0); // Zoom näher ran
+                            _mapController.move(feature.center, 18.0);
                             setState(() {
                               _isSearching = false;
                               _searchController.clear();
@@ -789,18 +734,33 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
 
+          // *** NEUE POSITION FÜR CLEAR BUTTON ***
+          // Wird nur angezeigt, wenn eine Route vorhanden ist
+          if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
+            Positioned(
+              top: 10.0, // Abstand vom oberen Rand (ggf. anpassen)
+              left: 10.0,  // Abstand vom linken Rand
+              child: FloatingActionButton(
+                mini: true, // Kleinerer Button
+                heroTag: "clearRouteBtn", // Eindeutiger Tag
+                onPressed: _clearRoute, // Ruft die Löschfunktion auf
+                tooltip: 'Route löschen',
+                // Angepasste Farben für besseren Kontrast auf der Karte
+                backgroundColor: Theme.of(context).colorScheme.surface.withAlpha(220), // Heller Hintergrund mit Transparenz
+                foregroundColor: Theme.of(context).colorScheme.onSurface, // Passende Icon-Farbe
+                elevation: 4.0, // Leichter Schatten
+                child: const Icon(Icons.clear),
+              ),
+            ),
+          // *** ENDE CLEAR BUTTON ***
 
           // Ladeindikator für Routenberechnung (über allem)
           if (_isCalculatingRoute)
-            Positioned.fill( // Füllt den gesamten Stack aus
-              // KORRIGIERT: const hinzugefügt
+            Positioned.fill(
               child: Container(
-                // Semi-transparenter Hintergrund
-                 // KORRIGIERT: withOpacity ersetzt
                 color: Colors.black.withAlpha((0.3 * 255).round()),
                 child: const Center(
                   child: CircularProgressIndicator(
-                     // Weiße Farbe für besseren Kontrast auf dunklem Hintergrund
                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
                 ),
@@ -808,55 +768,29 @@ class _MapScreenState extends State<MapScreen> {
             ),
         ],
       ),
-       // --- Floating Action Buttons ---
-       // KORRIGIERT: FABs in den Scaffold Parameter verschoben für Standard-Layout
-       floatingActionButton: Stack(
-         children: <Widget>[
-           // Button zum Zentrieren auf Nutzerposition (unten rechts)
-           Positioned(
-             bottom: 10.0,
-             right: 10.0,
-             child: FloatingActionButton(
-               heroTag: "locationBtn", // Eindeutiger Tag
-               onPressed: _centerOnUser,
-               tooltip: 'Auf meinen Standort zentrieren',
-               child: const Icon(Icons.my_location),
-             ),
-           ),
-           // Button zum Löschen der Route (nur sichtbar, wenn Route existiert)
-           // (unten links platziert)
-           if (_calculatedRoute != null && _calculatedRoute!.isNotEmpty)
-             Positioned(
-               bottom: 10.0,
-               // Ändere 'right' zu 'left' für die linke Seite
-               left: 40.0, // Etwas Abstand vom Rand wegen Notch etc.
-               child: FloatingActionButton(
-                 heroTag: "clearRouteBtn", // Eindeutiger Tag
-                 // *** HIER wurde onPressed hinzugefügt/korrigiert ***
-                 onPressed: _clearRoute, // Ruft die neue Löschfunktion auf
-                 tooltip: 'Route löschen',
-                 // KORRIGIERT: const hinzugefügt
-                 child: const Icon(Icons.clear),
-                 backgroundColor: Colors.redAccent, // Auffällige Farbe
-               ),
-             ),
-         ],
-       ),
+
+       // *** HIER WURDE DER ALTE CLEAR BUTTON ENTFERNT ***
+       // -> Nur noch der Button zum Zentrieren ist hier
+       floatingActionButton: FloatingActionButton(
+            heroTag: "locationBtn", // Eindeutiger Tag
+            onPressed: _centerOnUser,
+            tooltip: 'Auf meinen Standort zentrieren',
+            child: const Icon(Icons.my_location),
+        ),
+
     );
   }
 
 
   // --- Methode für Routenberechnung ---
   Future<void> _calculateAndDisplayRoute({required LatLng destination}) async {
+    // ... (Code unverändert) ...
     if (!mounted) return;
-
     final LatLng? startLatLng = _currentLatLng;
 
-    // Prüfen, ob Startpunkt und Routing-Daten vorhanden sind
     if (startLatLng == null) {
       if (kDebugMode) print("Aktueller Standort nicht verfügbar.");
       if (mounted) {
-        // KORRIGIERT: const hinzugefügt
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Aktueller Standort nicht verfügbar."),
           backgroundColor: Colors.orange,
@@ -867,7 +801,6 @@ class _MapScreenState extends State<MapScreen> {
     if (_routingGraph == null || _routingGraph!.nodes.isEmpty) {
       if (kDebugMode) print("Routing-Daten nicht geladen oder Graph leer.");
       if (mounted) {
-         // KORRIGIERT: const hinzugefügt
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text("Routing-Daten nicht geladen."),
           backgroundColor: Colors.orange,
@@ -876,18 +809,13 @@ class _MapScreenState extends State<MapScreen> {
       return;
     }
 
-    // Ladezustand STARTEN
     setState(() {
       _isCalculatingRoute = true;
-      _calculatedRoute = null; // Alte Route sofort ausblenden
+      _calculatedRoute = null;
     });
 
     List<LatLng>? path;
     try {
-      // Optional: Delay zum Testen des Indikators
-      // await Future.delayed(const Duration(seconds: 2));
-
-      // Nächste Knoten für Start und Ziel finden
       final GraphNode? startNode = _routingGraph!.findNearestNode(startLatLng);
       final GraphNode? endNode = _routingGraph!.findNearestNode(destination);
 
@@ -895,44 +823,36 @@ class _MapScreenState extends State<MapScreen> {
          throw Exception("Start- oder Endpunkt konnte keinem Weg zugeordnet werden.");
        }
 
-      // Prüfen, ob Start und Ziel (fast) identisch sind
        if (startNode.id == endNode.id) {
          if (kDebugMode) print("Start- und Zielpunkt sind identisch (oder nächster Knoten ist derselbe).");
          if (mounted) {
-           // KORRIGIERT: const hinzugefügt
            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Start und Ziel sind zu nah beieinander."),
             duration: Duration(seconds: 2),
            ));
          }
-         // Wichtig: Ladezustand hier auch beenden!
          if (mounted) setState(() => _isCalculatingRoute = false);
-         return; // Berechnung abbrechen
+         return;
        }
 
       if (kDebugMode) {
         print(
             ">>> Berechne Route von Knoten ${startNode.id} (Start: $startLatLng) zu ${endNode.id} (Ziel: $destination)");
       }
-      // Kosten zurücksetzen (wichtig für wiederholte Berechnungen)
       _routingGraph!.resetAllNodeCosts();
-      // Eigentliche Pfadfindung (asynchron)
       path = await RoutingService.findPath(_routingGraph!, startNode, endNode);
 
-      // Ergebnis nur verarbeiten, wenn das Widget noch im Baum ist
       if (mounted) {
-        setState(() => _calculatedRoute = path); // Ergebnis im State speichern
+        setState(() => _calculatedRoute = path);
 
         if (path == null || path.isEmpty) {
           if (kDebugMode) print("<<< Kein Pfad gefunden.");
-          // KORRIGIERT: const hinzugefügt
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Keine Route gefunden."),
             backgroundColor: Colors.orange,
           ));
         } else {
           if (kDebugMode) print("<<< Route berechnet (${path.length} Punkte).");
-          // KORRIGIERT: const hinzugefügt
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Route berechnet."),
             backgroundColor: Colors.green,
@@ -947,17 +867,14 @@ class _MapScreenState extends State<MapScreen> {
         print(stacktrace);
       }
       if (mounted) {
-         // Fehlermeldung anzeigen
          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
            content: Text(
-               "Routenberechnung fehlgeschlagen: ${e.toString().replaceFirst("Exception: ", "")}"), // Exception Präfix entfernen
+               "Routenberechnung fehlgeschlagen: ${e.toString().replaceFirst("Exception: ", "")}"),
            backgroundColor: Colors.red,
          ));
-         // Sicherstellen, dass keine halbfertige Route angezeigt wird
          setState(() => _calculatedRoute = null);
       }
     } finally {
-      // Ladezustand BEENDEN (immer, egal ob Erfolg oder Fehler)
       if (mounted) {
         setState(() => _isCalculatingRoute = false);
         if (kDebugMode) print("<<< Routenberechnungsmethode beendet (finally).");
