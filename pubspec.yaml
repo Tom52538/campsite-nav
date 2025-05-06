@@ -6,26 +6,23 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '^3.4.0' # <-- *** ÄNDERUNG HIER gemäß Fehlermeldung ***
+  sdk: '^3.4.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
   geolocator: ^12.0.0
-  flutter_map: ^6.1.0 # Beibehaltung der Version aus deiner ursprünglichen pubspec
+  flutter_map: ^6.1.0
   latlong2: ^0.9.1
   collection: ^1.18.0
+  flutter_map_cancellable_tile_provider: ^2.0.0 # <-- NEU HINZUGEFÜGT
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0 # Beibehaltung der Version aus deiner ursprünglichen pubspec
+  flutter_lints: ^4.0.0
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
 
