@@ -6,21 +6,21 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '^3.4.0' # <-- *** ÄNDERUNG HIER gemäß Fehlermeldung ***
 
 dependencies:
   flutter:
     sdk: flutter
 
   geolocator: ^12.0.0
-  flutter_map: ^6.1.0 # In deinem Log stand 6.2.1, aber in der pubspec stand 6.1.0. Ich lasse es bei 6.1.0, wie von dir bereitgestellt.
+  flutter_map: ^6.1.0 # Beibehaltung der Version aus deiner ursprünglichen pubspec
   latlong2: ^0.9.1
   collection: ^1.18.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0 # In deinem Log stand 4.0.0, aber neuere Versionen sind verfügbar. Ich belasse es bei der Version aus deiner Datei.
+  flutter_lints: ^4.0.0 # Beibehaltung der Version aus deiner ursprünglichen pubspec
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
