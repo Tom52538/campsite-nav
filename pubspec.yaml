@@ -13,14 +13,14 @@ dependencies:
     sdk: flutter
 
   geolocator: ^12.0.0
-  flutter_map: ^6.1.0
+  flutter_map: ^6.1.0 # In deinem Log stand 6.2.1, aber in der pubspec stand 6.1.0. Ich lasse es bei 6.1.0, wie von dir bereitgestellt.
   latlong2: ^0.9.1
-  collection: ^1.18.0 # <-- HINZUGEFÜGT/AKTUALISIERT
+  collection: ^1.18.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^4.0.0 # In deinem Log stand 4.0.0, aber neuere Versionen sind verfügbar. Ich belasse es bei der Version aus deiner Datei.
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -29,10 +29,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
   assets:
-     - assets/data/export.geojson # <-- *** ÄNDERUNG HIER ***
-
-  # An example of declaring fonts from package dependencies,
-  # see https://flutter.dev/custom-fonts/#from-packages
+    - assets/data/export.geojson
 # [Ende pubspec.yaml]
