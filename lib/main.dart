@@ -1,4 +1,4 @@
-// [Start lib/main.dart - Mit Mock-Location-Schalter V2]
+// [Start lib/main.dart - Korrektur für MapCamera.ready Fehler]
 import 'dart:async';
 import 'dart:convert'; // Für jsonDecode
 import 'package:flutter/foundation.dart';
@@ -62,8 +62,7 @@ class MapScreenState extends State<MapScreen> {
   Marker? _currentLocationMarker;
   Marker? _startMarker;
   Marker? _endMarker;
-  LatLng?
-      _currentGpsPosition; // Hält die aktuell *angezeigte* Position (Mock oder Echt)
+  LatLng? _currentGpsPosition;
   LatLng? _startLatLng;
   LatLng? _endLatLng;
   bool _isCalculatingRoute = false;
@@ -76,13 +75,13 @@ class MapScreenState extends State<MapScreen> {
   SearchableFeature? _selectedSearchFeatureForEnd;
 
   bool _isDataReady = false;
-  bool _useMockLocation = true; // NEU: Standardmäßig Mock-Position verwenden
+  bool _useMockLocation = true;
 
-  static const LatLng defaultInitialCenter = LatLng(
-      51.02518780487824, 5.858832278816441); // Koordinaten Firmengelände Tom
+  static const LatLng defaultInitialCenter =
+      LatLng(51.02518780487824, 5.858832278816441);
   static const double markerWidth = 40.0;
   static const double markerHeight = 40.0;
-  static const double centerOnGpsMaxDistanceMeters = 5000; // 5 Kilometer
+  static const double centerOnGpsMaxDistanceMeters = 5000;
 
   @override
   void initState() {
@@ -92,7 +91,7 @@ class MapScreenState extends State<MapScreen> {
           "<<< initState: MapScreen wird initialisiert. Mock-Location: $_useMockLocation >>>");
     }
     _loadData();
-    _initializeGpsOrMock(); // Startet mit der Einstellung von _useMockLocation
+    _initializeGpsOrMock();
     _searchController.addListener(_onSearchChanged);
     _searchFocusNode.addListener(_onSearchFocusChanged);
   }
@@ -103,7 +102,7 @@ class MapScreenState extends State<MapScreen> {
       print("<<< dispose: MapScreen wird zerstört. >>>");
     }
     _mapController.dispose();
-    _positionStreamSubscription?.cancel(); // Wichtig: Stream beenden
+    _positionStreamSubscription?.cancel();
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _searchFocusNode.removeListener(_onSearchFocusChanged);
@@ -111,12 +110,10 @@ class MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  // --- METHODE zum Umschalten des Positionsmodus ---
   void _toggleMockLocation() {
     if (!mounted) return;
     setState(() {
       _useMockLocation = !_useMockLocation;
-      // GPS neu initialisieren oder Mock-Position setzen
       _initializeGpsOrMock();
     });
     _showSnackbar(
@@ -130,59 +127,40 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  // --- METHODE: Entscheidet, ob Mock oder echtes GPS initialisiert wird ---
   void _initializeGpsOrMock() {
-    _positionStreamSubscription
-        ?.cancel(); // Wichtig: Alten Stream immer beenden!
-
-    // Marker und Position zurücksetzen, bevor der neue Modus startet
+    _positionStreamSubscription?.cancel();
     setStateIfMounted(() {
       _currentGpsPosition = null;
       _currentLocationMarker = null;
     });
 
     if (_useMockLocation) {
-      // --- Mock-Modus ---
       if (kDebugMode) {
         print(
             "<<< _initializeGpsOrMock: Mock-Modus AKTIV. Setze Position auf defaultInitialCenter. >>>");
       }
-      // Kurze Verzögerung, damit setState aus dem Cancel oben abgeschlossen ist
       Future.delayed(const Duration(milliseconds: 50), () {
         if (mounted) {
           setState(() {
-            _currentGpsPosition =
-                defaultInitialCenter; // Direkt die Position setzen
-            _currentLocationMarker = _createMarker(
-                _currentGpsPosition!,
-                Colors.orangeAccent,
-                Icons.pin_drop,
-                "Mock Position (Gelände)"); // Anderes Icon/Farbe für Mock
-            // Karte auf Mock-Position zentrieren (falls noch nicht geschehen)
-            // Überprüfen, ob der MapController initialisiert ist
-            if (_mapController.camera.ready) {
-              _mapController.move(_currentGpsPosition!, 17.0);
-              print(
-                  "<<< _initializeGpsOrMock: Map auf Mock Position zentriert >>>");
-            } else {
-              print(
-                  "<<< _initializeGpsOrMock: MapController noch nicht bereit zum Zentrieren auf Mock >>>");
-              // Optional: Timer setzen, um es später zu versuchen
-            }
+            _currentGpsPosition = defaultInitialCenter;
+            _currentLocationMarker = _createMarker(_currentGpsPosition!,
+                Colors.orangeAccent, Icons.pin_drop, "Mock Position (Gelände)");
+            // KORREKTUR: .ready entfernt
+            _mapController.move(_currentGpsPosition!, 17.0);
+            print(
+                "<<< _initializeGpsOrMock: Map auf Mock Position zentriert >>>");
           });
         }
       });
     } else {
-      // --- Echter GPS-Modus ---
       if (kDebugMode) {
         print(
             "<<< _initializeGpsOrMock: Echtes GPS AKTIV. Starte Initialisierung... >>>");
       }
-      _initializeGpsReal(); // Echte GPS-Initialisierung aufrufen
+      _initializeGpsReal();
     }
   }
 
-  // --- Methode zum Setzen des State nur wenn mounted ---
   void setStateIfMounted(VoidCallback fn) {
     if (mounted) {
       setState(fn);
@@ -191,6 +169,7 @@ class MapScreenState extends State<MapScreen> {
 
   List<SearchableFeature> _extractSearchableFeaturesFromGeoJson(
       String geoJsonString) {
+    // ... (Code wie vorher, unverändert) ...
     final List<SearchableFeature> features = [];
     final dynamic decodedJson = jsonDecode(geoJsonString);
 
@@ -290,6 +269,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadData() async {
+    // ... (Code wie vorher, unverändert) ...
     if (kDebugMode) {
       print("<<< _loadData: Starte das Laden der GeoJSON Daten... >>>");
     }
@@ -355,6 +335,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onSearchChanged() {
+    // ... (Code wie vorher, unverändert) ...
     if (!mounted) return;
     final query = _searchController.text.toLowerCase().trim();
     List<SearchableFeature> results = [];
@@ -371,9 +352,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onSearchFocusChanged() {
+    // ... (Code wie vorher, unverändert) ...
     if (!mounted) return;
     setStateIfMounted(() {
-      // Ergebnisse nur anzeigen, wenn Fokus UND Ergebnisse UND Text vorhanden
       _showSearchResults = _searchFocusNode.hasFocus &&
           _searchResults.isNotEmpty &&
           _searchController.text.isNotEmpty;
@@ -381,6 +362,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _selectFeatureAndSetPoint(SearchableFeature feature) {
+    // ... (Code wie vorher, unverändert) ...
     if (kDebugMode) {
       print(
           "<<< _selectFeatureAndSetPoint: Feature ausgewählt: ${feature.name} >>>");
@@ -392,12 +374,11 @@ class MapScreenState extends State<MapScreen> {
     _showSearchResults = false;
     _searchFocusNode.unfocus();
 
-    // Zielpunkt setzen (Startpunkt ist implizit GPS/Mock)
     setStateIfMounted(() {
       _endLatLng = feature.center;
       _endMarker = _createMarker(feature.center, Colors.red, Icons.flag_circle,
           "Ziel: ${feature.name}");
-      _selectedSearchFeatureForEnd = feature; // Merken für evtl. spätere Infos
+      _selectedSearchFeatureForEnd = feature;
       if (kDebugMode) {
         print(
             "<<< _selectFeatureAndSetPoint: Zielpunkt gesetzt auf: ${feature.name} >>>");
@@ -408,6 +389,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initializeGpsReal() async {
+    // ... (Code wie vorher, unverändert für Berechtigungen) ...
     if (kDebugMode) {
       print("<<< _initializeGpsReal: Starte ECHTE GPS Initialisierung... >>>");
     }
@@ -417,7 +399,6 @@ class MapScreenState extends State<MapScreen> {
     LocationPermission permission;
 
     try {
-      // Fehler abfangen bei Berechtigungsprüfung etc.
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _showErrorDialog("GPS ist deaktiviert. Bitte aktiviere es.");
@@ -489,12 +470,11 @@ class MapScreenState extends State<MapScreen> {
             distance(defaultInitialCenter, _currentGpsPosition!);
 
         if (meters <= centerOnGpsMaxDistanceMeters) {
-          if (_mapController.camera.ready) {
-            _mapController.move(_currentGpsPosition!, 17.0);
-            if (kDebugMode) {
-              print(
-                  "<<< _initializeGpsReal: Karte auf erste, nahe ECHTE GPS-Position ($meters m entfernt) zentriert. >>>");
-            }
+          // KORREKTUR: .ready entfernt
+          _mapController.move(_currentGpsPosition!, 17.0);
+          if (kDebugMode) {
+            print(
+                "<<< _initializeGpsReal: Karte auf erste, nahe ECHTE GPS-Position ($meters m entfernt) zentriert. >>>");
           }
         } else {
           if (kDebugMode) {
@@ -517,6 +497,7 @@ class MapScreenState extends State<MapScreen> {
   Marker _createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
       {double size = 30.0}) {
+    // ... (Code wie vorher, unverändert) ...
     return Marker(
       width: markerWidth,
       height: markerHeight,
@@ -530,13 +511,13 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _calculateAndDisplayRoute() async {
+    // ... (Code wie vorher, unverändert) ...
     LatLng? routeStartPoint;
     String startPointType = "";
 
     if (_useMockLocation) {
       routeStartPoint = defaultInitialCenter;
       startPointType = "Mock Position";
-      // Im Mock-Modus muss der Start-Marker gesetzt sein, wenn noch keiner da ist
       if (_startMarker == null && mounted) {
         setStateIfMounted(() {
           _startLatLng = defaultInitialCenter;
@@ -547,7 +528,6 @@ class MapScreenState extends State<MapScreen> {
     } else {
       routeStartPoint = _currentGpsPosition;
       startPointType = "Echte GPS Position";
-      // Im Echten Modus, setze Start-Marker auf GPS Position wenn noch keiner da ist
       if (_startMarker == null && _currentGpsPosition != null && mounted) {
         setStateIfMounted(() {
           _startLatLng = _currentGpsPosition;
@@ -610,7 +590,7 @@ class MapScreenState extends State<MapScreen> {
         final List<LatLng>? routePoints =
             await RoutingService.findPath(_routingGraph!, startNode, endNode);
 
-        if (!mounted) return; // Erneute Prüfung nach await
+        if (!mounted) return;
         setStateIfMounted(() {
           if (routePoints != null && routePoints.isNotEmpty) {
             _routePolyline = Polyline(
@@ -647,6 +627,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
+    // ... (Code wie vorher, unverändert) ...
     if (kDebugMode) {
       print("<<< _handleMapTap: Auf Karte getippt: $latLng >>>");
     }
@@ -658,13 +639,9 @@ class MapScreenState extends State<MapScreen> {
     }
     if (_isCalculatingRoute) return;
 
-    // Der Startpunkt ist jetzt immer implizit (Mock oder GPS)
-    // Ein Tap auf die Karte setzt/ändert immer den ZIELPUNKT
-
     final bool isNewTarget = _endLatLng == null || _endMarker == null;
 
     if (isNewTarget) {
-      // Zielpunkt erstmalig setzen
       setStateIfMounted(() {
         _endLatLng = latLng;
         _endMarker = _createMarker(latLng, Colors.red, Icons.flag_circle,
@@ -677,15 +654,14 @@ class MapScreenState extends State<MapScreen> {
       }
       _calculateAndDisplayRoute();
     } else {
-      // Zielpunkt ist schon gesetzt -> Dialog für Änderung
       _showConfirmationDialog("Neues Ziel?",
           "Möchtest du ein neues Ziel setzen? Die aktuelle Route und das alte Ziel werden dabei gelöscht.",
           () {
         if (!mounted) return;
         setStateIfMounted(() {
-          _routePolyline = null; // Alte Route löschen
-          _endMarker = null; // Alten Zielmarker löschen
-          _endLatLng = latLng; // Neues Ziel setzen
+          _routePolyline = null;
+          _endMarker = null;
+          _endLatLng = latLng;
           _endMarker = _createMarker(latLng, Colors.red, Icons.flag_circle,
               "Ziel (Position: ${latLng.latitude.toStringAsFixed(5)}, ${latLng.longitude.toStringAsFixed(5)})");
           _selectedSearchFeatureForEnd = null;
@@ -694,22 +670,21 @@ class MapScreenState extends State<MapScreen> {
                 "<<< _handleMapTap: Neues Ziel nach Bestätigung gesetzt. >>>");
           }
         });
-        _calculateAndDisplayRoute(); // Neue Route berechnen
+        _calculateAndDisplayRoute();
       });
     }
   }
 
-  // --- GEÄNDERT: Löscht Route und ZIEL, aber nicht den impliziten Startpunkt ---
   void _clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
+    // ... (Code wie vorher, unverändert) ...
     final clearAction = () {
       if (!mounted) return;
       setStateIfMounted(() {
         _routePolyline = null;
         if (clearMarkers) {
-          _endMarker = null; // Nur Ziel löschen
+          _endMarker = null;
           _endLatLng = null;
           _selectedSearchFeatureForEnd = null;
-          // Start-Marker NICHT löschen, da er jetzt GPS/Mock repräsentiert
           if (kDebugMode) {
             print(
                 "<<< _clearRoute: Route UND Ziel-Marker gelöscht. Start bleibt. >>>");
@@ -726,7 +701,6 @@ class MapScreenState extends State<MapScreen> {
           durationSeconds: 2);
     };
 
-    // Prüfen, ob überhaupt etwas zu löschen ist (Route oder Ziel)
     final bool somethingToDelete =
         _routePolyline != null || (clearMarkers && _endMarker != null);
 
@@ -742,16 +716,13 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  // --- GEÄNDERT: Löscht Route, Ziel UND Suchdaten. Setzt Modus NICHT zurück. ---
   void _clearAll() {
+    // ... (Code wie vorher, unverändert) ...
     if (!mounted) return;
     setStateIfMounted(() {
       _routePolyline = null;
-      // Start Marker NICHT löschen
       _endMarker = null;
-      // Start LatLng NICHT löschen
       _endLatLng = null;
-      // Start Feature NICHT löschen
       _selectedSearchFeatureForEnd = null;
       _searchController.clear();
       _searchResults = [];
@@ -764,21 +735,15 @@ class MapScreenState extends State<MapScreen> {
     _showSnackbar("Zieleingaben und Route zurückgesetzt.", durationSeconds: 2);
   }
 
-  // --- GEÄNDERT: Zentriert auf die AKTUELL VERWENDETE Position (_currentGpsPosition) ---
   void _centerOnGps() {
+    // ... (Code wie vorher, unverändert) ...
     if (!mounted) return;
     if (_currentGpsPosition != null) {
-      if (_mapController.camera.ready) {
-        _mapController.move(_currentGpsPosition!, 17.0);
-        if (kDebugMode) {
-          print(
-              "<<< _centerOnGps: Zentriere auf aktuell verwendete Position: $_currentGpsPosition (${_useMockLocation ? 'Mock' : 'Echt'}) >>>");
-        }
-      } else {
-        if (kDebugMode) {
-          print(
-              ">>> _centerOnGps: MapController noch nicht bereit zum Zentrieren.");
-        }
+      // KORREKTUR: .ready entfernt
+      _mapController.move(_currentGpsPosition!, 17.0);
+      if (kDebugMode) {
+        print(
+            "<<< _centerOnGps: Zentriere auf aktuell verwendete Position: $_currentGpsPosition (${_useMockLocation ? 'Mock' : 'Echt'}) >>>");
       }
     } else {
       if (kDebugMode) {
@@ -790,6 +755,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showErrorDialog(String message) {
+    // ... (Code wie vorher, unverändert) ...
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       if (kDebugMode) {
         print(
@@ -819,6 +785,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showSnackbar(String message, {int durationSeconds = 3}) {
+    // ... (Code wie vorher, unverändert) ...
     if (!mounted) {
       if (kDebugMode) {
         print(">>> _showSnackbar: Snackbar NICHT angezeigt. Message: $message");
@@ -837,6 +804,7 @@ class MapScreenState extends State<MapScreen> {
 
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
+    // ... (Code wie vorher, unverändert) ...
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       if (kDebugMode) {
         print(
@@ -876,30 +844,25 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ... (Code wie vorher, unverändert für activeMarkers) ...
     List<Marker> activeMarkers = [];
-    // Füge den aktuellen Positionsmarker hinzu (Mock oder Echt)
     if (_currentLocationMarker != null)
       activeMarkers.add(_currentLocationMarker!);
-    // Start-Marker wird jetzt nur noch gesetzt, wenn Route berechnet wird
-    // if (_startMarker != null) activeMarkers.add(_startMarker!);
     if (_endMarker != null) activeMarkers.add(_endMarker!);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Campground Navigator"),
         actions: [
-          // NEU: Umschalt-Button in der AppBar
           Tooltip(
             message: _useMockLocation
                 ? "Echtes GPS aktivieren"
                 : "Mock-Position aktivieren",
             child: IconButton(
               icon: Icon(_useMockLocation
-                  ? Icons.location_disabled
-                  : Icons.location_on),
-              color: _useMockLocation
-                  ? Colors.orangeAccent
-                  : Colors.white, // Farbe je nach Modus
+                  ? Icons.location_on
+                  : Icons.location_off), // Logik für Icon umgedreht
+              color: _useMockLocation ? Colors.orangeAccent : Colors.white,
               onPressed: _toggleMockLocation,
             ),
           )
@@ -910,8 +873,7 @@ class MapScreenState extends State<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter:
-                  defaultInitialCenter, // Startet immer auf Firmengelände
+              initialCenter: defaultInitialCenter,
               initialZoom: 17.0,
               minZoom: 13.0,
               maxZoom: 19.0,
@@ -937,7 +899,6 @@ class MapScreenState extends State<MapScreen> {
             ],
           ),
           Positioned(
-            // Suchfeld - jetzt nur noch für ZIEL
             top: 10,
             left: 10,
             right: 10,
@@ -951,7 +912,6 @@ class MapScreenState extends State<MapScreen> {
                   controller: _searchController,
                   focusNode: _searchFocusNode,
                   decoration: InputDecoration(
-                    // Geändert: Sucht immer nach Zielen
                     hintText: "Zielpunkt suchen...",
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: _searchController.text.isNotEmpty
@@ -976,7 +936,6 @@ class MapScreenState extends State<MapScreen> {
           ),
           if (_showSearchResults && _searchResults.isNotEmpty)
             Positioned(
-              // Suchergebnisliste
               top: 75,
               left: 10,
               right: 10,
@@ -997,7 +956,6 @@ class MapScreenState extends State<MapScreen> {
                         leading: Icon(_getIconForFeatureType(feature.type)),
                         title: Text(feature.name),
                         subtitle: Text("Typ: ${feature.type}"),
-                        // Geändert: Wählt Feature als ZIEL aus
                         onTap: () => _selectFeatureAndSetPoint(feature),
                         dense: true,
                       );
@@ -1006,7 +964,7 @@ class MapScreenState extends State<MapScreen> {
                 ),
               ),
             ),
-          if (_isCalculatingRoute) // Ladeindikator Route
+          if (_isCalculatingRoute)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.3),
@@ -1014,8 +972,7 @@ class MapScreenState extends State<MapScreen> {
                     child: CircularProgressIndicator(color: Colors.white)),
               ),
             ),
-          if (!_isDataReady &&
-              _routingGraph == null) // Ladeindikator Initialdaten
+          if (!_isDataReady && _routingGraph == null)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.7),
@@ -1034,28 +991,24 @@ class MapScreenState extends State<MapScreen> {
         ],
       ),
       floatingActionButton: Column(
-        // FABs unten rechts
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Geändert: Löscht nur noch Route & Ziel
           if (_routePolyline != null || _endMarker != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: FloatingActionButton.small(
-                heroTag: "clearRouteAndTargetBtn", // Eindeutiger Tag
-                onPressed: () =>
-                    _clearRoute(clearMarkers: true), // Ruft clearRoute auf
+                heroTag: "clearRouteAndTargetBtn",
+                onPressed: () => _clearRoute(clearMarkers: true),
                 tooltip: 'Route & Ziel löschen',
-                child: const Icon(Icons.delete_outline), // Anderes Icon
+                child: const Icon(Icons.delete_outline),
               ),
             ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: FloatingActionButton.small(
-              heroTag: "centerBtn", // Eindeutiger Tag
-              onPressed:
-                  _centerOnGps, // Zentriert auf aktuelle Position (Mock oder Echt)
+              heroTag: "centerBtn",
+              onPressed: _centerOnGps,
               tooltip: 'Auf aktuelle Position zentrieren',
               child: const Icon(Icons.my_location),
             ),
@@ -1089,4 +1042,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart - Mit Mock-Location-Schalter V2]
+// [Ende lib/main.dart - Korrektur für MapCamera.ready Fehler]
