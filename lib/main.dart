@@ -1,4 +1,4 @@
-// lib/main.dart (Bereinigt - mit Klammern etc.)
+// lib/main.dart (Bereinigt - mit Klammern etc. UND KORREKTUR in AppBar)
 
 import 'dart:async';
 import 'dart:convert';
@@ -114,7 +114,6 @@ class _MapScreenState extends State<MapScreen> {
               locationSettings: const LocationSettings(
                   accuracy: LocationAccuracy.high, distanceFilter: 10))
           .listen((Position position) {
-        // Klammern hier hinzugefügt
         if (mounted) {
           setState(() {
             _currentLatLng = LatLng(position.latitude, position.longitude);
@@ -123,7 +122,6 @@ class _MapScreenState extends State<MapScreen> {
           });
         }
       }, onError: (error) {
-        // Klammern hier hinzugefügt
         if (mounted) {
           setState(() {
             _locationError = "Standortupdates fehlgeschlagen: $error";
@@ -132,7 +130,6 @@ class _MapScreenState extends State<MapScreen> {
         }
       });
     } catch (e) {
-      // Klammern hier hinzugefügt
       if (mounted) {
         setState(() {
           _locationError = e.toString();
@@ -170,7 +167,6 @@ class _MapScreenState extends State<MapScreen> {
         throw Exception("GeoJSON-Struktur ungültig");
       }
     } catch (e) {
-      // Klammern hier hinzugefügt
       if (mounted) {
         setState(() => _geoJsonError = "Lade-/Parse-Fehler: $e");
       }
@@ -178,7 +174,6 @@ class _MapScreenState extends State<MapScreen> {
         print("Fehler beim Laden/Parsen: $e");
       }
     } finally {
-      // Klammern hier hinzugefügt
       if (mounted) {
         setState(() => _geoJsonLoading = false);
         if (kDebugMode) {
@@ -218,7 +213,6 @@ class _MapScreenState extends State<MapScreen> {
             final String featureName = properties['name'];
             String featureType = 'Unknown';
             LatLng? centerPoint;
-            // Klammern hinzugefügt für Klarheit
             if (properties['building'] != null) {
               featureType = 'Building';
             } else if (properties['amenity'] == 'parking') {
@@ -262,7 +256,6 @@ class _MapScreenState extends State<MapScreen> {
                     double totalLat = 0, totalLng = 0;
                     int pointCount = 0;
                     for (final point in polygonPoints) {
-                      // Klammern hinzugefügt
                       if (point is List &&
                           point.length >= 2 &&
                           point[0] is num &&
@@ -283,7 +276,6 @@ class _MapScreenState extends State<MapScreen> {
                   double totalLat = 0, totalLng = 0;
                   int pointCount = 0;
                   for (final point in coordinates) {
-                    // Klammern hinzugefügt
                     if (point is List &&
                         point.length >= 2 &&
                         point[0] is num &&
@@ -393,7 +385,6 @@ class _MapScreenState extends State<MapScreen> {
       print(
           "Display-Parsing beendet: ${tempPolygons.length} Polygone, ${tempPolylines.length} Polylinien (Wege), ${tempPoiMarkers.length} POI-Marker, ${tempSearchableFeatures.length} durchsuchbare Features gefunden.");
     }
-    // Klammern hier hinzugefügt
     if (mounted) {
       setState(() {
         _polygons = tempPolygons;
@@ -404,7 +395,7 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // _handleMarkerTap, _showFeatureDetails (unverändert, hatten schon Klammern)
+  // _handleMarkerTap, _showFeatureDetails (unverändert)
   void _handleMarkerTap(Map<String, dynamic> properties) {
     _showFeatureDetails(context, properties);
   }
@@ -418,7 +409,6 @@ class _MapScreenState extends State<MapScreen> {
       details.add(const SizedBox(height: 8));
     }
     properties.forEach((key, value) {
-      // Klammern hier hinzugefügt
       if (!key.startsWith('@') &&
           !key.startsWith('ref:') &&
           value != null &&
@@ -517,7 +507,7 @@ class _MapScreenState extends State<MapScreen> {
     setState(() => _searchResults = filteredResults);
   }
 
-  // _buildSearchAppBar, _buildNormalAppBar (unverändert)
+  // _buildSearchAppBar (KORRIGIERTE Version ohne Klammern um IconButton)
   AppBar _buildSearchAppBar() {
     final ThemeData theme = Theme.of(context);
     final Color foregroundColor =
@@ -547,18 +537,18 @@ class _MapScreenState extends State<MapScreen> {
         cursorColor: foregroundColor,
       ),
       actions: [
+        // Keine Klammern hier!
         if (_searchController.text.isNotEmpty)
-          {
-            IconButton(
-              icon: Icon(Icons.clear, color: foregroundColor),
-              tooltip: 'Suche löschen',
-              onPressed: () => _searchController.clear(),
-            )
-          },
+          IconButton(
+            icon: Icon(Icons.clear, color: foregroundColor),
+            tooltip: 'Suche löschen',
+            onPressed: () => _searchController.clear(),
+          )
       ],
     );
   }
 
+  // _buildNormalAppBar (unverändert)
   AppBar _buildNormalAppBar() {
     return AppBar(
       title: const Text('Campground Navi'),
@@ -773,9 +763,9 @@ class _MapScreenState extends State<MapScreen> {
                     if (_currentLatLng != null) {
                       _mapController.move(_currentLatLng!, 17.0);
                     }
-                  }, // Klammer hinzugefügt
+                  },
                   child: const Icon(
-                      Icons.my_location), // child nach hinten verschoben
+                      Icons.my_location), // Korrekte Position für child
                 )),
 
           // Mock Location Toggle Button oben links
@@ -790,7 +780,7 @@ class _MapScreenState extends State<MapScreen> {
               mini: true,
               onPressed: _toggleMockLocation,
               child: Icon(
-                // child nach hinten verschoben
+                // Korrekte Position für child
                 _useMockLocation ? Icons.location_off : Icons.location_on,
                 color: Colors.white,
               ),
@@ -801,8 +791,7 @@ class _MapScreenState extends State<MapScreen> {
           if (_isCalculatingRoute)
             Positioned.fill(
               child: Container(
-                color: Colors.black
-                    .withOpacity(0.3), // Deprecated withOpacity hier belassen
+                color: Colors.black.withOpacity(0.3),
                 child: const Center(
                     child: CircularProgressIndicator(
                         valueColor:
@@ -821,7 +810,7 @@ class _MapScreenState extends State<MapScreen> {
                 mini: true,
                 onPressed: _clearRoute,
                 child: const Icon(Icons.close,
-                    color: Colors.white), // child nach hinten verschoben
+                    color: Colors.white), // Korrekte Position für child
               ),
             ),
         ],
@@ -833,51 +822,46 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _calculateAndDisplayRoute({required LatLng destination}) async {
     if (!mounted) {
       return;
-    } // Klammer hinzugefügt
+    }
 
-    // --- Startpunkt bestimmen: Mock oder Real? ---
-    // unnecessary_nullable korrigiert: startLatLng ist jetzt LatLng statt LatLng?
-    // Der Null-Check unten stellt sicher, dass es nicht null ist, wenn wir es brauchen.
-    final LatLng startLatLng;
+    // Startpunkt bestimmen
+    final LatLng startLatLng; // Ist jetzt non-nullable
     if (_useMockLocation) {
       startLatLng = mockStartPosition;
     } else {
-      // Wenn wir den echten Standort brauchen, prüfen wir ihn hier
       if (_currentLatLng == null) {
         if (kDebugMode) {
           print("Echter GPS-Standort benötigt, aber nicht verfügbar.");
         }
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Echter GPS-Standort nicht verfügbar."),
-          backgroundColor: Colors.orange,
-        ));
-        return; // Abbruch
+            content: Text("Echter GPS-Standort nicht verfügbar."),
+            backgroundColor: Colors.orange));
+        return;
       }
-      startLatLng =
-          _currentLatLng!; // Wir wissen jetzt, dass _currentLatLng nicht null ist
+      startLatLng = _currentLatLng!;
     }
 
-    // --- Prüfen, ob Routing-Daten geladen sind ---
+    // Routing-Daten prüfen
     if (_routingGraph == null || _routingGraph!.nodes.isEmpty) {
       if (kDebugMode) {
         print("Routing-Daten nicht geladen.");
       }
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text("Routing-Daten nicht geladen."),
-        backgroundColor: Colors.orange,
-      ));
+          content: Text("Routing-Daten nicht geladen."),
+          backgroundColor: Colors.orange));
       return;
     }
 
-    // --- Berechnung starten ---
+    // Berechnung starten
     setState(() {
       _isCalculatingRoute = true;
       _calculatedRoute = null;
     });
 
-    List<LatLng>? path;
+    List<LatLng>? path; // Bleibt nullable, da das Ergebnis null sein kann
     try {
-      final GraphNode? startNode = _routingGraph!.findNearestNode(startLatLng);
+      final GraphNode? startNode = _routingGraph!
+          .findNearestNode(startLatLng); // startLatLng ist hier sicher non-null
       final GraphNode? endNode = _routingGraph!.findNearestNode(destination);
 
       if (startNode == null || endNode == null) {
@@ -891,14 +875,14 @@ class _MapScreenState extends State<MapScreen> {
         }
         if (mounted) {
           setState(() => _isCalculatingRoute = false);
-        } // Klammer hinzugefügt
+        }
         return;
       }
 
       if (kDebugMode) {
         final startType = _useMockLocation
             ? "Mock-Position $startLatLng"
-            : "echter Position $_currentLatLng";
+            : "echter Position $_currentLatLng"; // _currentLatLng kann hier null sein, wenn Mock aktiv ist, aber das ist ok für den Log-String
         print(
             ">>> Berechne Route von Knoten ${startNode.id} (ausgehend von $startType) zu Knoten ${endNode.id} (Ziel: $destination)");
       }
