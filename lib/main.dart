@@ -12,7 +12,7 @@ import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_ti
 // Eigene Imports
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
-// import 'package:camping_osm_navi/models/graph_node.dart'; // graph_node.dart wird nicht direkt hier benötigt, wenn RoutingGraph es exportiert oder die Nutzung nur in Services erfolgt
+import 'package:camping_osm_navi/models/graph_node.dart'; // Import für GraphNode hinzugefügt/aktiviert
 import 'package:camping_osm_navi/services/geojson_parser_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
 
