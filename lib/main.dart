@@ -1,4 +1,4 @@
-// [Start lib/main.dart Überarbeitet für Fehlerbehebung]
+// [Start lib/main.dart Überarbeitet für Fehlerbehebung - mit neuen Koordinaten]
 import 'dart:async';
 import 'dart:convert'; // Für jsonDecode
 import 'package:flutter/foundation.dart';
@@ -80,8 +80,10 @@ class MapScreenState extends State<MapScreen> {
 
   bool _isDataReady = false;
 
-  static const LatLng defaultInitialCenter =
-      LatLng(51.0245, 5.8630); // Beispiel-Koordinaten Campingplatz
+  // === HIER WURDEN DIE KOORDINATEN ANGEPASST ===
+  static const LatLng defaultInitialCenter = LatLng(
+      51.02518780487824, 5.858832278816441); // Koordinaten Firmengelände Tom
+  // ============================================
   static const double markerWidth =
       40.0; // Kleinere Marker für bessere Übersicht
   static const double markerHeight = 40.0;
@@ -433,6 +435,7 @@ class MapScreenState extends State<MapScreen> {
         print(
             "<<< _initializeGps: Neue GPS Position: $_currentGpsPosition >>>");
       }
+      // === Zentriert auf die ERSTE GPS Position, nicht mehr bei jedem Update ===
       if (isFirstFix && _currentGpsPosition != null) {
         _mapController.move(
             _currentGpsPosition!, 17.0); // Auf erste Position zoomen
@@ -441,6 +444,7 @@ class MapScreenState extends State<MapScreen> {
               "<<< _initializeGps: Karte auf erste GPS-Position zentriert. >>>");
         }
       }
+      // ========================================================================
     }, onError: (error) {
       if (kDebugMode) {
         print(">>> _initializeGps: Fehler im GPS Positions-Stream: $error");
@@ -715,7 +719,8 @@ class MapScreenState extends State<MapScreen> {
   void _centerOnGps() {
     if (!mounted) return;
     if (_currentGpsPosition != null) {
-      _mapController.move(_currentGpsPosition!, 17.0);
+      _mapController.move(
+          _currentGpsPosition!, 17.0); // Zoomstufe hier anpassbar
       if (kDebugMode) {
         print(
             "<<< _centerOnGps: Zentriere auf GPS-Position: $_currentGpsPosition >>>");
@@ -835,8 +840,9 @@ class MapScreenState extends State<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _currentGpsPosition ?? defaultInitialCenter,
-              initialZoom: 16.0,
+              initialCenter:
+                  defaultInitialCenter, // Verwendet jetzt die angepassten Koordinaten
+              initialZoom: 17.0, // Etwas höherer initialer Zoom
               minZoom: 13.0,
               maxZoom: 19.0,
               onTap: _handleMapTap,
@@ -1030,4 +1036,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart Überarbeitet für Fehlerbehebung]
+// [Ende lib/main.dart Überarbeitet für Fehlerbehebung - mit neuen Koordinaten]
