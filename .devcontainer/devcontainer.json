@@ -1,0 +1,27 @@
+{
+  "name": "Basic Codespace (Ubuntu)",
+  // Nur das Basis-Image, keine Flutter-spezifischen Dinge
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  // Wichtig: Port-Weiterleitung für die Web-App behalten wir bei
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "App Port",
+      "onAutoForward": "notify" // Benachrichtigen, wenn Port offen
+    }
+  },
+
+  // VS Code Standard-Anpassungen (optional, können auch weg)
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Nur grundlegende Erweiterungen, Flutter/Dart fügen wir später hinzu oder lassen sie weg
+        "GitHub.codespaces",
+        "GitHub.vscode-pull-request-github"
+      ]
+    }
+  },
+
+  "remoteUser": "vscode"
+}

@@ -1,3 +1,4 @@
+# [Start pubspec.yaml]
 name: camping_osm_navi
 description: A navigation app for a specific campground using OpenStreetMap.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -5,7 +6,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '^3.4.0'
 
 dependencies:
   flutter:
@@ -14,24 +15,17 @@ dependencies:
   geolocator: ^12.0.0
   flutter_map: ^6.1.0
   latlong2: ^0.9.1
-  collection: ^1.18.0 # <-- HINZUGEFÜGT/AKTUALISIERT
+  collection: ^1.18.0
+  flutter_map_cancellable_tile_provider: ^2.0.0 # <-- NEU HINZUGEFÜGT
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
 
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-# The following section is specific to Flutter packages.
 flutter:
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/ # Deklariert den gesamten Ordner
-  #   - assets/site_data.geojson # Alternative: Einzelne Datei deklarieren
-
-  # An example of declaring fonts from package dependencies,
-  # see https://flutter.dev/custom-fonts/#from-packages
+    - assets/data/export.geojson
+# [Ende pubspec.yaml]
