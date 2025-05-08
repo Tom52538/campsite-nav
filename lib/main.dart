@@ -131,7 +131,6 @@ class MapScreenState extends State<MapScreen> {
       _currentGpsPosition = null;
       _currentLocationMarker = null;
     });
-
     if (_useMockLocation) {
       if (kDebugMode) {
         print(
@@ -144,8 +143,10 @@ class MapScreenState extends State<MapScreen> {
             _currentLocationMarker = _createMarker(_currentGpsPosition!,
                 Colors.orangeAccent, Icons.pin_drop, "Mock Position (Gelände)");
             _mapController.move(_currentGpsPosition!, 17.0);
-            print(
-                "<<< _initializeGpsOrMock: Map auf Mock Position zentriert >>>");
+            if (kDebugMode) {
+              print(
+                  "<<< _initializeGpsOrMock: Map auf Mock Position zentriert >>>");
+            }
           });
         }
       });
@@ -166,7 +167,6 @@ class MapScreenState extends State<MapScreen> {
 
   List<SearchableFeature> _extractSearchableFeaturesFromGeoJson(
       String geoJsonString) {
-    // ... (Code unverändert) ...
     final List<SearchableFeature> features = [];
     final dynamic decodedJson = jsonDecode(geoJsonString);
 
@@ -266,7 +266,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _loadData() async {
-    // ... (Code unverändert) ...
     if (kDebugMode) {
       print("<<< _loadData: Starte das Laden der GeoJSON Daten... >>>");
     }
@@ -332,7 +331,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onSearchChanged() {
-    // ... (Code unverändert) ...
     if (!mounted) return;
     final query = _searchController.text.toLowerCase().trim();
     List<SearchableFeature> results = [];
@@ -344,32 +342,66 @@ class MapScreenState extends State<MapScreen> {
     }
     setStateIfMounted(() {
       _searchResults = results;
-      _showSearchResults = _searchFocusNode.hasFocus && results.isNotEmpty;
+      // Update _showSearchResults based on focus AND if results are available and text is not empty
+      _showSearchResults =
+          _searchFocusNode.hasFocus && results.isNotEmpty && query.isNotEmpty;
     });
   }
 
+  // ========== MODIFIED FUNCTION STARTS HERE ==========
   void _onSearchFocusChanged() {
-    // ... (Code unverändert) ...
     if (!mounted) return;
-    setStateIfMounted(() {
-      _showSearchResults = _searchFocusNode.hasFocus &&
-          _searchResults.isNotEmpty &&
-          _searchController.text.isNotEmpty;
-    });
+
+    final bool hasFocus = _searchFocusNode.hasFocus;
+    final bool hasText = _searchController.text.isNotEmpty;
+    final bool hasResults = _searchResults.isNotEmpty;
+
+    if (kDebugMode) {
+      print(
+          "<<< _onSearchFocusChanged: hasFocus: $hasFocus, hasText: $hasText, hasResults: $hasResults. Current _showSearchResults: $_showSearchResults >>>");
+    }
+
+    // Wenn das Suchfeld den Fokus erhält und Text/Ergebnisse vorhanden sind, zeige die Ergebnisse an.
+    if (hasFocus) {
+      setStateIfMounted(() {
+        _showSearchResults = hasText && hasResults;
+        if (kDebugMode && (hasText && hasResults)) {
+          print(
+              "<<< _onSearchFocusChanged: Focus gained/kept. Showing results. >>>");
+        } else if (kDebugMode) {
+          print(
+              "<<< _onSearchFocusChanged: Focus gained/kept. BUT no text or no results, hiding results. >>>");
+        }
+      });
+    } else {
+      // Wenn das Suchfeld den Fokus VERLIERT:
+      // Blende die Ergebnisse NICHT sofort aus.
+      // Die Methode _selectFeatureAndSetPoint (die durch Tippen auf ein ListTile ausgelöst wird)
+      // wird _showSearchResults explizit auf false setzen und den Fokus entfernen.
+      // Wenn der Benutzer auf die Karte tippt (und nicht auf ein ListTile),
+      // wird onPositionChanged der Karte oder ein anderer Mechanismus das Ausblenden übernehmen.
+      if (kDebugMode) {
+        print(
+            "<<< _onSearchFocusChanged: Focus LOST. Intentionally NOT changing _showSearchResults state here. Waiting for item selection or map tap. >>>");
+      }
+      // Es ist wichtig, hier KEIN setState aufzurufen, das _showSearchResults auf false setzt,
+      // da dies das ListTile entfernen würde, bevor sein onTap ausgelöst werden kann.
+    }
   }
+  // ========== MODIFIED FUNCTION ENDS HERE ==========
 
   void _selectFeatureAndSetPoint(SearchableFeature feature) {
-    // ... (Code unverändert) ...
     if (kDebugMode) {
       print(
           "<<< _selectFeatureAndSetPoint: Feature ausgewählt: ${feature.name} >>>");
     }
     if (!mounted) return;
 
-    _searchController.clear();
-    _searchResults = [];
-    _showSearchResults = false;
-    _searchFocusNode.unfocus();
+    _searchController.clear(); // Wichtig: Zuerst Suchtext löschen
+    _searchResults = []; // Dann Suchergebnisse leeren
+    _showSearchResults = false; // Dann Suchergebnisliste ausblenden
+    _searchFocusNode
+        .unfocus(); // Dann Fokus entziehen (löst _onSearchFocusChanged aus, was jetzt ok ist)
 
     setStateIfMounted(() {
       _endLatLng = feature.center;
@@ -386,7 +418,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initializeGpsReal() async {
-    // ... (Code unverändert) ...
     if (kDebugMode) {
       print("<<< _initializeGpsReal: Starte ECHTE GPS Initialisierung... >>>");
     }
@@ -394,6 +425,7 @@ class MapScreenState extends State<MapScreen> {
 
     bool serviceEnabled;
     LocationPermission permission;
+
     try {
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -403,6 +435,7 @@ class MapScreenState extends State<MapScreen> {
         }
         return;
       }
+
       permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         if (kDebugMode) {
@@ -419,6 +452,7 @@ class MapScreenState extends State<MapScreen> {
           return;
         }
       }
+
       if (permission == LocationPermission.deniedForever) {
         _showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
         if (kDebugMode) {
@@ -487,7 +521,6 @@ class MapScreenState extends State<MapScreen> {
   Marker _createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
       {double size = 30.0}) {
-    // ... (Code unverändert) ...
     return Marker(
       width: markerWidth,
       height: markerHeight,
@@ -501,13 +534,14 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _calculateAndDisplayRoute() async {
-    // ... (Code unverändert) ...
     LatLng? routeStartPoint;
     String startPointType = "";
+
     if (_useMockLocation) {
       routeStartPoint = defaultInitialCenter;
       startPointType = "Mock Position";
       if (_startMarker == null && mounted) {
+        // Ensure start marker for mock is set if null
         setStateIfMounted(() {
           _startMarker = _createMarker(defaultInitialCenter, Colors.green,
               Icons.flag_circle, "Start: Mock Position");
@@ -517,16 +551,19 @@ class MapScreenState extends State<MapScreen> {
       routeStartPoint = _currentGpsPosition;
       startPointType = "Echte GPS Position";
       if (_startMarker == null && _currentGpsPosition != null && mounted) {
+        // Ensure start marker for GPS is set if null
         setStateIfMounted(() {
           _startMarker = _createMarker(_currentGpsPosition!, Colors.green,
               Icons.flag_circle, "Start: GPS Position");
         });
       }
     }
+
     if (kDebugMode) {
       print(
           "<<< _calculateAndDisplayRoute: Aufgerufen. Verwende Startpunkt: $startPointType ($routeStartPoint) >>>");
     }
+
     if (!mounted) return;
     if (!_isDataReady) {
       _showErrorDialog("Kartendaten nicht bereit.");
@@ -542,6 +579,22 @@ class MapScreenState extends State<MapScreen> {
           : "Zielpunkt nicht gesetzt.");
       return;
     }
+
+    // Ensure start marker is created if it wasn't (e.g. if _calculateAndDisplayRoute is called by _selectFeatureAndSetPoint)
+    if (_startMarker == null) {
+      if (_useMockLocation && mounted) {
+        setStateIfMounted(() {
+          _startMarker = _createMarker(defaultInitialCenter, Colors.green,
+              Icons.flag_circle, "Start: Mock Position");
+        });
+      } else if (!_useMockLocation && _currentGpsPosition != null && mounted) {
+        setStateIfMounted(() {
+          _startMarker = _createMarker(_currentGpsPosition!, Colors.green,
+              Icons.flag_circle, "Start: GPS Position");
+        });
+      }
+    }
+
     setStateIfMounted(() => _isCalculatingRoute = true);
     if (kDebugMode) {
       print(
@@ -552,6 +605,7 @@ class MapScreenState extends State<MapScreen> {
       final GraphNode? startNode =
           _routingGraph!.findNearestNode(routeStartPoint);
       final GraphNode? endNode = _routingGraph!.findNearestNode(_endLatLng!);
+
       if (startNode == null || endNode == null) {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
         if (kDebugMode) {
@@ -604,17 +658,34 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
-    // ... (Code unverändert) ...
     if (kDebugMode) {
       print("<<< _handleMapTap: Auf Karte getippt: $latLng >>>");
     }
     if (!mounted) return;
+
+    // If search results are shown and the tap is on the map, hide search results.
     if (_searchFocusNode.hasFocus) {
-      _searchFocusNode.unfocus();
+      _searchFocusNode.unfocus(); // Will trigger _onSearchFocusChanged
+      // which will now (with the fix) NOT hide results immediately.
+      // However, tapping map should hide them.
+      setStateIfMounted(
+          () => _showSearchResults = false); // Explicitly hide on map tap
+      if (kDebugMode)
+        print(
+            "<<< _handleMapTap: Search had focus. Unfocused and hid results. >>>");
+    } else if (_showSearchResults) {
+      // If search results are visible but search doesn't have focus (e.g. after a ListTile tap attempt that failed before the fix)
+      // also hide them.
       setStateIfMounted(() => _showSearchResults = false);
+      if (kDebugMode)
+        print(
+            "<<< _handleMapTap: Search results were visible without focus. Hid results. >>>");
     }
+
     if (_isCalculatingRoute) return;
+
     final bool isNewTarget = _endLatLng == null || _endMarker == null;
+
     if (isNewTarget) {
       setStateIfMounted(() {
         _endLatLng = latLng;
@@ -632,8 +703,8 @@ class MapScreenState extends State<MapScreen> {
           "Neues Ziel?", "Altes Ziel verwerfen und neues Ziel setzen?", () {
         if (!mounted) return;
         setStateIfMounted(() {
-          _routePolyline = null;
-          _endMarker = null;
+          _routePolyline = null; // Clear previous route line
+          _endMarker = null; // Clear previous end marker
           _endLatLng = latLng;
           _endMarker = _createMarker(
               latLng, Colors.red, Icons.flag_circle, "Ziel (Karte)");
@@ -648,7 +719,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
-    // ... (Code unverändert) ...
     final clearAction = () {
       if (!mounted) return;
       setStateIfMounted(() {
@@ -657,12 +727,15 @@ class MapScreenState extends State<MapScreen> {
           _endMarker = null;
           _endLatLng = null;
           _selectedSearchFeatureForEnd = null;
+          // Do NOT clear _startMarker here as it represents current GPS/Mock location implicitly
           if (kDebugMode) {
-            print("<<< _clearRoute: Route UND Ziel gelöscht. >>>");
+            print(
+                "<<< _clearRoute: Route UND Ziel-Marker gelöscht. Start-Marker bleibt. >>>");
           }
         } else {
+          // Only clear route line
           if (kDebugMode) {
-            print("<<< _clearRoute: Nur Route gelöscht. >>>");
+            print("<<< _clearRoute: Nur Route gelöscht. Marker bleiben. >>>");
           }
         }
       });
@@ -670,8 +743,10 @@ class MapScreenState extends State<MapScreen> {
           clearMarkers ? "Route und Ziel gelöscht." : "Route gelöscht.",
           durationSeconds: 2);
     };
+
     final bool somethingToDelete =
         _routePolyline != null || (clearMarkers && _endMarker != null);
+
     if (showConfirmation && somethingToDelete) {
       _showConfirmationDialog(
           clearMarkers ? "Route & Ziel löschen?" : "Route löschen?",
@@ -685,7 +760,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _centerOnGps() {
-    // ... (Code unverändert) ...
     if (!mounted) return;
     if (_currentGpsPosition != null) {
       _mapController.move(_currentGpsPosition!, 17.0);
@@ -702,7 +776,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showErrorDialog(String message) {
-    // ... (Code unverändert) ...
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       if (kDebugMode) {
         print(
@@ -732,7 +805,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showSnackbar(String message, {int durationSeconds = 3}) {
-    // ... (Code unverändert) ...
     if (!mounted) {
       if (kDebugMode) {
         print(">>> _showSnackbar: Snackbar NICHT angezeigt. Message: $message");
@@ -751,7 +823,6 @@ class MapScreenState extends State<MapScreen> {
 
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
-    // ... (Code unverändert) ...
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       if (kDebugMode) {
         print(
@@ -792,13 +863,16 @@ class MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     List<Marker> activeMarkers = [];
-    if (_currentLocationMarker != null)
+    if (_currentLocationMarker != null) {
       activeMarkers.add(_currentLocationMarker!);
-    // Start-Marker wird jetzt nur noch intern in _calculateRoute gesetzt
-    if (_startMarker != null)
-      activeMarkers.add(
-          _startMarker!); // WIEDER HINZUGEFÜGT, wird für Mock/GPS Start gesetzt
-    if (_endMarker != null) activeMarkers.add(_endMarker!);
+    }
+    if (_startMarker != null) {
+      // Start marker is for the calculated route's start
+      activeMarkers.add(_startMarker!);
+    }
+    if (_endMarker != null) {
+      activeMarkers.add(_endMarker!);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -829,10 +903,22 @@ class MapScreenState extends State<MapScreen> {
               onTap: _handleMapTap,
               onPositionChanged: (MapPosition position, bool hasGesture) {
                 if (hasGesture && _searchFocusNode.hasFocus) {
-                  _searchFocusNode.unfocus();
+                  _searchFocusNode
+                      .unfocus(); // This will call _onSearchFocusChanged
                   if (mounted) {
+                    // _onSearchFocusChanged will NOT hide results on focus loss alone.
+                    // Explicitly hide results if map is moved.
                     setStateIfMounted(() => _showSearchResults = false);
+                    if (kDebugMode)
+                      print(
+                          "<<< onPositionChanged: Map moved by gesture with search focus. Hid results. >>>");
                   }
+                } else if (hasGesture && _showSearchResults) {
+                  // If map is moved and results are shown (even if search lost focus e.g. failed tap)
+                  setStateIfMounted(() => _showSearchResults = false);
+                  if (kDebugMode)
+                    print(
+                        "<<< onPositionChanged: Map moved by gesture AND results were visible. Hid results. >>>");
                 }
               },
             ),
@@ -867,13 +953,9 @@ class MapScreenState extends State<MapScreen> {
                         ? IconButton(
                             icon: const Icon(Icons.clear),
                             onPressed: () {
-                              _searchController.clear();
-                              if (mounted) {
-                                setStateIfMounted(() {
-                                  _searchResults = [];
-                                  _showSearchResults = false;
-                                });
-                              }
+                              _searchController
+                                  .clear(); // Triggers _onSearchChanged
+                              // which will update _searchResults and _showSearchResults
                             },
                           )
                         : null,
@@ -883,22 +965,28 @@ class MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-          // === WICHTIGE ÄNDERUNG HIER: GestureDetector um die Suchergebnisliste ===
           if (_showSearchResults && _searchResults.isNotEmpty)
             Positioned(
-              top: 75, left: 10, right: 10,
-              // GestureDetector fängt Klicks ab, auch wenn darunterliegende Widgets sie vielleicht blockieren
+              top: 75, // Position below search bar card
+              left: 10,
+              right: 10,
               child: GestureDetector(
-                // Verhindert, dass Klicks zur Karte durchgehen, wenn die Liste sichtbar ist
+                // Outer GestureDetector
                 onTap: () {
-                  if (kDebugMode)
-                    print("GestureDetector tapped - preventing map tap.");
-                  // Optional: Fokus wegnehmen, wenn auf den leeren Bereich der Card geklickt wird
-                  // _searchFocusNode.unfocus();
-                  // setStateIfMounted(() => _showSearchResults = false);
+                  // Tap on the Card area itself (not a ListTile)
+                  if (kDebugMode) {
+                    print(
+                        "<<< GestureDetector (around ListView) tapped - Hiding results and unfocusing. >>>");
+                  }
+                  if (mounted) {
+                    setStateIfMounted(() {
+                      _showSearchResults = false;
+                    });
+                    _searchFocusNode.unfocus(); // Explicitly unfocus
+                  }
                 },
-                // Sorgt dafür, dass der GestureDetector den Bereich ausfüllt
-                behavior: HitTestBehavior.opaque,
+                behavior: HitTestBehavior
+                    .opaque, // Prevents taps from reaching map below
                 child: Card(
                   elevation: 4.0,
                   shape: RoundedRectangleBorder(
@@ -917,7 +1005,6 @@ class MapScreenState extends State<MapScreen> {
                           title: Text(feature.name),
                           subtitle: Text("Typ: ${feature.type}"),
                           onTap: () {
-                            // Der eigentliche onTap für das Listenelement
                             if (kDebugMode) {
                               print(
                                   "<<< ListTile tapped! Feature: ${feature.name} >>>");
@@ -932,7 +1019,6 @@ class MapScreenState extends State<MapScreen> {
                 ),
               ),
             ),
-          // ================================================================
           if (_isCalculatingRoute)
             Positioned.fill(
               child: Container(
