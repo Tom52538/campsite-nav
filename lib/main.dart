@@ -1,4 +1,4 @@
-// [Start lib/main.dart - Fix SnackBar Layout & Double Load]
+// [Start lib/main.dart - Further SnackBar Refinements]
 import 'dart:async';
 import 'dart:convert'; // Für jsonDecode
 import 'package:flutter/foundation.dart';
@@ -94,8 +94,6 @@ class MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    // didChangeDependencies wird den initialen Standort vom Provider holen und verarbeiten.
-    // initState ist jetzt hauptsächlich für einmalige Listener-Registrierungen da.
     _searchController.addListener(_onSearchChanged);
     _searchFocusNode.addListener(_onSearchFocusChanged);
     if (kDebugMode) {
@@ -110,7 +108,6 @@ class MapScreenState extends State<MapScreen> {
     final currentLocationProvider = Provider.of<LocationProvider>(context);
     final newSelectedLocation = currentLocationProvider.selectedLocation;
 
-    // Vergleiche IDs, um unnötige Updates bei gleichen Objekten zu vermeiden, die neu erstellt wurden
     if (newSelectedLocation != null &&
         (newSelectedLocation.id != _lastProcessedLocation?.id)) {
       if (kDebugMode) {
@@ -118,7 +115,8 @@ class MapScreenState extends State<MapScreen> {
             "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newSelectedLocation.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
       }
       _handleLocationChangeUIUpdates(newSelectedLocation);
-      _lastProcessedLocation = newSelectedLocation;
+      _lastProcessedLocation =
+          newSelectedLocation; // Wichtig: hier setzen, nachdem _handle... aufgerufen wurde
     }
   }
 
@@ -140,6 +138,7 @@ class MapScreenState extends State<MapScreen> {
     if (newLocation == null) {
       return;
     }
+    // Der Provider wird aktualisiert. didChangeDependencies wird dann reagieren.
     Provider.of<LocationProvider>(context, listen: false)
         .selectLocation(newLocation);
   }
@@ -148,6 +147,10 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
+
+    final bool isInitialLoad = _lastProcessedLocation ==
+        null; // Prüfen, ob es der erste Ladevorgang ist
+
     setState(() {
       _routingGraph = null;
       _searchableFeatures = [];
@@ -165,12 +168,15 @@ class MapScreenState extends State<MapScreen> {
       _mapController.move(newLocation.initialCenter, 17.0);
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _showSnackbar("Standort geändert zu: ${newLocation.name}",
-            durationSeconds: 3);
-      }
-    });
+    // Zeige SnackBar nur bei einem tatsächlichen Wechsel, nicht beim ersten Laden.
+    if (!isInitialLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showSnackbar("Standort geändert zu: ${newLocation.name}",
+              durationSeconds: 3);
+        }
+      });
+    }
 
     if (kDebugMode) {
       print(
@@ -181,6 +187,7 @@ class MapScreenState extends State<MapScreen> {
     _initializeGpsOrMock(newLocation);
   }
 
+  // ... (Rest der Methoden _toggleMockLocation bis _createMarker bleiben unverändert wie in der letzten Version)
   void _toggleMockLocation() {
     if (!mounted) {
       return;
@@ -909,9 +916,7 @@ class MapScreenState extends State<MapScreen> {
       SnackBar(
         content: Text(message),
         duration: Duration(seconds: durationSeconds),
-        behavior: SnackBarBehavior.fixed, // ÄNDERUNG: fixed statt floating
-        // Optional: Etwas Abstand, wenn fixed verwendet wird und FABs sehr nah sind
-        // margin: EdgeInsets.only(bottom: _isFabColumnVisible() ? 60 : 10, left:10, right:10),
+        behavior: SnackBarBehavior.fixed, // Sicherstellen, dass dies .fixed ist
       ),
     );
   }
@@ -972,7 +977,6 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
     return Scaffold(
-      // Die Zeile, auf die der Fehler "Floating SnackBar presented off screen" zeigte
       appBar: AppBar(
         title: const Text("Campground Navigator"),
         actions: [
@@ -1214,4 +1218,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart - Fix SnackBar Layout & Double Load]
+// [Ende lib/main.dart - Further SnackBar Refinements]
