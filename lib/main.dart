@@ -1,4 +1,4 @@
-// [Start lib/main.dart - Mit Standortauswahl-Dropdown]
+// [Start lib/main.dart - Korrigiert gemäß Diagnose-Log]
 import 'dart:async';
 import 'dart:convert'; // Für jsonDecode
 import 'package:flutter/foundation.dart';
@@ -15,7 +15,7 @@ import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
 import 'package:camping_osm_navi/services/geojson_parser_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
-import 'package:camping_osm_navi/models/location_info.dart'; // NEUER IMPORT
+import 'package:camping_osm_navi/models/location_info.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,19 +71,15 @@ class MapScreenState extends State<MapScreen> {
   final FocusNode _searchFocusNode = FocusNode();
   List<SearchableFeature> _searchResults = [];
   bool _showSearchResults = false;
-  SearchableFeature? _selectedSearchFeatureForEnd;
+  // Entfernt: SearchableFeature? _selectedSearchFeatureForEnd; (war unused_field)
 
   bool _isDataReady = false;
   bool _useMockLocation = true;
 
-  // NEU: Ausgewählter Standort und verfügbare Standorte
   LocationInfo? _selectedLocation;
-  final List<LocationInfo> _availableLocations =
-      appLocations; // Aus location_info.dart
+  final List<LocationInfo> _availableLocations = appLocations;
 
-  // defaultInitialCenter wird jetzt vom _selectedLocation oder als Fallback verwendet
-  static const LatLng
-      fallbackInitialCenter = // Umbenannt von defaultInitialCenter
+  static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
   static const double markerWidth = 40.0;
   static const double markerHeight = 40.0;
@@ -93,11 +89,9 @@ class MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
 
-    // Initialisiere den ausgewählten Standort
     if (_availableLocations.isNotEmpty) {
       _selectedLocation = _availableLocations.first;
     } else {
-      // Fallback, falls appLocations leer ist (sollte nicht passieren)
       _selectedLocation = null;
     }
 
@@ -106,11 +100,7 @@ class MapScreenState extends State<MapScreen> {
           "<<< initState: MapScreen wird initialisiert. Ausgewählter Standort: ${_selectedLocation?.name ?? "Keiner"}. Mock-Location: $_useMockLocation >>>");
     }
 
-    // WICHTIG: _loadData und _initializeGpsOrMock müssen noch angepasst werden,
-    // um den _selectedLocation.geojsonAssetPath und ggf. _selectedLocation.initialCenter zu verwenden,
-    // wenn Mock-Location aktiv ist und kein GPS-Fix da ist.
-    // Für diesen Schritt laden wir weiterhin die Standard-Daten.
-    _loadData(); // Lädt aktuell noch hartcodiert 'assets/data/export.geojson'
+    _loadData();
     _initializeGpsOrMock();
 
     _searchController.addListener(_onSearchChanged);
@@ -132,25 +122,26 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onLocationChanged(LocationInfo? newLocation) {
-    if (newLocation == null || newLocation == _selectedLocation) return;
-    if (!mounted) return;
+    if (newLocation == null || newLocation == _selectedLocation) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _selectedLocation = newLocation;
-      // Alle standortspezifischen Daten zurücksetzen
       _routingGraph = null;
       _searchableFeatures = [];
       _routePolyline = null;
-      // _currentLocationMarker bleibt (da GPS oder Mock-Standort)
       _startMarker = null;
       _endMarker = null;
       _endLatLng = null;
-      _selectedSearchFeatureForEnd = null;
-      _isDataReady = false; // Daten für neuen Standort müssen geladen werden
+      // _selectedSearchFeatureForEnd wurde entfernt
+      _isDataReady = false;
     });
 
-    _mapController.move(
-        _selectedLocation!.initialCenter, 17.0); // Zoom anpassen?
+    _mapController.move(_selectedLocation!.initialCenter, 17.0);
     _showSnackbar("Standort geändert zu: ${_selectedLocation!.name}",
         durationSeconds: 3);
 
@@ -160,43 +151,24 @@ class MapScreenState extends State<MapScreen> {
     }
 
     // TODO Phase 2: Hier _loadData(_selectedLocation!.geojsonAssetPath) aufrufen und ggf. _initializeGpsOrMock anpassen
-    // Fürs Erste simulieren wir, dass die Daten neu geladen werden müssen, aber die _loadData Methode lädt noch das alte File.
-    // Der _loadData Aufruf wird in einem späteren Schritt dynamisch gemacht.
-    // _loadData(); // AKTUELL NICHT AUFRUFEN, da es die alte Datei lädt und zu Verwirrung führen könnte.
-    // Stattdessen zeigen wir dem Nutzer, dass etwas passieren würde:
     _showSnackbar("Lade Daten für ${_selectedLocation!.name}...",
         durationSeconds: 2);
-    // Manuell _isDataReady auf false setzen, bis die echte Ladelogik implementiert ist
-    // und dann wieder auf true, nachdem geladen wurde.
-    // Hier noch keine echten Daten laden, das ist der nächste Schritt im Plan.
-    // Als Platzhalter: Nach kurzer Verzögerung so tun, als wären Daten geladen (für UI-Demo)
-    // Dies ist nur für die Demo des Wechsels, die echte Ladelogik kommt später
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted && _selectedLocation == newLocation) {
-        // Sicherstellen, dass der Standort nicht erneut gewechselt wurde
-        // setState(() { _isDataReady = true; }); // Nur aktivieren, wenn _loadData wirklich aufgerufen und erfolgreich war
-        // Da _loadData noch nicht dynamisch ist, lassen wir _isDataReady vorerst so, wie es von der initialen Ladung ist
-        // oder setzen es explizit, um den "Lade"-Zustand zu simulieren.
-        // Für diesen Schritt ist es besser, wenn der Nutzer sieht, dass die Daten noch nicht zum Standort passen.
+        // setState(() { _isDataReady = true; }); // Nur wenn _loadData erfolgreich war
       }
     });
   }
 
-  LatLng _getActiveInitialCenter() {
-    if (_useMockLocation) {
-      // Wenn Mock-Location aktiv ist, verwende das initialCenter des ausgewählten Standorts
-      return _selectedLocation?.initialCenter ?? fallbackInitialCenter;
-    }
-    // Wenn echtes GPS aktiv ist und eine Position vorhanden ist, wird diese verwendet.
-    // Das defaultInitialCenter für die MapOptions ist nur der erste Startpunkt.
-    return _selectedLocation?.initialCenter ?? fallbackInitialCenter;
-  }
+  // Entfernt: _getActiveInitialCenter() da ungenutzt und Logik direkt implementiert
 
   void _toggleMockLocation() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     setState(() {
       _useMockLocation = !_useMockLocation;
-      _initializeGpsOrMock(); // Diese Methode muss _selectedLocation.initialCenter für Mock berücksichtigen
+      _initializeGpsOrMock();
     });
     _showSnackbar(
         _useMockLocation
@@ -233,15 +205,15 @@ class MapScreenState extends State<MapScreen> {
                 Colors.orangeAccent,
                 Icons.pin_drop,
                 "Mock Position (${_selectedLocation?.name ?? 'Gelände'})");
-            _mapController.move(
-                _currentGpsPosition!, 17.0); // Ggf. Zoom anpassen
+            _mapController.move(_currentGpsPosition!, 17.0);
             if (kDebugMode) {
               print(
                   "<<< _initializeGpsOrMock: Map auf Mock Position für ${_selectedLocation?.name} zentriert >>>");
             }
           });
-          // Routen neu berechnen, falls ein Ziel existiert, da sich der Startpunkt geändert haben könnte
-          if (_endLatLng != null) _calculateAndDisplayRoute();
+          if (_endLatLng != null) {
+            _calculateAndDisplayRoute();
+          }
         }
       });
     } else {
@@ -361,22 +333,22 @@ class MapScreenState extends State<MapScreen> {
 
   // TODO Phase 2: _loadData anpassen, um geojsonAssetPath als Parameter zu akzeptieren
   Future<void> _loadData() async {
-    // Aktuell wird immer noch die Standard-Datei geladen.
-    // Dies wird in Phase 2, Schritt 3 angepasst.
     final String currentGeoJsonPath =
         _selectedLocation?.geojsonAssetPath ?? 'assets/data/export.geojson';
     if (kDebugMode) {
       print(
           "<<< _loadData: Starte das Laden der GeoJSON Daten von: $currentGeoJsonPath (Hinweis: Muss noch dynamisch werden für Standortwechsel!). >>>");
     }
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     setStateIfMounted(() {
       _isDataReady = false;
     });
 
     try {
-      final String geoJsonString = await rootBundle.loadString(
-          currentGeoJsonPath); // Verwende (noch nicht voll dynamischen) Pfad
+      final String geoJsonString =
+          await rootBundle.loadString(currentGeoJsonPath);
       if (kDebugMode) {
         print(
             "<<< _loadData: GeoJSON String erfolgreich geladen (${geoJsonString.length} Zeichen). >>>");
@@ -397,7 +369,9 @@ class MapScreenState extends State<MapScreen> {
       final List<SearchableFeature> features =
           _extractSearchableFeaturesFromGeoJson(geoJsonString);
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setStateIfMounted(() {
         _routingGraph = graph;
         _searchableFeatures = features;
@@ -408,7 +382,7 @@ class MapScreenState extends State<MapScreen> {
                 "<<< _loadData SUCCESS: Daten sind jetzt bereit (_isDataReady = true). Graph: ${_routingGraph!.nodes.length} Knoten. Features: ${_searchableFeatures.length}. >>>");
           }
         } else {
-          _isDataReady = false; // Bleibt false, wenn Graph leer
+          _isDataReady = false;
           if (kDebugMode) {
             print(
                 ">>> _loadData ERROR: Routing Graph nicht korrekt initialisiert oder leer für $currentGeoJsonPath. _isDataReady bleibt false.");
@@ -422,7 +396,9 @@ class MapScreenState extends State<MapScreen> {
         print(
             ">>> _loadData FATAL ERROR: Fehler beim Laden/Parsen der GeoJSON Daten von $currentGeoJsonPath: $e\n$stacktrace");
       }
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setStateIfMounted(() {
         _isDataReady = false;
       });
@@ -432,7 +408,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onSearchChanged() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final query = _searchController.text.toLowerCase().trim();
     List<SearchableFeature> results = [];
     if (query.isNotEmpty) {
@@ -449,7 +427,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onSearchFocusChanged() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final bool hasFocus = _searchFocusNode.hasFocus;
     final bool hasText = _searchController.text.isNotEmpty;
     final bool hasResults = _searchResults.isNotEmpty;
@@ -474,7 +454,9 @@ class MapScreenState extends State<MapScreen> {
       print(
           "<<< _selectFeatureAndSetPoint: Feature ausgewählt: ${feature.name} >>>");
     }
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     _searchController.clear();
     _searchResults = [];
@@ -485,7 +467,7 @@ class MapScreenState extends State<MapScreen> {
       _endLatLng = feature.center;
       _endMarker = _createMarker(feature.center, Colors.red, Icons.flag_circle,
           "Ziel: ${feature.name}");
-      _selectedSearchFeatureForEnd = feature;
+      // _selectedSearchFeatureForEnd wurde entfernt
       if (kDebugMode) {
         print(
             "<<< _selectFeatureAndSetPoint: Zielpunkt gesetzt auf: ${feature.name} >>>");
@@ -499,7 +481,9 @@ class MapScreenState extends State<MapScreen> {
     if (kDebugMode) {
       print("<<< _initializeGpsReal: Starte ECHTE GPS Initialisierung... >>>");
     }
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     bool serviceEnabled;
     LocationPermission permission;
@@ -525,8 +509,9 @@ class MapScreenState extends State<MapScreen> {
         return;
       }
     } catch (e) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print(">>> _initializeGpsReal: Fehler bei Berechtigungsprüfung: $e");
+      }
       _showErrorDialog("Fehler GPS-Berechtigungen: $e");
       return;
     }
@@ -539,16 +524,19 @@ class MapScreenState extends State<MapScreen> {
                 accuracy: LocationAccuracy.bestForNavigation,
                 distanceFilter: 5))
         .listen((Position position) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final bool isFirstFix = _currentGpsPosition == null;
       setStateIfMounted(() {
         _currentGpsPosition = LatLng(position.latitude, position.longitude);
         _currentLocationMarker = _createMarker(_currentGpsPosition!,
             Colors.blueAccent, Icons.circle, "Meine Position");
       });
-      if (kDebugMode)
+      if (kDebugMode) {
         print(
             "<<< _initializeGpsReal: Neue ECHTE GPS Position: $_currentGpsPosition >>>");
+      }
 
       if (isFirstFix && _currentGpsPosition != null) {
         final Distance distance = Distance();
@@ -556,24 +544,28 @@ class MapScreenState extends State<MapScreen> {
             distance(centerForDistanceCheck, _currentGpsPosition!);
         if (meters <= centerOnGpsMaxDistanceMeters) {
           _mapController.move(_currentGpsPosition!, 17.0);
-          if (kDebugMode)
+          if (kDebugMode) {
             print(
-                "<<< _initializeGpsReal: Karte auf erste, nahe ECHTE GPS-Position ($meters m entfernt von ${centerForDistanceCheck}) zentriert. >>>");
+                "<<< _initializeGpsReal: Karte auf erste, nahe ECHTE GPS-Position ($meters m entfernt von $centerForDistanceCheck) zentriert. >>>");
+          }
         } else {
-          if (kDebugMode)
+          if (kDebugMode) {
             print(
-                "<<< _initializeGpsReal: Erste ECHTE GPS-Position ($meters m entfernt) ist zu weit weg (> $centerOnGpsMaxDistanceMeters m von ${centerForDistanceCheck}). Karte NICHT zentriert. >>>");
+                "<<< _initializeGpsReal: Erste ECHTE GPS-Position ($meters m entfernt) ist zu weit weg (> $centerOnGpsMaxDistanceMeters m von $centerForDistanceCheck). Karte NICHT zentriert. >>>");
+          }
           _showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
               durationSeconds: 4);
         }
       }
-      // Routen neu berechnen, wenn GPS-Position sich ändert und ein Ziel existiert
-      if (_endLatLng != null) _calculateAndDisplayRoute();
+      if (_endLatLng != null) {
+        _calculateAndDisplayRoute();
+      }
     }, onError: (error) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print(
             ">>> _initializeGpsReal: Fehler im ECHTEN GPS Positions-Stream: $error");
+      }
       _showErrorDialog("Fehler GPS-Empfang: $error");
     });
   }
@@ -586,6 +578,7 @@ class MapScreenState extends State<MapScreen> {
       height: markerHeight,
       point: position,
       child: Tooltip(
+        // Ignoriere prefer_const_constructors für Tooltip hier, da 'tooltip' (message) variabel ist
         message: tooltip,
         child: Icon(icon, color: color, size: size),
       ),
@@ -608,24 +601,25 @@ class MapScreenState extends State<MapScreen> {
       startPointType = "Echte GPS Position";
     }
 
-    // Start-Marker immer basierend auf routeStartPoint aktualisieren/setzen
     if (routeStartPoint != null && mounted) {
       setStateIfMounted(() {
         _startMarker = _createMarker(routeStartPoint!, Colors.green,
             Icons.flag_circle, "Start: $startPointType");
       });
     } else if (mounted) {
-      // Falls routeStartPoint null ist (z.B. kein GPS Fix)
       setStateIfMounted(() {
         _startMarker = null;
       });
     }
 
-    if (kDebugMode)
+    if (kDebugMode) {
       print(
           "<<< _calculateAndDisplayRoute: Aufgerufen. Verwende Startpunkt: $startPointType ($routeStartPoint) >>>");
+    }
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     if (!_isDataReady) {
       _showErrorDialog(
           "Kartendaten für ${_selectedLocation?.name ?? 'ausgewählten Standort'} nicht bereit.");
@@ -637,18 +631,19 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
     if (routeStartPoint == null || _endLatLng == null) {
-      // Alte Route löschen, wenn Start- oder Endpunkt ungültig wird
       setStateIfMounted(() => _routePolyline = null);
-      if (routeStartPoint == null)
+      if (routeStartPoint == null) {
+        // Curly brace hinzugefügt
         _showErrorDialog("Startpunkt (GPS/Mock) nicht verfügbar.");
-      // Kein Fehlerdialog für fehlendes Ziel, da das normal sein kann
+      }
       return;
     }
 
     setStateIfMounted(() => _isCalculatingRoute = true);
-    if (kDebugMode)
+    if (kDebugMode) {
       print(
           "<<< _calculateAndDisplayRoute: Starte Routenberechnung von $routeStartPoint nach $_endLatLng >>>");
+    }
 
     try {
       final GraphNode? startNode =
@@ -660,14 +655,14 @@ class MapScreenState extends State<MapScreen> {
         setStateIfMounted(() => _routePolyline = null);
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start/Ziel identisch.");
-        _clearRoute(
-            showConfirmation: false,
-            clearMarkers: false); // Nur Polyline löschen
+        _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
         _routingGraph!.resetAllNodeCosts();
         final List<LatLng>? routePoints =
             await RoutingService.findPath(_routingGraph!, startNode, endNode);
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         setStateIfMounted(() {
           if (routePoints != null && routePoints.isNotEmpty) {
             _routePolyline = Polyline(
@@ -683,9 +678,10 @@ class MapScreenState extends State<MapScreen> {
         });
       }
     } catch (e, stacktrace) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print(
             ">>> _calculateAndDisplayRoute: Fehler Routenberechnung: $e\n$stacktrace");
+      }
       _showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() => _routePolyline = null);
     } finally {
@@ -696,8 +692,12 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
-    if (kDebugMode) print("<<< _handleMapTap: Auf Karte getippt: $latLng >>>");
-    if (!mounted) return;
+    if (kDebugMode) {
+      print("<<< _handleMapTap: Auf Karte getippt: $latLng >>>");
+    }
+    if (!mounted) {
+      return;
+    }
 
     if (_searchFocusNode.hasFocus) {
       _searchFocusNode.unfocus();
@@ -706,7 +706,9 @@ class MapScreenState extends State<MapScreen> {
       setStateIfMounted(() => _showSearchResults = false);
     }
 
-    if (_isCalculatingRoute) return;
+    if (_isCalculatingRoute) {
+      return;
+    }
 
     final bool isNewTarget = _endLatLng == null || _endMarker == null;
 
@@ -715,20 +717,22 @@ class MapScreenState extends State<MapScreen> {
         _endLatLng = latLng;
         _endMarker = _createMarker(
             latLng, Colors.red, Icons.flag_circle, "Ziel (Karte)");
-        _selectedSearchFeatureForEnd = null;
+        // _selectedSearchFeatureForEnd wurde entfernt
       });
       _calculateAndDisplayRoute();
     } else {
       _showConfirmationDialog(
           "Neues Ziel?", "Altes Ziel verwerfen und neues Ziel setzen?", () {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         setStateIfMounted(() {
           _routePolyline = null;
           _endMarker = null;
           _endLatLng = latLng;
           _endMarker = _createMarker(
               latLng, Colors.red, Icons.flag_circle, "Ziel (Karte)");
-          _selectedSearchFeatureForEnd = null;
+          // _selectedSearchFeatureForEnd wurde entfernt
         });
         _calculateAndDisplayRoute();
       });
@@ -736,20 +740,23 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
-    final clearAction = () {
-      if (!mounted) return;
+    // Umschreiben zu lokaler Funktion
+    void doClearAction() {
+      if (!mounted) {
+        return;
+      }
       setStateIfMounted(() {
         _routePolyline = null;
         if (clearMarkers) {
           _endMarker = null;
           _endLatLng = null;
-          _selectedSearchFeatureForEnd = null;
+          // _selectedSearchFeatureForEnd wurde entfernt
         }
       });
       _showSnackbar(
           clearMarkers ? "Route und Ziel gelöscht." : "Route gelöscht.",
           durationSeconds: 2);
-    };
+    }
 
     final bool somethingToDelete =
         _routePolyline != null || (clearMarkers && _endMarker != null);
@@ -760,14 +767,16 @@ class MapScreenState extends State<MapScreen> {
           clearMarkers
               ? "Route und Ziel wirklich löschen?"
               : "Route wirklich löschen?",
-          clearAction);
+          doClearAction); // Aufruf der lokalen Funktion
     } else if (somethingToDelete) {
-      clearAction();
+      doClearAction(); // Aufruf der lokalen Funktion
     }
   }
 
   void _centerOnGps() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     LatLng? centerTarget;
     if (_useMockLocation) {
       centerTarget = _selectedLocation?.initialCenter ?? fallbackInitialCenter;
@@ -776,19 +785,28 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (centerTarget != null) {
-      _mapController.move(centerTarget, 17.0); // Ggf. Zoom anpassen
+      _mapController.move(centerTarget, 17.0);
       if (kDebugMode) {
+        // Korrigierte String Interpolation
         print(
-            "<<< _centerOnGps: Zentriere auf aktuell verwendete Position: $centerTarget (${_useMockLocation ? 'Mock für ' + (_selectedLocation?.name ?? 'Default') : 'Echt'}) >>>");
+            "<<< _centerOnGps: Zentriere auf aktuell verwendete Position: $centerTarget (${_useMockLocation ? 'Mock für ${_selectedLocation?.name ?? 'Default'}' : 'Echt'}) >>>");
       }
     } else {
-      if (kDebugMode) print(">>> _centerOnGps: Keine Position verfügbar.");
+      if (kDebugMode) {
+        print(">>> _centerOnGps: Keine Position verfügbar.");
+      }
       _showSnackbar("Keine Position verfügbar.");
     }
   }
 
   void _showErrorDialog(String message) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) return;
+    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+      if (kDebugMode) {
+        print(
+            ">>> _showErrorDialog: Dialog NICHT angezeigt. Message: $message");
+      }
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -811,7 +829,12 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showSnackbar(String message, {int durationSeconds = 3}) {
-    if (!mounted) return;
+    if (!mounted) {
+      if (kDebugMode) {
+        print(">>> _showSnackbar: Snackbar NICHT angezeigt. Message: $message");
+      }
+      return;
+    }
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -824,7 +847,13 @@ class MapScreenState extends State<MapScreen> {
 
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) return;
+    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+      if (kDebugMode) {
+        print(
+            ">>> _showConfirmationDialog: Dialog NICHT angezeigt. Message: $title");
+      }
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -872,21 +901,15 @@ class MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         title: const Text("Campground Navigator"),
         actions: [
-          // NEU: Dropdown zur Standortauswahl
           if (_availableLocations.isNotEmpty && _selectedLocation != null)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: DropdownButtonHideUnderline(
-                // Optional: Entfernt die Standard-Unterstreichung
                 child: DropdownButton<LocationInfo>(
                   value: _selectedLocation,
-                  icon: const Icon(Icons.public,
-                      color: Colors.white), // Icon für das Dropdown
-                  dropdownColor: Colors
-                      .deepOrange[700], // Hintergrundfarbe der Dropdown-Liste
-                  style: const TextStyle(
-                      color: Colors
-                          .white), // Textfarbe für ausgewählten Eintrag in der AppBar
+                  icon: const Icon(Icons.public, color: Colors.white),
+                  dropdownColor: Colors.deepOrange[700],
+                  style: const TextStyle(color: Colors.white),
                   items: _availableLocations
                       .map<DropdownMenuItem<LocationInfo>>(
                           (LocationInfo location) {
@@ -894,9 +917,8 @@ class MapScreenState extends State<MapScreen> {
                       value: location,
                       child: Text(
                         location.name,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14), // Textfarbe für Items in der Liste
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 14),
                         overflow: TextOverflow.ellipsis,
                       ),
                     );
@@ -925,7 +947,6 @@ class MapScreenState extends State<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              // Verwende initialCenter des ausgewählten Standorts oder Fallback
               initialCenter:
                   _selectedLocation?.initialCenter ?? fallbackInitialCenter,
               initialZoom: 17.0, // TODO: Ggf. Zoom aus LocationInfo übernehmen
@@ -949,13 +970,9 @@ class MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'de.tomsoft.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
               ),
-              if (_isDataReady &&
-                  _routePolyline !=
-                      null) // Zeige Polyline nur wenn Daten bereit sind
+              if (_isDataReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
-              if (_isDataReady &&
-                  activeMarkers
-                      .isNotEmpty) // Zeige Marker nur wenn Daten bereit sind
+              if (_isDataReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
           ),
@@ -986,8 +1003,7 @@ class MapScreenState extends State<MapScreen> {
                         : null,
                     border: InputBorder.none,
                   ),
-                  enabled:
-                      _isDataReady, // Deaktiviere Suche, wenn Daten nicht bereit sind
+                  enabled: _isDataReady,
                 ),
               ),
             ),
@@ -1000,7 +1016,9 @@ class MapScreenState extends State<MapScreen> {
               child: GestureDetector(
                 onTap: () {
                   if (mounted) {
-                    setStateIfMounted(() => _showSearchResults = false);
+                    setStateIfMounted(() {
+                      _showSearchResults = false;
+                    });
                     _searchFocusNode.unfocus();
                   }
                 },
@@ -1036,16 +1054,17 @@ class MapScreenState extends State<MapScreen> {
           if (_isCalculatingRoute)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.3),
+                // deprecated_member_use: withOpacity korrigiert
+                color: Colors.black.withAlpha((0.3 * 255).round()),
                 child: const Center(
                     child: CircularProgressIndicator(color: Colors.white)),
               ),
             ),
-          // Zeige Ladeindikator spezifischer, wenn _isDataReady false ist NACHDEM ein Standort ausgewählt wurde
-          if (!_isDataReady) // Allgemeiner Ladeindikator, wenn Daten initial nicht bereit sind
+          if (!_isDataReady)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.7),
+                // deprecated_member_use: withOpacity korrigiert
+                color: Colors.black.withAlpha((0.7 * 255).round()),
                 child: Center(
                     child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1115,4 +1134,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart - Mit Standortauswahl-Dropdown]
+// [Ende lib/main.dart - Korrigiert gemäß Diagnose-Log]
