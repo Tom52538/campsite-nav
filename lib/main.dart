@@ -1,4 +1,4 @@
-// [Start lib/main.dart - Fix LateInitializationError MapController]
+// [Start lib/main.dart - Fix ScaffoldMessenger SnackBar Error V2]
 import 'dart:async';
 import 'dart:convert'; // Für jsonDecode
 import 'package:flutter/foundation.dart';
@@ -81,7 +81,7 @@ class MapScreenState extends State<MapScreen> {
 
   bool _isDataReady = false;
   bool _useMockLocation = true;
-  bool _isMapReady = false; // NEU: Flag für Kartenbereitschaft
+  bool _isMapReady = false;
 
   LocationInfo? _lastProcessedLocation;
 
@@ -105,8 +105,6 @@ class MapScreenState extends State<MapScreen> {
           print(
               "<<< initState (postFrame): MapScreen wird initialisiert. Ausgewählter Standort vom Provider: ${initialLocation.name}. Mock-Location: $_useMockLocation >>>");
         }
-        // _loadDataForLocation und _initializeGpsOrMock setzen jetzt nur noch den Zustand,
-        // die initiale Kartenbewegung erfolgt in _performInitialMapMove via onMapReady.
         _loadDataForLocation(initialLocation);
         _initializeGpsOrMock(initialLocation);
       } else {
@@ -176,20 +174,26 @@ class MapScreenState extends State<MapScreen> {
       _showSearchResults = false;
     });
 
-    // Kartenbewegung nur, wenn Karte bereit ist
     if (_isMapReady) {
       _mapController.move(newLocation.initialCenter, 17.0);
     }
-    _showSnackbar("Standort geändert zu: ${newLocation.name}",
-        durationSeconds: 3);
+
+    // HIER DIE ÄNDERUNG: SnackBar-Aufruf in addPostFrameCallback verpacken
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Erneute mounted-Prüfung ist gut
+        _showSnackbar("Standort geändert zu: ${newLocation.name}",
+            durationSeconds: 3);
+      }
+    });
+
     if (kDebugMode) {
       print(
           "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>");
     }
 
     _loadDataForLocation(newLocation);
-    _initializeGpsOrMock(
-        newLocation); // Setzt Position, aber bewegt Karte nicht mehr direkt hier
+    _initializeGpsOrMock(newLocation);
   }
 
   void _toggleMockLocation() {
@@ -208,7 +212,8 @@ class MapScreenState extends State<MapScreen> {
         _useMockLocation
             ? "Mock-Position (${currentLocation?.name ?? 'Fallback'}) aktiviert."
             : "Echtes GPS aktiviert (mit Distanzprüfung).",
-        durationSeconds: 4);
+        durationSeconds:
+            4); // Dieser SnackBar sollte unproblematisch sein, da er durch Nutzerinteraktion ausgelöst wird
     if (kDebugMode) {
       print(
           "<<< _toggleMockLocation: Mock-Location ist jetzt: $_useMockLocation für Standort ${currentLocation?.name} >>>");
@@ -228,8 +233,6 @@ class MapScreenState extends State<MapScreen> {
         print(
             "<<< _initializeGpsOrMock: Mock-Modus AKTIV. Setze Position auf initialCenter von ${location.name}: $activeInitialCenterForMock. >>>");
       }
-      // Entferne Future.delayed, setze Zustand direkt
-      // Die Kartenbewegung erfolgt durch _performInitialMapMove oder _handleLocationChangeUIUpdates
       if (mounted) {
         setState(() {
           _currentGpsPosition = activeInitialCenterForMock;
@@ -239,8 +242,6 @@ class MapScreenState extends State<MapScreen> {
               Icons.pin_drop,
               "Mock Position (${location.name})");
         });
-        // Wenn die Karte bereits bereit ist, hier die initiale Bewegung auslösen
-        // oder auf onMapReady warten. _performInitialMapMove in onMapReady ist sicherer.
         if (_isMapReady) {
           _mapController.move(activeInitialCenterForMock, 17.0);
           if (kDebugMode) {
@@ -262,7 +263,6 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  // NEUE METHODE: Wird von onMapReady aufgerufen oder wenn GPS/Mock-Status sich ändert und Karte bereit ist
   void _performInitialMapMove() {
     if (!_isMapReady || !mounted) {
       return;
@@ -271,39 +271,37 @@ class MapScreenState extends State<MapScreen> {
     final location =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
     if (location == null) {
-      if (kDebugMode)
+      if (kDebugMode) {
         print(
             "<<< _performInitialMapMove: Kein ausgewählter Standort, keine Bewegung. >>>");
-      return; // Kein Standort ausgewählt
+      }
+      return;
     }
 
     LatLng? targetToMoveTo;
 
     if (_useMockLocation) {
-      // _currentGpsPosition sollte bereits durch _initializeGpsOrMock gesetzt sein
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
-        // Für echtes GPS, wenn ein Fix vorhanden ist, prüfen, ob er in der Nähe ist
         final Distance distance = Distance();
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveTo = _currentGpsPosition;
         } else {
-          // GPS-Position zu weit weg, zentriere auf initialCenter des Standorts
           targetToMoveTo = location.initialCenter;
-          if (kDebugMode)
+          if (kDebugMode) {
             print(
                 "<<< _performInitialMapMove: Echte GPS-Position zu weit, zentriere auf Standort-Initial. >>>");
+          }
         }
       } else {
-        // Kein GPS-Fix, zentriere auf initialCenter des Standorts
         targetToMoveTo = location.initialCenter;
       }
     }
 
     if (targetToMoveTo != null) {
-      _mapController.move(targetToMoveTo, 17.0); // Standardzoom, ggf. anpassen
+      _mapController.move(targetToMoveTo, 17.0);
       if (kDebugMode) {
         print(
             "<<< _performInitialMapMove: Karte bewegt zu $targetToMoveTo >>>");
@@ -566,7 +564,6 @@ class MapScreenState extends State<MapScreen> {
       _calculateAndDisplayRoute();
     });
     if (_isMapReady) {
-      // Nur bewegen, wenn Karte bereit ist
       _mapController.move(feature.center, 18.0);
     }
   }
@@ -630,7 +627,6 @@ class MapScreenState extends State<MapScreen> {
             "<<< _initializeGpsReal: Neue ECHTE GPS Position: $_currentGpsPosition >>>");
       }
 
-      // Initiale Kartenbewegung bei erstem GPS-Fix, wenn Karte bereit ist
       if (isFirstFix && _currentGpsPosition != null && _isMapReady) {
         final Distance distance = Distance();
         final double meters =
@@ -648,7 +644,8 @@ class MapScreenState extends State<MapScreen> {
           }
           _showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
-              durationSeconds: 4);
+              durationSeconds:
+                  4); // Dieser SnackBar ist durch GPS-Events ausgelöst, sollte ok sein
         }
       }
       if (_endLatLng != null) {
@@ -744,7 +741,8 @@ class MapScreenState extends State<MapScreen> {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
         setStateIfMounted(() => _routePolyline = null);
       } else if (startNode.id == endNode.id) {
-        _showSnackbar("Start/Ziel identisch.");
+        _showSnackbar(
+            "Start/Ziel identisch."); // Dieser SnackBar ist durch Logik ausgelöst, sollte ok sein
         _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
         _routingGraph!.resetAllNodeCosts();
@@ -760,7 +758,9 @@ class MapScreenState extends State<MapScreen> {
               strokeWidth: 5.0,
               color: Colors.deepPurpleAccent,
             );
-            _showSnackbar("Route berechnet.", durationSeconds: 3);
+            _showSnackbar("Route berechnet.",
+                durationSeconds:
+                    3); // Dieser SnackBar ist nach async Call, sollte ok sein
           } else {
             _routePolyline = null;
             _showErrorDialog("Keine Route gefunden.");
@@ -839,6 +839,7 @@ class MapScreenState extends State<MapScreen> {
         }
       });
       _showSnackbar(
+          // Dieser SnackBar ist durch Nutzerinteraktion via Dialog ausgelöst, sollte ok sein
           clearMarkers ? "Route und Ziel gelöscht." : "Route gelöscht.",
           durationSeconds: 2);
     }
@@ -874,7 +875,6 @@ class MapScreenState extends State<MapScreen> {
 
     if (centerTarget != null) {
       if (_isMapReady) {
-        // Nur bewegen, wenn Karte bereit ist
         _mapController.move(centerTarget, 17.0);
       }
       if (kDebugMode) {
@@ -885,7 +885,8 @@ class MapScreenState extends State<MapScreen> {
       if (kDebugMode) {
         print(">>> _centerOnGps: Keine Position verfügbar.");
       }
-      _showSnackbar("Keine Position verfügbar.");
+      _showSnackbar(
+          "Keine Position verfügbar."); // Dieser SnackBar ist durch Nutzerinteraktion ausgelöst, sollte ok sein
     }
   }
 
@@ -1048,15 +1049,16 @@ class MapScreenState extends State<MapScreen> {
               maxZoom: 19.0,
               onTap: _handleMapTap,
               onMapReady: () {
-                // NEU: onMapReady Callback
-                if (!mounted) return;
+                if (!mounted) {
+                  return;
+                }
                 if (kDebugMode) {
                   print("<<< Map ist jetzt bereit (onMapReady Callback) >>>");
                 }
                 setState(() {
                   _isMapReady = true;
                 });
-                _performInitialMapMove(); // Erste Kartenbewegung hier ausführen
+                _performInitialMapMove();
               },
               onPositionChanged: (MapPosition position, bool hasGesture) {
                 if (hasGesture && _searchFocusNode.hasFocus) {
@@ -1231,4 +1233,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart - Fix LateInitializationError MapController]
+// [Ende lib/main.dart - Fix ScaffoldMessenger SnackBar Error V2]
