@@ -1,4 +1,4 @@
-// [Start lib/main.dart - Fix ScaffoldMessenger SnackBar Error V2]
+// [Start lib/main.dart - Fix SnackBar Layout & Double Load]
 import 'dart:async';
 import 'dart:convert'; // Für jsonDecode
 import 'package:flutter/foundation.dart';
@@ -94,28 +94,14 @@ class MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final initialLocation =
-          Provider.of<LocationProvider>(context, listen: false)
-              .selectedLocation;
-      if (initialLocation != null) {
-        _lastProcessedLocation = initialLocation;
-        if (kDebugMode) {
-          print(
-              "<<< initState (postFrame): MapScreen wird initialisiert. Ausgewählter Standort vom Provider: ${initialLocation.name}. Mock-Location: $_useMockLocation >>>");
-        }
-        _loadDataForLocation(initialLocation);
-        _initializeGpsOrMock(initialLocation);
-      } else {
-        if (kDebugMode) {
-          print(
-              "<<< initState (postFrame): Kein initialer Standort vom Provider verfügbar. >>>");
-        }
-      }
-    });
+    // didChangeDependencies wird den initialen Standort vom Provider holen und verarbeiten.
+    // initState ist jetzt hauptsächlich für einmalige Listener-Registrierungen da.
     _searchController.addListener(_onSearchChanged);
     _searchFocusNode.addListener(_onSearchFocusChanged);
+    if (kDebugMode) {
+      print(
+          "<<< initState: MapScreenState initialisiert. _lastProcessedLocation ist anfangs: ${_lastProcessedLocation?.name} >>>");
+    }
   }
 
   @override
@@ -124,11 +110,12 @@ class MapScreenState extends State<MapScreen> {
     final currentLocationProvider = Provider.of<LocationProvider>(context);
     final newSelectedLocation = currentLocationProvider.selectedLocation;
 
+    // Vergleiche IDs, um unnötige Updates bei gleichen Objekten zu vermeiden, die neu erstellt wurden
     if (newSelectedLocation != null &&
-        newSelectedLocation != _lastProcessedLocation) {
+        (newSelectedLocation.id != _lastProcessedLocation?.id)) {
       if (kDebugMode) {
         print(
-            "<<< didChangeDependencies: Standortwechsel erkannt von ${_lastProcessedLocation?.name} zu ${newSelectedLocation.name} >>>");
+            "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newSelectedLocation.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
       }
       _handleLocationChangeUIUpdates(newSelectedLocation);
       _lastProcessedLocation = newSelectedLocation;
@@ -178,10 +165,8 @@ class MapScreenState extends State<MapScreen> {
       _mapController.move(newLocation.initialCenter, 17.0);
     }
 
-    // HIER DIE ÄNDERUNG: SnackBar-Aufruf in addPostFrameCallback verpacken
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Erneute mounted-Prüfung ist gut
         _showSnackbar("Standort geändert zu: ${newLocation.name}",
             durationSeconds: 3);
       }
@@ -212,8 +197,7 @@ class MapScreenState extends State<MapScreen> {
         _useMockLocation
             ? "Mock-Position (${currentLocation?.name ?? 'Fallback'}) aktiviert."
             : "Echtes GPS aktiviert (mit Distanzprüfung).",
-        durationSeconds:
-            4); // Dieser SnackBar sollte unproblematisch sein, da er durch Nutzerinteraktion ausgelöst wird
+        durationSeconds: 4);
     if (kDebugMode) {
       print(
           "<<< _toggleMockLocation: Mock-Location ist jetzt: $_useMockLocation für Standort ${currentLocation?.name} >>>");
@@ -644,8 +628,7 @@ class MapScreenState extends State<MapScreen> {
           }
           _showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
-              durationSeconds:
-                  4); // Dieser SnackBar ist durch GPS-Events ausgelöst, sollte ok sein
+              durationSeconds: 4);
         }
       }
       if (_endLatLng != null) {
@@ -741,8 +724,7 @@ class MapScreenState extends State<MapScreen> {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
         setStateIfMounted(() => _routePolyline = null);
       } else if (startNode.id == endNode.id) {
-        _showSnackbar(
-            "Start/Ziel identisch."); // Dieser SnackBar ist durch Logik ausgelöst, sollte ok sein
+        _showSnackbar("Start/Ziel identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
         _routingGraph!.resetAllNodeCosts();
@@ -758,9 +740,7 @@ class MapScreenState extends State<MapScreen> {
               strokeWidth: 5.0,
               color: Colors.deepPurpleAccent,
             );
-            _showSnackbar("Route berechnet.",
-                durationSeconds:
-                    3); // Dieser SnackBar ist nach async Call, sollte ok sein
+            _showSnackbar("Route berechnet.", durationSeconds: 3);
           } else {
             _routePolyline = null;
             _showErrorDialog("Keine Route gefunden.");
@@ -839,7 +819,6 @@ class MapScreenState extends State<MapScreen> {
         }
       });
       _showSnackbar(
-          // Dieser SnackBar ist durch Nutzerinteraktion via Dialog ausgelöst, sollte ok sein
           clearMarkers ? "Route und Ziel gelöscht." : "Route gelöscht.",
           durationSeconds: 2);
     }
@@ -885,8 +864,7 @@ class MapScreenState extends State<MapScreen> {
       if (kDebugMode) {
         print(">>> _centerOnGps: Keine Position verfügbar.");
       }
-      _showSnackbar(
-          "Keine Position verfügbar."); // Dieser SnackBar ist durch Nutzerinteraktion ausgelöst, sollte ok sein
+      _showSnackbar("Keine Position verfügbar.");
     }
   }
 
@@ -931,7 +909,9 @@ class MapScreenState extends State<MapScreen> {
       SnackBar(
         content: Text(message),
         duration: Duration(seconds: durationSeconds),
-        behavior: SnackBarBehavior.floating,
+        behavior: SnackBarBehavior.fixed, // ÄNDERUNG: fixed statt floating
+        // Optional: Etwas Abstand, wenn fixed verwendet wird und FABs sehr nah sind
+        // margin: EdgeInsets.only(bottom: _isFabColumnVisible() ? 60 : 10, left:10, right:10),
       ),
     );
   }
@@ -992,6 +972,7 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
     return Scaffold(
+      // Die Zeile, auf die der Fehler "Floating SnackBar presented off screen" zeigte
       appBar: AppBar(
         title: const Text("Campground Navigator"),
         actions: [
@@ -1233,4 +1214,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart - Fix ScaffoldMessenger SnackBar Error V2]
+// [Ende lib/main.dart - Fix SnackBar Layout & Double Load]
