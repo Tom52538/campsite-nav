@@ -1,22 +1,18 @@
 // lib/models/location_info.dart
 
-import 'package:flutter/foundation.dart'; // Import für kDebugMode, falls hier verwendet, sonst optional
+// Entfernt: import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 /// Speichert alle relevanten Informationen für einen einzelnen Standort (Campingplatz).
 class LocationInfo {
-  final String id; // Eindeutiger Identifikator, z.B. "sittard", "kamperland"
-  final String name; // Anzeigename, z.B. "Testgelände Sittard"
-  final String
-      geojsonAssetPath; // Pfad zur GeoJSON-Datei im App-Asset-Verzeichnis
-  final double initialLatitude; // Start-Breitengrad für die Kartenansicht
-  final double initialLongitude; // Start-Längengrad für die Kartenansicht
-  // Radius für die initiale Kartenansicht oder zur Definition des relevanten Bereichs.
-  // Die genaue Verwendung (z.B. zur Ableitung eines Zoomlevels) muss ggf. noch definiert werden.
+  final String id;
+  final String name;
+  final String geojsonAssetPath;
+  final double initialLatitude;
+  final double initialLongitude;
   final double radiusInMeters;
 
   const LocationInfo({
-    // Konstruktor ist bereits const
     required this.id,
     required this.name,
     required this.geojsonAssetPath,
@@ -25,14 +21,12 @@ class LocationInfo {
     required this.radiusInMeters,
   });
 
-  // Helper, um die initialen Koordinaten als LatLng-Objekt zu erhalten
   LatLng get initialCenter => LatLng(initialLatitude, initialLongitude);
 }
 
 // Globale Liste der verfügbaren Standorte
 final List<LocationInfo> appLocations = [
   const LocationInfo(
-    // NEU: const hinzugefügt
     id: "sittard",
     name: "Testgelände Sittard",
     geojsonAssetPath: "assets/data/export.geojson",
@@ -41,7 +35,6 @@ final List<LocationInfo> appLocations = [
     radiusInMeters: 1000.0,
   ),
   const LocationInfo(
-    // NEU: const hinzugefügt
     id: "kamperland",
     name: "Camping Resort Kamperland",
     geojsonAssetPath: "assets/data/export_kamperland.geojson",
