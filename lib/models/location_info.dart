@@ -1,5 +1,6 @@
 // lib/models/location_info.dart
 
+import 'package:flutter/foundation.dart'; // Import für kDebugMode, falls hier verwendet, sonst optional
 import 'package:latlong2/latlong.dart';
 
 /// Speichert alle relevanten Informationen für einen einzelnen Standort (Campingplatz).
@@ -15,6 +16,7 @@ class LocationInfo {
   final double radiusInMeters;
 
   const LocationInfo({
+    // Konstruktor ist bereits const
     required this.id,
     required this.name,
     required this.geojsonAssetPath,
@@ -28,27 +30,23 @@ class LocationInfo {
 }
 
 // Globale Liste der verfügbaren Standorte
-// Diese Liste wird später verwendet, um dem Nutzer eine Auswahl anzubieten
-// und die standortspezifischen Daten zu laden.
 final List<LocationInfo> appLocations = [
-  LocationInfo(
+  const LocationInfo(
+    // NEU: const hinzugefügt
     id: "sittard",
     name: "Testgelände Sittard",
-    geojsonAssetPath: "assets/data/export.geojson", // Aktuell verwendete Datei
-    initialLatitude:
-        51.02518780487824, // Aus MapScreenState.defaultInitialCenter
-    initialLongitude:
-        5.858832278816441, // Aus MapScreenState.defaultInitialCenter
-    radiusInMeters: 1000.0, // Beispielradius, kann angepasst/genutzt werden
+    geojsonAssetPath: "assets/data/export.geojson",
+    initialLatitude: 51.02518780487824,
+    initialLongitude: 5.858832278816441,
+    radiusInMeters: 1000.0,
   ),
-  LocationInfo(
+  const LocationInfo(
+    // NEU: const hinzugefügt
     id: "kamperland",
     name: "Camping Resort Kamperland",
-    geojsonAssetPath:
-        "assets/data/export_kamperland.geojson", // Muss vom Nutzer hinzugefügt werden
-    initialLatitude: 51.590186, // Gemäß Plan
-    initialLongitude: 3.722494, // Gemäß Plan
-    radiusInMeters: 1500.0, // Beispielradius, kann angepasst/genutzt werden
+    geojsonAssetPath: "assets/data/export_kamperland.geojson",
+    initialLatitude: 51.590186,
+    initialLongitude: 3.722494,
+    radiusInMeters: 1500.0,
   ),
-  // Hier könnten zukünftig weitere Standorte hinzugefügt werden
 ];
