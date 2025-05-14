@@ -1,10 +1,10 @@
 // lib/main.dart
 
 import 'dart:async';
-import 'dart:convert'; // Für jsonDecode // Wird hier nicht mehr direkt verwendet
+// import 'dart:convert'; // Nicht mehr direkt hier benötigt
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Für rootBundle // Wird hier nicht mehr direkt verwendet
+// import 'package:flutter/services.dart'; // Nicht mehr direkt hier benötigt
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart'; // Wird für Distance benötigt
 import 'package:geolocator/geolocator.dart';
@@ -105,10 +105,8 @@ class MapScreenState extends State<MapScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Holen des Providers hier ist ok, aber Änderungen sollten die build-Methode triggern,
-    // wenn Provider.of mit listen:true verwendet wird oder ein Consumer-Widget.
-    final locationProvider = Provider.of<LocationProvider>(context,
-        listen: false); // listen: false, da wir hier nur Aktionen auslösen
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
     final newSelectedLocation = locationProvider.selectedLocation;
 
     if (newSelectedLocation != null &&
@@ -306,18 +304,16 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
-    final locationProvider = Provider.of<LocationProvider>(context,
-        listen: false); // Zugriff auf Provider
-    final currentSearchableFeatures =
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    final List<SearchableFeature> currentSearchableFeatures =
         locationProvider.currentSearchableFeatures;
 
     final query = _searchController.text.toLowerCase().trim();
     List<SearchableFeature> results = [];
 
     if (query.isNotEmpty && currentSearchableFeatures.isNotEmpty) {
-      // ANPASSUNG
       results = currentSearchableFeatures.where((feature) {
-        // ANPASSUNG
         return feature.name.toLowerCase().contains(query) ||
             feature.type.toLowerCase().contains(query);
       }).toList();
@@ -333,7 +329,6 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
-    // Die Logik hier bleibt gleich, da _searchResults und _searchFocusNode lokale UI-Steuerungsgrößen sind
     final bool hasFocus = _searchFocusNode.hasFocus;
     final bool hasText = _searchController.text.isNotEmpty;
     final bool hasResults = _searchResults.isNotEmpty;
@@ -489,21 +484,20 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _calculateAndDisplayRoute() async {
-    // ANPASSUNG: Daten und Ladezustand vom Provider holen
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
+    // KORREKTUR für unnecessary_null_comparison: currentGraph ist hier schon geprüft durch isDataReadyForRouting
+    // Die Prüfung auf nodes.isEmpty ist aber weiterhin sinnvoll.
     final bool isDataReadyForRouting =
         !locationProvider.isLoadingLocationData && currentGraph != null;
 
-    final selectedLocationFromProvider =
-        locationProvider.selectedLocation; // Kann bleiben für Namen etc.
+    final selectedLocationFromProvider = locationProvider.selectedLocation;
 
     LatLng? routeStartPoint;
     String startPointType = "";
     final LatLng activeMockCenter =
         selectedLocationFromProvider?.initialCenter ?? fallbackInitialCenter;
-
     if (_useMockLocation) {
       routeStartPoint = activeMockCenter;
       startPointType =
@@ -533,15 +527,16 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (!isDataReadyForRouting) {
-      // ANPASSUNG
       _showErrorDialog(
           "Kartendaten für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht bereit für Routing.");
       return;
     }
-    if (currentGraph == null || currentGraph.nodes.isEmpty) {
-      // ANPASSUNG
+    // Da isDataReadyForRouting true ist, ist currentGraph hier definitiv NICHT null.
+    // Die zusätzliche Prüfung `currentGraph == null` war die Quelle der Analyzer-Warnung.
+    if (currentGraph!.nodes.isEmpty) {
+      // KORREKTUR: Direkter Zugriff auf nodes, da currentGraph nicht null ist.
       _showErrorDialog(
-          "Routing-Daten (Graph) für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht verfügbar.");
+          "Routing-Daten (Graph) für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht verfügbar oder leer.");
       return;
     }
     if (routeStartPoint == null || _endLatLng == null) {
@@ -559,9 +554,8 @@ class MapScreenState extends State<MapScreen> {
     }
     try {
       final GraphNode? startNode =
-          currentGraph.findNearestNode(routeStartPoint); // ANPASSUNG
-      final GraphNode? endNode =
-          currentGraph.findNearestNode(_endLatLng!); // ANPASSUNG
+          currentGraph.findNearestNode(routeStartPoint);
+      final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
       if (startNode == null || endNode == null) {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
@@ -570,9 +564,9 @@ class MapScreenState extends State<MapScreen> {
         _showSnackbar("Start/Ziel identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
-        currentGraph.resetAllNodeCosts(); // ANPASSUNG
-        final List<LatLng>? routePoints = await RoutingService.findPath(
-            currentGraph, startNode, endNode); // ANPASSUNG
+        currentGraph.resetAllNodeCosts();
+        final List<LatLng>? routePoints =
+            await RoutingService.findPath(currentGraph, startNode, endNode);
         if (!mounted) {
           return;
         }
@@ -798,21 +792,16 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Zugriff auf den Provider. 'listen: true' ist hier wichtig, damit die UI
-    // auf Änderungen im Provider reagiert (z.B. wenn isLoadingLocationData sich ändert).
     final locationProvider = Provider.of<LocationProvider>(context);
-    final selectedLocationFromUI =
-        locationProvider.selectedLocation; // Kann für UI-Texte bleiben
-    final availableLocationsFromUI =
-        locationProvider.availableLocations; // Kann für UI-Texte bleiben
+    final selectedLocationFromUI = locationProvider.selectedLocation;
+    final availableLocationsFromUI = locationProvider.availableLocations;
 
-    // Ladezustand und Daten aus dem Provider holen
     final bool isLoading = locationProvider.isLoadingLocationData;
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
-    final List<SearchableFeature> currentFeatures =
-        locationProvider.currentSearchableFeatures;
-    final bool isUiReady =
-        !isLoading && currentGraph != null; // Eigene Logik für UI-Bereitschaft
+    // KORREKTUR für unused_local_variable: 'currentFeatures' wird hier nicht direkt für die UI benötigt,
+    // sondern in _onSearchChanged direkt vom Provider geholt. Daher entfernen wir die lokale Variable hier.
+    // final List<SearchableFeature> currentFeatures = locationProvider.currentSearchableFeatures;
+    final bool isUiReady = !isLoading && currentGraph != null;
 
     List<Marker> activeMarkers = [];
     if (_currentLocationMarker != null) {
@@ -911,9 +900,9 @@ class MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'de.tomsoft.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
               ),
-              if (isUiReady && _routePolyline != null) // ANPASSUNG
+              if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
-              if (isUiReady && activeMarkers.isNotEmpty) // ANPASSUNG
+              if (isUiReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
           ),
@@ -942,14 +931,12 @@ class MapScreenState extends State<MapScreen> {
                         : null,
                     border: InputBorder.none,
                   ),
-                  enabled: isUiReady, // ANPASSUNG
+                  enabled: isUiReady,
                 ),
               ),
             ),
           ),
-          if (_showSearchResults &&
-              _searchResults.isNotEmpty &&
-              isUiReady) // ANPASSUNG
+          if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
               top: 75,
               left: 10,
@@ -988,7 +975,7 @@ class MapScreenState extends State<MapScreen> {
                 ),
               ),
             ),
-          if (_isCalculatingRoute) // Bleibt, da reine UI-Steuerung
+          if (_isCalculatingRoute)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withAlpha((0.3 * 255).round()),
@@ -996,7 +983,7 @@ class MapScreenState extends State<MapScreen> {
                     child: CircularProgressIndicator(color: Colors.white)),
               ),
             ),
-          if (isLoading) // ANPASSUNG: Ladeindikator basierend auf Provider-Status
+          if (isLoading)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withAlpha((0.7 * 255).round()),
@@ -1021,8 +1008,7 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (isUiReady &&
-              (_routePolyline != null || _endMarker != null)) // ANPASSUNG
+          if (isUiReady && (_routePolyline != null || _endMarker != null))
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: FloatingActionButton.small(
