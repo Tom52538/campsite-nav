@@ -208,4 +208,88 @@ class GeojsonParserService {
         featureCount++;
         if (featureJson is Map<String, dynamic>) {
           final properties = featureJson['properties'] as Map<String, dynamic>?;
-          final geometry = featureJson
+          final geometry = featureJson['geometry'] as Map<String, dynamic>?;
+
+          if (properties != null && geometry != null) {
+            final dynamic id = featureJson['id'] ??
+                properties['@id'] ??
+                'feature_${DateTime.now().millisecondsSinceEpoch}_$featureCount';
+            final String? name = properties['name'] as String?;
+            String type = properties['highway'] as String? ??
+                properties['amenity'] as String? ??
+                properties['shop'] as String? ??
+                properties['building'] as String? ??
+                properties['tourism'] as String? ??
+                'unknown'; // Fallback-Typ
+            if (name != null && name.isNotEmpty) {
+              LatLng? center;
+              final String? geomType = geometry['type'] as String?;
+              final dynamic coordsRaw = geometry['coordinates'];
+              try {
+                if (geomType == 'Point' &&
+                    coordsRaw is List &&
+                    coordsRaw.length >= 2 &&
+                    coordsRaw[0] is num &&
+                    coordsRaw[1] is num) {
+                  center = LatLng((coordsRaw[1] as num).toDouble(),
+                      (coordsRaw[0] as num).toDouble());
+                } else if (geomType == 'LineString' &&
+                    coordsRaw is List &&
+                    coordsRaw.isNotEmpty) {
+                  if (coordsRaw.first is List) {
+                    final firstPointList = coordsRaw.first as List;
+                    if (firstPointList.length >= 2 &&
+                        firstPointList[0] is num &&
+                        firstPointList[1] is num) {
+                      center = LatLng((firstPointList[1] as num).toDouble(),
+                          (firstPointList[0] as num).toDouble());
+                    }
+                  }
+                } else if (geomType == 'Polygon' &&
+                    coordsRaw is List &&
+                    coordsRaw.isNotEmpty) {
+                  if (coordsRaw.first is List) {
+                    final firstRing = coordsRaw.first as List;
+                    if (firstRing.isNotEmpty && firstRing.first is List) {
+                      final firstPointList = firstRing.first as List;
+                      if (firstPointList.length >= 2 &&
+                          firstPointList[0] is num &&
+                          firstPointList[1] is num) {
+                        center = LatLng((firstPointList[1] as num).toDouble(),
+                            (firstPointList[0] as num).toDouble());
+                      }
+                    }
+                  }
+                }
+              } catch (e) {
+                if (kDebugMode) {
+                  print(
+                      "[GeojsonParserService] Fehler beim Parsen der Koordinaten für Feature '$name' (in _internalExtractSearchableFeatures): $e");
+                }
+              }
+
+              if (center != null) {
+                features.add(SearchableFeature(
+                  id: id.toString(),
+                  name: name,
+                  type: type,
+                  center: center,
+                ));
+              }
+            }
+          }
+        }
+      }
+      if (kDebugMode) {
+        print(
+            "[GeojsonParserService] _internalExtractSearchableFeatures: ${features.length} Features extrahiert.");
+      }
+    } else {
+      if (kDebugMode) {
+        print(
+            "[GeojsonParserService] Fehler: GeoJSON ist keine gültige FeatureCollection für Feature-Extraktion.");
+      }
+    }
+    return features;
+  }
+}
