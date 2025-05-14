@@ -1,10 +1,10 @@
 // lib/main.dart
 
 import 'dart:async';
-import 'dart:convert'; // Für jsonDecode
+import 'dart:convert'; // Für jsonDecode // Wird hier nicht mehr direkt verwendet
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Für rootBundle
+import 'package:flutter/services.dart'; // Für rootBundle // Wird hier nicht mehr direkt verwendet
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart'; // Wird für Distance benötigt
 import 'package:geolocator/geolocator.dart';
@@ -15,7 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
-// GeojsonParserService wird hier nicht mehr direkt benötigt, da der Provider es nutzt
+// GeojsonParserService wird hier nicht mehr direkt benötigt
 // import 'package:camping_osm_navi/services/geojson_parser_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
@@ -66,10 +66,6 @@ class MapScreen extends StatefulWidget {
 
 class MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
-  // ENTFERNTE FELDER:
-  // RoutingGraph? _routingGraph;
-  // List<SearchableFeature> _searchableFeatures = [];
-  // bool _isDataReady = false;
 
   Polyline? _routePolyline;
   Marker? _currentLocationMarker;
@@ -83,9 +79,6 @@ class MapScreenState extends State<MapScreen> {
   final FocusNode _searchFocusNode = FocusNode();
   List<SearchableFeature> _searchResults = [];
   bool _showSearchResults = false;
-
-  // _isDataReady wird später durch locationProvider.isLoadingLocationData ersetzt
-  // bool _isDataReady = false; // Bereits oben entfernt
 
   bool _useMockLocation = true;
   bool _isMapReady = false;
@@ -112,8 +105,11 @@ class MapScreenState extends State<MapScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final currentLocationProvider = Provider.of<LocationProvider>(context);
-    final newSelectedLocation = currentLocationProvider.selectedLocation;
+    // Holen des Providers hier ist ok, aber Änderungen sollten die build-Methode triggern,
+    // wenn Provider.of mit listen:true verwendet wird oder ein Consumer-Widget.
+    final locationProvider = Provider.of<LocationProvider>(context,
+        listen: false); // listen: false, da wir hier nur Aktionen auslösen
+    final newSelectedLocation = locationProvider.selectedLocation;
 
     if (newSelectedLocation != null &&
         (newSelectedLocation.id != _lastProcessedLocation?.id)) {
@@ -155,31 +151,14 @@ class MapScreenState extends State<MapScreen> {
 
     final bool isInitialLoad = _lastProcessedLocation == null;
 
-    // Felder werden nicht mehr direkt im State zurückgesetzt, da sie entfernt wurden.
-    // Der Provider kümmert sich um das Zurücksetzen seiner Daten.
-    // setState(() {
-    //   _routingGraph = null; // ENTFERNT
-    //   _searchableFeatures = []; // ENTFERNT
-    //   _routePolyline = null;
-    //   _startMarker = null;
-    //   _endMarker = null;
-    //   _endLatLng = null;
-    //   _isDataReady = false; // ENTFERNT
-    //   _searchController.clear();
-    //   _searchResults = [];
-    //   _showSearchResults = false;
-    // });
-    // Stattdessen bereinigen wir nur die UI-bezogenen State-Variablen hier
     setState(() {
       _routePolyline = null;
-      _startMarker =
-          null; // Startmarker wird über Provider-Daten oder GPS neu gesetzt
+      _startMarker = null;
       _endMarker = null;
       _endLatLng = null;
       _searchController.clear();
       _searchResults = [];
       _showSearchResults = false;
-      // _isCalculatingRoute bleibt vorerst, da es eine reine UI-Steuerung ist
     });
 
     if (_isMapReady) {
@@ -200,10 +179,9 @@ class MapScreenState extends State<MapScreen> {
           "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>");
     }
 
-    // GEÄNDERTER AUFRUF: Datenladen über den Provider anstoßen
     Provider.of<LocationProvider>(context, listen: false)
         .loadDataForSelectedLocation();
-    _initializeGpsOrMock(newLocation); // GPS/Mock Initialisierung bleibt hier
+    _initializeGpsOrMock(newLocation);
   }
 
   void _toggleMockLocation() {
@@ -324,29 +302,28 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  // ENTFERNTE METHODE: _extractSearchableFeaturesFromGeoJson
-  // List<SearchableFeature> _extractSearchableFeaturesFromGeoJson(
-  //     String geoJsonString) { ... }
-
-  // ENTFERNTE METHODE: _loadDataForLocation
-  // Future<void> _loadDataForLocation(LocationInfo location) async { ... }
-
   void _onSearchChanged() {
     if (!mounted) {
       return;
     }
+    final locationProvider = Provider.of<LocationProvider>(context,
+        listen: false); // Zugriff auf Provider
+    final currentSearchableFeatures =
+        locationProvider.currentSearchableFeatures;
+
     final query = _searchController.text.toLowerCase().trim();
     List<SearchableFeature> results = [];
-    // HIER WIRD EIN FEHLER AUFTRETEN, da _searchableFeatures entfernt wurde
-    // Wir müssen hier auf locationProvider.currentSearchableFeatures zugreifen
-    // if (query.isNotEmpty && _searchableFeatures.isNotEmpty) {
-    //   results = _searchableFeatures.where((feature) {
-    //     return feature.name.toLowerCase().contains(query) ||
-    //         feature.type.toLowerCase().contains(query);
-    //   }).toList();
-    // }
+
+    if (query.isNotEmpty && currentSearchableFeatures.isNotEmpty) {
+      // ANPASSUNG
+      results = currentSearchableFeatures.where((feature) {
+        // ANPASSUNG
+        return feature.name.toLowerCase().contains(query) ||
+            feature.type.toLowerCase().contains(query);
+      }).toList();
+    }
     setStateIfMounted(() {
-      _searchResults = results; // Muss später angepasst werden
+      _searchResults = results;
       _showSearchResults =
           _searchFocusNode.hasFocus && results.isNotEmpty && query.isNotEmpty;
     });
@@ -356,10 +333,10 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
+    // Die Logik hier bleibt gleich, da _searchResults und _searchFocusNode lokale UI-Steuerungsgrößen sind
     final bool hasFocus = _searchFocusNode.hasFocus;
     final bool hasText = _searchController.text.isNotEmpty;
-    final bool hasResults =
-        _searchResults.isNotEmpty; // Hängt von _searchResults ab
+    final bool hasResults = _searchResults.isNotEmpty;
     if (kDebugMode) {
       print(
           "<<< _onSearchFocusChanged: hasFocus: $hasFocus, hasText: $hasText, hasResults: $hasResults. Current _showSearchResults: $_showSearchResults >>>");
@@ -512,13 +489,21 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _calculateAndDisplayRoute() async {
-    // HIER WIRD EIN FEHLER AUFTRETEN, da _isDataReady und _routingGraph entfernt wurden
+    // ANPASSUNG: Daten und Ladezustand vom Provider holen
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
+    final bool isDataReadyForRouting =
+        !locationProvider.isLoadingLocationData && currentGraph != null;
+
     final selectedLocationFromProvider =
-        Provider.of<LocationProvider>(context, listen: false).selectedLocation;
+        locationProvider.selectedLocation; // Kann bleiben für Namen etc.
+
     LatLng? routeStartPoint;
     String startPointType = "";
     final LatLng activeMockCenter =
         selectedLocationFromProvider?.initialCenter ?? fallbackInitialCenter;
+
     if (_useMockLocation) {
       routeStartPoint = activeMockCenter;
       startPointType =
@@ -546,16 +531,19 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
-    // if (!_isDataReady) { // ERSETZEN durch Provider-Zugriff
-    //   _showErrorDialog(
-    //       "Kartendaten für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht bereit.");
-    //   return;
-    // }
-    // if (_routingGraph == null || _routingGraph!.nodes.isEmpty) { // ERSETZEN durch Provider-Zugriff
-    //   _showErrorDialog(
-    //       "Routing-Daten für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht verfügbar.");
-    //   return;
-    // }
+
+    if (!isDataReadyForRouting) {
+      // ANPASSUNG
+      _showErrorDialog(
+          "Kartendaten für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht bereit für Routing.");
+      return;
+    }
+    if (currentGraph == null || currentGraph.nodes.isEmpty) {
+      // ANPASSUNG
+      _showErrorDialog(
+          "Routing-Daten (Graph) für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht verfügbar.");
+      return;
+    }
     if (routeStartPoint == null || _endLatLng == null) {
       setStateIfMounted(() => _routePolyline = null);
       if (routeStartPoint == null) {
@@ -570,11 +558,10 @@ class MapScreenState extends State<MapScreen> {
           "<<< _calculateAndDisplayRoute: Starte Routenberechnung von $routeStartPoint nach $_endLatLng >>>");
     }
     try {
-      // final GraphNode? startNode =
-      //     _routingGraph!.findNearestNode(routeStartPoint); // ERSETZEN
-      // final GraphNode? endNode = _routingGraph!.findNearestNode(_endLatLng!); // ERSETZEN
-      GraphNode? startNode; // Platzhalter
-      GraphNode? endNode; // Platzhalter
+      final GraphNode? startNode =
+          currentGraph.findNearestNode(routeStartPoint); // ANPASSUNG
+      final GraphNode? endNode =
+          currentGraph.findNearestNode(_endLatLng!); // ANPASSUNG
 
       if (startNode == null || endNode == null) {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
@@ -583,11 +570,9 @@ class MapScreenState extends State<MapScreen> {
         _showSnackbar("Start/Ziel identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
-        // _routingGraph!.resetAllNodeCosts(); // ERSETZEN
-        // final List<LatLng>? routePoints =
-        //     await RoutingService.findPath(_routingGraph!, startNode, endNode); // ERSETZEN
-        List<LatLng>? routePoints; // Platzhalter
-
+        currentGraph.resetAllNodeCosts(); // ANPASSUNG
+        final List<LatLng>? routePoints = await RoutingService.findPath(
+            currentGraph, startNode, endNode); // ANPASSUNG
         if (!mounted) {
           return;
         }
@@ -813,16 +798,21 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // HIER WIRD EIN FEHLER AUFTRETEN, da wir den Provider noch nicht korrekt einbinden
-    // für den Zugriff auf isLoadingLocationData, currentRoutingGraph, currentSearchableFeatures
-    final locationProvider = Provider.of<LocationProvider>(
-        context); // 'listen: true' ist hier Standard und wichtig
-    final selectedLocationFromUI = locationProvider.selectedLocation;
-    final availableLocationsFromUI = locationProvider.availableLocations;
+    // Zugriff auf den Provider. 'listen: true' ist hier wichtig, damit die UI
+    // auf Änderungen im Provider reagiert (z.B. wenn isLoadingLocationData sich ändert).
+    final locationProvider = Provider.of<LocationProvider>(context);
+    final selectedLocationFromUI =
+        locationProvider.selectedLocation; // Kann für UI-Texte bleiben
+    final availableLocationsFromUI =
+        locationProvider.availableLocations; // Kann für UI-Texte bleiben
 
-    // Logik für isDataReady und searchableFeatures muss angepasst werden:
-    // bool isUiReady = !locationProvider.isLoadingLocationData && locationProvider.currentRoutingGraph != null;
-    // List<SearchableFeature> currentSearchableFeaturesForUi = locationProvider.currentSearchableFeatures;
+    // Ladezustand und Daten aus dem Provider holen
+    final bool isLoading = locationProvider.isLoadingLocationData;
+    final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
+    final List<SearchableFeature> currentFeatures =
+        locationProvider.currentSearchableFeatures;
+    final bool isUiReady =
+        !isLoading && currentGraph != null; // Eigene Logik für UI-Bereitschaft
 
     List<Marker> activeMarkers = [];
     if (_currentLocationMarker != null) {
@@ -834,6 +824,7 @@ class MapScreenState extends State<MapScreen> {
     if (_endMarker != null) {
       activeMarkers.add(_endMarker!);
     }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Campground Navigator"),
@@ -920,10 +911,10 @@ class MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'de.tomsoft.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
               ),
-              // if (_isDataReady && _routePolyline != null) // ERSETZEN
-              //   PolylineLayer(polylines: [_routePolyline!]),
-              // if (_isDataReady && activeMarkers.isNotEmpty) // ERSETZEN
-              //   MarkerLayer(markers: activeMarkers),
+              if (isUiReady && _routePolyline != null) // ANPASSUNG
+                PolylineLayer(polylines: [_routePolyline!]),
+              if (isUiReady && activeMarkers.isNotEmpty) // ANPASSUNG
+                MarkerLayer(markers: activeMarkers),
             ],
           ),
           Positioned(
@@ -951,51 +942,53 @@ class MapScreenState extends State<MapScreen> {
                         : null,
                     border: InputBorder.none,
                   ),
-                  // enabled: _isDataReady, // ERSETZEN
+                  enabled: isUiReady, // ANPASSUNG
                 ),
               ),
             ),
           ),
-          // if (_showSearchResults && _searchResults.isNotEmpty && _isDataReady) // ERSETZEN
-          //   Positioned(
-          //     top: 75,
-          //     left: 10,
-          //     right: 10,
-          //     child: GestureDetector(
-          //       onTap: () {
-          //         if (mounted) {
-          //           setStateIfMounted(() => _showSearchResults = false);
-          //           _searchFocusNode.unfocus();
-          //         }
-          //       },
-          //       behavior: HitTestBehavior.opaque,
-          //       child: Card(
-          //         elevation: 4.0,
-          //         shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(8.0)),
-          //         child: ConstrainedBox(
-          //           constraints: BoxConstraints(
-          //             maxHeight: MediaQuery.of(context).size.height * 0.35,
-          //           ),
-          //           child: ListView.builder(
-          //             shrinkWrap: true,
-          //             itemCount: _searchResults.length, // _searchResults wird auch über Provider gespeist
-          //             itemBuilder: (context, index) {
-          //               final feature = _searchResults[index]; // _searchResults wird auch über Provider gespeist
-          //               return ListTile(
-          //                 leading: Icon(_getIconForFeatureType(feature.type)),
-          //                 title: Text(feature.name),
-          //                 subtitle: Text("Typ: ${feature.type}"),
-          //                 onTap: () => _selectFeatureAndSetPoint(feature),
-          //                 dense: true,
-          //               );
-          //             },
-          //           ),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-          if (_isCalculatingRoute)
+          if (_showSearchResults &&
+              _searchResults.isNotEmpty &&
+              isUiReady) // ANPASSUNG
+            Positioned(
+              top: 75,
+              left: 10,
+              right: 10,
+              child: GestureDetector(
+                onTap: () {
+                  if (mounted) {
+                    setStateIfMounted(() => _showSearchResults = false);
+                    _searchFocusNode.unfocus();
+                  }
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Card(
+                  elevation: 4.0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0)),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.35,
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final feature = _searchResults[index];
+                        return ListTile(
+                          leading: Icon(_getIconForFeatureType(feature.type)),
+                          title: Text(feature.name),
+                          subtitle: Text("Typ: ${feature.type}"),
+                          onTap: () => _selectFeatureAndSetPoint(feature),
+                          dense: true,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (_isCalculatingRoute) // Bleibt, da reine UI-Steuerung
             Positioned.fill(
               child: Container(
                 color: Colors.black.withAlpha((0.3 * 255).round()),
@@ -1003,41 +996,42 @@ class MapScreenState extends State<MapScreen> {
                     child: CircularProgressIndicator(color: Colors.white)),
               ),
             ),
-          // if (!_isDataReady) // ERSETZEN durch locationProvider.isLoadingLocationData
-          //   Positioned.fill(
-          //     child: Container(
-          //       color: Colors.black.withAlpha((0.7 * 255).round()),
-          //       child: Center(
-          //           child: Column(
-          //         mainAxisSize: MainAxisSize.min,
-          //         children: [
-          //           const CircularProgressIndicator(color: Colors.white),
-          //           const SizedBox(height: 16),
-          //           Text(
-          //               "Lade Kartendaten für ${selectedLocationFromUI?.name ?? 'Start-Standort'}...",
-          //               textAlign: TextAlign.center,
-          //               style:
-          //                   const TextStyle(color: Colors.white, fontSize: 16)),
-          //         ],
-          //       )),
-          //     ),
-          //   ),
+          if (isLoading) // ANPASSUNG: Ladeindikator basierend auf Provider-Status
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withAlpha((0.7 * 255).round()),
+                child: Center(
+                    child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(color: Colors.white),
+                    const SizedBox(height: 16),
+                    Text(
+                        "Lade Kartendaten für ${selectedLocationFromUI?.name ?? 'Start-Standort'}...",
+                        textAlign: TextAlign.center,
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16)),
+                  ],
+                )),
+              ),
+            ),
         ],
       ),
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // if (_isDataReady && (_routePolyline != null || _endMarker != null)) // ERSETZEN
-          //   Padding(
-          //     padding: const EdgeInsets.only(bottom: 8.0),
-          //     child: FloatingActionButton.small(
-          //       heroTag: "clearRouteAndTargetBtn",
-          //       onPressed: () => _clearRoute(clearMarkers: true),
-          //       tooltip: 'Route & Ziel löschen',
-          //       child: const Icon(Icons.delete_outline),
-          //     ),
-          //   ),
+          if (isUiReady &&
+              (_routePolyline != null || _endMarker != null)) // ANPASSUNG
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: FloatingActionButton.small(
+                heroTag: "clearRouteAndTargetBtn",
+                onPressed: () => _clearRoute(clearMarkers: true),
+                tooltip: 'Route & Ziel löschen',
+                child: const Icon(Icons.delete_outline),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: FloatingActionButton.small(
