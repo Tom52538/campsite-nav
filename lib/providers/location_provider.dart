@@ -7,7 +7,7 @@ import 'dart:async'; // Für Future
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
-import 'package:camping_osm_navi/services/geojson_parser_service.dart'; // Wichtig: Import für den Service
+import 'package:camping_osm_navi/services/geojson_parser_service.dart';
 
 class LocationProvider with ChangeNotifier {
   final List<LocationInfo> _availableLocations =
@@ -54,7 +54,12 @@ class LocationProvider with ChangeNotifier {
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
       _isLoadingLocationData = false;
-      notifyListeners();
+      // Da dies auch den Zustand ändert, ggf. auch in Future.microtask verpacken,
+      // aber meist ist es unkritischer, wenn es keine UI-Aktualisierung direkt im Build-Zyklus auslöst.
+      // Für Konsistenz könnte man es tun.
+      Future.microtask(() {
+        notifyListeners();
+      });
       return;
     }
 
@@ -63,10 +68,15 @@ class LocationProvider with ChangeNotifier {
           "[LocationProvider] Starte Laden der Daten für: ${_selectedLocation!.name}");
     }
 
-    _isLoadingLocationData = true;
-    _currentRoutingGraph = null; // Alte Daten vor dem Laden löschen
-    _currentSearchableFeatures = []; // Alte Daten vor dem Laden löschen
-    notifyListeners(); // UI informieren, dass Ladevorgang startet
+    // KORREKTUR: Verzögere den ersten notifyListeners-Aufruf
+    Future.microtask(() {
+      _isLoadingLocationData = true;
+      _currentRoutingGraph = null; // Alte Daten vor dem Laden löschen
+      _currentSearchableFeatures = []; // Alte Daten vor dem Laden löschen
+      notifyListeners(); // UI informieren, dass Ladevorgang startet
+    });
+
+    // await Future.delayed(Duration.zero); // Alternative kleine Verzögerung, falls microtask nicht reicht
 
     try {
       final String geoJsonString =
@@ -76,7 +86,6 @@ class LocationProvider with ChangeNotifier {
             "[LocationProvider] GeoJSON-String für ${_selectedLocation!.name} geladen (${geoJsonString.length} Zeichen).");
       }
 
-      // Aufruf des GeojsonParserService, um Graph und Features zu erhalten
       final parsedData =
           GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString);
       _currentRoutingGraph = parsedData.graph;
@@ -92,13 +101,14 @@ class LocationProvider with ChangeNotifier {
             "[LocationProvider] Fehler beim Laden oder Parsen der Daten für ${_selectedLocation!.name}: $e");
         print("[LocationProvider] Stacktrace: $stacktrace");
       }
-      // Im Fehlerfall sicherstellen, dass die Felder konsistent sind
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
     }
 
     _isLoadingLocationData = false;
-    notifyListeners(); // UI informieren, dass Ladevorgang beendet ist (erfolgreich oder nicht)
+    // Der finale notifyListeners kann oft direkt erfolgen, da die asynchronen Operationen (await)
+    // den synchronen Build-Flow bereits unterbrochen haben.
+    notifyListeners();
 
     if (kDebugMode) {
       print(
