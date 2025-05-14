@@ -96,8 +96,6 @@ class MapScreenState extends State<MapScreen> {
       print(
           "<<< initState: MapScreenState initialisiert. _lastProcessedLocation ist anfangs: ${_lastProcessedLocation?.name}, _isMapReady: $_isMapReady >>>");
     }
-    // Initiales Laden der Daten für den ersten Standort (falls vorhanden) wird
-    // durch den LocationProvider-Konstruktor und didChangeDependencies gehandhabt.
   }
 
   @override
@@ -107,8 +105,6 @@ class MapScreenState extends State<MapScreen> {
         Provider.of<LocationProvider>(context, listen: false);
     final newSelectedLocation = locationProvider.selectedLocation;
 
-    // Verarbeite Standortwechsel nur, wenn es tatsächlich ein neuer Standort ist
-    // und der Provider nicht gerade initialisiert wird (wo selectedLocation kurz null sein könnte, bevor der erste gesetzt wird)
     if (newSelectedLocation != null &&
         (newSelectedLocation.id != _lastProcessedLocation?.id)) {
       if (kDebugMode) {
@@ -118,7 +114,6 @@ class MapScreenState extends State<MapScreen> {
       _handleLocationChangeUIUpdates(newSelectedLocation);
       _lastProcessedLocation = newSelectedLocation;
     } else if (newSelectedLocation != null && _lastProcessedLocation == null) {
-      // Fall für den allerersten Ladevorgang, wenn _lastProcessedLocation noch null ist
       if (kDebugMode) {
         print(
             "<<< didChangeDependencies: Erster Ladevorgang für ${newSelectedLocation.name}. >>>");
@@ -173,8 +168,6 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (isInitialLoad) {
-      // Zeige Snackbar nur bei tatsächlichem Wechsel, nicht beim ersten Laden
-      // Wenn _lastProcessedLocation nicht null war (also ein Wechsel stattfindet)
       if (_lastProcessedLocation != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
@@ -325,7 +318,6 @@ class MapScreenState extends State<MapScreen> {
     }
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
-    // Greift direkt auf currentSearchableFeatures vom Provider zu
     final List<SearchableFeature> currentSearchableFeatures =
         locationProvider.currentSearchableFeatures;
 
@@ -506,7 +498,6 @@ class MapScreenState extends State<MapScreen> {
   Future<void> _calculateAndDisplayRoute() async {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
-    // Greift direkt auf currentRoutingGraph und isLoadingLocationData vom Provider zu
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
     final bool isLoadingData = locationProvider.isLoadingLocationData;
     final bool isDataReadyForRouting = !isLoadingData && currentGraph != null;
@@ -551,7 +542,9 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (currentGraph == null || currentGraph.nodes.isEmpty) {
+    // Korrigierte Bedingung: currentGraph wurde bereits durch isDataReadyForRouting auf non-null geprüft.
+    // Es reicht, auf nodes.isEmpty zu prüfen.
+    if (currentGraph!.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten (Graph) für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht verfügbar oder leer.");
       return;
@@ -808,17 +801,12 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Daten vom LocationProvider beziehen
     final locationProvider = Provider.of<LocationProvider>(context);
     final selectedLocationFromUI = locationProvider.selectedLocation;
     final availableLocationsFromUI = locationProvider.availableLocations;
 
-    // Direkter Zugriff auf isLoadingLocationData und currentRoutingGraph vom Provider
     final bool isLoading = locationProvider.isLoadingLocationData;
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
-    // currentSearchableFeatures wird in _onSearchChanged direkt vom Provider geholt
-
-    // UI ist bereit, wenn nicht geladen wird und ein Graph vorhanden ist
     final bool isUiReady = !isLoading && currentGraph != null;
 
     List<Marker> activeMarkers = [];
@@ -919,7 +907,6 @@ class MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'de.tomsoft.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
               ),
-              // UI-Elemente basieren auf isUiReady (abgeleitet von Provider-Daten)
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
@@ -951,14 +938,12 @@ class MapScreenState extends State<MapScreen> {
                         : null,
                     border: InputBorder.none,
                   ),
-                  enabled: isUiReady, // UI-Element basiert auf isUiReady
+                  enabled: isUiReady,
                 ),
               ),
             ),
           ),
-          if (_showSearchResults &&
-              _searchResults.isNotEmpty &&
-              isUiReady) // UI-Element basiert auf isUiReady
+          if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
               top: 75,
               left: 10,
@@ -1005,7 +990,6 @@ class MapScreenState extends State<MapScreen> {
                     child: CircularProgressIndicator(color: Colors.white)),
               ),
             ),
-          // Ladeindikator basiert auf isLoading vom Provider
           if (isLoading)
             Positioned.fill(
               child: Container(
@@ -1031,7 +1015,6 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // UI-Element basiert auf isUiReady
           if (isUiReady && (_routePolyline != null || _endMarker != null))
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
