@@ -77,7 +77,7 @@ class MapScreenState extends State<MapScreen> {
   bool _showSearchResults = false;
 
   bool _useMockLocation = true;
-  bool _isMapReady = false; // Wieder eingeführt
+  bool _isMapReady = false;
 
   LocationInfo? _lastProcessedLocation;
 
@@ -130,6 +130,8 @@ class MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
+  // METHODEN _loadDataForLocation und _extractSearchableFeaturesFromGeoJson SIND HIER ENTFERNT
+
   void _onLocationSelectedFromDropdown(LocationInfo? newLocation) {
     if (newLocation == null) {
       return;
@@ -156,7 +158,6 @@ class MapScreenState extends State<MapScreen> {
     });
 
     if (_isMapReady && mounted) {
-      // Prüfung auf _isMapReady und mounted
       _mapController.move(newLocation.initialCenter, 17.0);
     }
 
@@ -174,6 +175,9 @@ class MapScreenState extends State<MapScreen> {
           "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>");
     }
 
+    // Der Aufruf zum Laden der Daten erfolgt nun hier explizit,
+    // da der LocationProvider die Daten nicht mehr automatisch bei jeder Selektion neu lädt,
+    // sondern nur, wenn loadDataForSelectedLocation aufgerufen wird.
     Provider.of<LocationProvider>(context, listen: false)
         .loadDataForSelectedLocation();
     _initializeGpsOrMock(newLocation);
@@ -225,7 +229,6 @@ class MapScreenState extends State<MapScreen> {
               "Mock Position (${location.name})");
         });
         if (_isMapReady && mounted) {
-          // Prüfung auf _isMapReady und mounted
           _mapController.move(activeInitialCenterForMock, 17.0);
           if (kDebugMode) {
             print(
@@ -248,7 +251,6 @@ class MapScreenState extends State<MapScreen> {
 
   void _performInitialMapMove() {
     if (!mounted || !_isMapReady) {
-      // Prüfung auf mounted UND _isMapReady
       if (kDebugMode && !_isMapReady) {
         print(
             "<<< _performInitialMapMove: Karte noch nicht bereit (_isMapReady ist false). Keine Bewegung. >>>");
@@ -289,7 +291,6 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (targetToMoveTo != null && mounted) {
-      // Zusätzlicher mounted Check
       _mapController.move(targetToMoveTo, 17.0);
       if (kDebugMode) {
         print(
@@ -377,7 +378,6 @@ class MapScreenState extends State<MapScreen> {
       _calculateAndDisplayRoute();
     });
     if (_isMapReady && mounted) {
-      // Prüfung auf _isMapReady und mounted
       _mapController.move(feature.center, 18.0);
     }
   }
@@ -442,7 +442,6 @@ class MapScreenState extends State<MapScreen> {
       }
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
-        // Prüfung auf _isMapReady und mounted
         final Distance distance = Distance();
         final double meters =
             distance(centerForDistanceCheck, _currentGpsPosition!);
@@ -493,8 +492,7 @@ class MapScreenState extends State<MapScreen> {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
-    final bool isLoadingData =
-        locationProvider.isLoadingLocationData; // Vom Provider holen
+    final bool isLoadingData = locationProvider.isLoadingLocationData;
     final bool isDataReadyForRouting = !isLoadingData && currentGraph != null;
 
     final selectedLocationFromProvider = locationProvider.selectedLocation;
@@ -537,7 +535,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (currentGraph!.nodes.isEmpty) {
+    if (currentGraph == null || currentGraph.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten (Graph) für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht verfügbar oder leer.");
       return;
@@ -693,7 +691,6 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (centerTarget != null && _isMapReady && mounted) {
-      // Prüfung auf _isMapReady und mounted
       _mapController.move(centerTarget, 17.0);
       if (kDebugMode) {
         print(
@@ -880,10 +877,9 @@ class MapScreenState extends State<MapScreen> {
                       "<<< Map ist jetzt bereit (onMapReady Callback), _isMapReady wird auf true gesetzt. >>>");
                 }
                 setState(() {
-                  // Korrekt _isMapReady setzen
                   _isMapReady = true;
                 });
-                _performInitialMapMove(); // Aufrufen, nachdem _isMapReady gesetzt wurde
+                _performInitialMapMove();
               },
               onPositionChanged: (MapPosition position, bool hasGesture) {
                 if (hasGesture && _searchFocusNode.hasFocus) {
