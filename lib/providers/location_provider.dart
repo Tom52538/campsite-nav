@@ -68,7 +68,6 @@ class LocationProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // NEU: GeoJSON-String laden
       final String geoJsonString =
           await rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
       if (kDebugMode) {
@@ -84,18 +83,18 @@ class LocationProvider with ChangeNotifier {
 
       // Temporär, um zu sehen, dass der Ladevorgang durchläuft
       if (geoJsonString.isNotEmpty) {
-        // Nur eine kleine Erfolgsmeldung, die eigentliche Datenzuweisung fehlt noch
-        if (kDebugMode)
+        // ÄUSSERE IF-BEDINGUNG
+        if (kDebugMode) {
+          // INNERE IF-BEDINGUNG JETZT MIT KLAMMERN
           print(
               "[LocationProvider] GeoJSON String erfolgreich gelesen, Parsing folgt in Schritt 1.5.");
+        }
       }
     } catch (e, stacktrace) {
-      // stacktrace hinzugefügt für besseres Debugging
       if (kDebugMode) {
         print(
             "[LocationProvider] Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e");
-        print(
-            "[LocationProvider] Stacktrace: $stacktrace"); // Stacktrace ausgeben
+        print("[LocationProvider] Stacktrace: $stacktrace");
       }
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
