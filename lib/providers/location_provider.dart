@@ -22,11 +22,7 @@ class LocationProvider with ChangeNotifier {
   LocationProvider() {
     if (_availableLocations.isNotEmpty) {
       _selectedLocation = _availableLocations.first;
-      // Wir rufen hier loadDataForSelectedLocation auf, um die Daten für den initialen Standort zu laden.
-      // Da dies ein Future ist und der Konstruktor nicht async sein kann,
-      // verwenden wir .then() oder ein Future.microtask, um Fehlerbehandlung oder weitere Aktionen
-      // nach dem Laden zu ermöglichen, falls nötig. Fürs Erste reicht der Aufruf.
-      loadDataForSelectedLocation(); // NEU: Initiales Laden anstoßen
+      loadDataForSelectedLocation();
     }
   }
 
@@ -44,12 +40,10 @@ class LocationProvider with ChangeNotifier {
       if (kDebugMode) {
         print("[LocationProvider] Standort gewechselt zu: ${newLocation.name}");
       }
-      loadDataForSelectedLocation(); // NEU: Laden für neuen Standort anstoßen
-      // notifyListeners() wird jetzt von loadDataForSelectedLocation übernommen (am Anfang und Ende)
+      loadDataForSelectedLocation();
     }
   }
 
-  // NEUE METHODE / GRUNDGERÜST
   Future<void> loadDataForSelectedLocation() async {
     if (_selectedLocation == null) {
       if (kDebugMode) {
@@ -58,8 +52,7 @@ class LocationProvider with ChangeNotifier {
       }
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
-      _isLoadingLocationData =
-          false; // Sicherstellen, dass der Zustand korrekt ist
+      _isLoadingLocationData = false;
       notifyListeners();
       return;
     }
@@ -70,30 +63,46 @@ class LocationProvider with ChangeNotifier {
     }
 
     _isLoadingLocationData = true;
-    _currentRoutingGraph = null; // Alte Daten ggf. löschen
-    _currentSearchableFeatures = []; // Alte Daten ggf. löschen
-    notifyListeners(); // UI informieren, dass Ladevorgang startet
+    _currentRoutingGraph = null;
+    _currentSearchableFeatures = [];
+    notifyListeners();
 
-    // Simuliert eine Ladezeit, damit man den Ladeindikator später testen kann
-    // await Future.delayed(const Duration(seconds: 2));
+    try {
+      // NEU: GeoJSON-String laden
+      final String geoJsonString =
+          await rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
+      if (kDebugMode) {
+        print(
+            "[LocationProvider] GeoJSON-String für ${_selectedLocation!.name} geladen (${geoJsonString.length} Zeichen).");
+      }
 
-    // HIER KOMMT IN SCHRITT 1.4 und 1.5 die Lade- und Parsing-Logik
-    // z.B.
-    // try {
-    //   final String geoJsonString = await rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
-    //   // ... parsen ...
-    //   // _currentRoutingGraph = ...
-    //   // _currentSearchableFeatures = ...
-    // } catch (e) {
-    //   if (kDebugMode) {
-    //     print("[LocationProvider] Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e");
-    //   }
-    //   _currentRoutingGraph = null;
-    //   _currentSearchableFeatures = [];
-    // }
+      // HIER KOMMT IN SCHRITT 1.5 die Parsing-Logik
+      // z.B.
+      // final parsedData = GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString); // (Methode existiert noch nicht so)
+      // _currentRoutingGraph = parsedData.graph;
+      // _currentSearchableFeatures = parsedData.features;
+
+      // Temporär, um zu sehen, dass der Ladevorgang durchläuft
+      if (geoJsonString.isNotEmpty) {
+        // Nur eine kleine Erfolgsmeldung, die eigentliche Datenzuweisung fehlt noch
+        if (kDebugMode)
+          print(
+              "[LocationProvider] GeoJSON String erfolgreich gelesen, Parsing folgt in Schritt 1.5.");
+      }
+    } catch (e, stacktrace) {
+      // stacktrace hinzugefügt für besseres Debugging
+      if (kDebugMode) {
+        print(
+            "[LocationProvider] Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e");
+        print(
+            "[LocationProvider] Stacktrace: $stacktrace"); // Stacktrace ausgeben
+      }
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+    }
 
     _isLoadingLocationData = false;
-    notifyListeners(); // UI informieren, dass Ladevorgang beendet ist
+    notifyListeners();
 
     if (kDebugMode) {
       print(
