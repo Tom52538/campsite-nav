@@ -7,8 +7,7 @@ import 'dart:async'; // Für Future
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
-// Import für GeojsonParserService wird später relevant, kann aber schon hinzugefügt werden:
-// import 'package:camping_osm_navi/services/geojson_parser_service.dart';
+import 'package:camping_osm_navi/services/geojson_parser_service.dart'; // NEU: Import wieder einkommentiert
 
 class LocationProvider with ChangeNotifier {
   final List<LocationInfo> _availableLocations =
@@ -75,25 +74,22 @@ class LocationProvider with ChangeNotifier {
             "[LocationProvider] GeoJSON-String für ${_selectedLocation!.name} geladen (${geoJsonString.length} Zeichen).");
       }
 
-      // HIER KOMMT IN SCHRITT 1.5 die Parsing-Logik
-      // z.B.
-      // final parsedData = GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString); // (Methode existiert noch nicht so)
-      // _currentRoutingGraph = parsedData.graph;
-      // _currentSearchableFeatures = parsedData.features;
+      // NEU: Aufruf des (noch zu erstellenden) Parsers und Zuweisung der Daten
+      // Diese Methode wird in Teil 2 unseres Plans im GeojsonParserService erstellt.
+      // Sobald sie existiert, wird dieser Code kompilieren.
+      final parsedData =
+          GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString);
+      _currentRoutingGraph = parsedData.graph;
+      _currentSearchableFeatures = parsedData.features;
 
-      // Temporär, um zu sehen, dass der Ladevorgang durchläuft
-      if (geoJsonString.isNotEmpty) {
-        // ÄUSSERE IF-BEDINGUNG
-        if (kDebugMode) {
-          // INNERE IF-BEDINGUNG JETZT MIT KLAMMERN
-          print(
-              "[LocationProvider] GeoJSON String erfolgreich gelesen, Parsing folgt in Schritt 1.5.");
-        }
+      if (kDebugMode) {
+        print(
+            "[LocationProvider] Daten für ${_selectedLocation!.name} erfolgreich geparst und zugewiesen.");
       }
     } catch (e, stacktrace) {
       if (kDebugMode) {
         print(
-            "[LocationProvider] Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e");
+            "[LocationProvider] Fehler beim Laden oder Parsen der Daten für ${_selectedLocation!.name}: $e");
         print("[LocationProvider] Stacktrace: $stacktrace");
       }
       _currentRoutingGraph = null;
