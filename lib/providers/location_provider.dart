@@ -1,107 +1,295 @@
-// lib/providers/location_provider.dart
+// lib/services/geojson_parser_service.dart
 
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart'; // Für rootBundle
-import 'dart:async'; // Für Future
-
-import 'package:camping_osm_navi/models/location_info.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
+import 'package:camping_osm_navi/models/graph_node.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
-import 'package:camping_osm_navi/services/geojson_parser_service.dart'; // NEU: Import wieder einkommentiert
 
-class LocationProvider with ChangeNotifier {
-  final List<LocationInfo> _availableLocations =
-      appLocations; // Aus location_info.dart
-  LocationInfo? _selectedLocation;
+class GeojsonParserService {
+  static const Distance _distance = Distance();
+  static const Set<String> _routableHighwayTypes = {
+    'service',
+    'footway',
+    'cycleway',
+    'path',
+    'track',
+    'unclassified',
+    'tertiary',
+    'residential',
+    'living_street',
+    'pedestrian',
+    'platform'
+  };
 
-  RoutingGraph? _currentRoutingGraph;
-  List<SearchableFeature> _currentSearchableFeatures = [];
-  bool _isLoadingLocationData = false;
-
-  LocationProvider() {
-    if (_availableLocations.isNotEmpty) {
-      _selectedLocation = _availableLocations.first;
-      loadDataForSelectedLocation();
-    }
-  }
-
-  List<LocationInfo> get availableLocations => _availableLocations;
-  LocationInfo? get selectedLocation => _selectedLocation;
-
-  RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
-  List<SearchableFeature> get currentSearchableFeatures =>
-      _currentSearchableFeatures;
-  bool get isLoadingLocationData => _isLoadingLocationData;
-
-  void selectLocation(LocationInfo? newLocation) {
-    if (newLocation != null && newLocation != _selectedLocation) {
-      _selectedLocation = newLocation;
-      if (kDebugMode) {
-        print("[LocationProvider] Standort gewechselt zu: ${newLocation.name}");
-      }
-      loadDataForSelectedLocation();
-    }
-  }
-
-  Future<void> loadDataForSelectedLocation() async {
-    if (_selectedLocation == null) {
-      if (kDebugMode) {
-        print(
-            "[LocationProvider] Kein Standort ausgewählt, Laden abgebrochen.");
-      }
-      _currentRoutingGraph = null;
-      _currentSearchableFeatures = [];
-      _isLoadingLocationData = false;
-      notifyListeners();
-      return;
-    }
+  // Die alte Methode - kann vorerst bleiben, wird aber vom LocationProvider nicht mehr genutzt
+  static RoutingGraph parseGeoJson(String geoJsonString) {
+    final RoutingGraph graph = RoutingGraph();
+    final decodedJson = jsonDecode(geoJsonString);
 
     if (kDebugMode) {
       print(
-          "[LocationProvider] Starte Laden der Daten für: ${_selectedLocation!.name}");
+          "[GeojsonParserService] Starte GeoJSON Parsing für Routing-Graph (alte Methode)...");
     }
 
-    _isLoadingLocationData = true;
-    _currentRoutingGraph = null;
-    _currentSearchableFeatures = [];
-    notifyListeners();
+    if (decodedJson is Map<String, dynamic> &&
+        decodedJson['type'] == 'FeatureCollection' &&
+        decodedJson['features'] is List) {
+      List featuresJson = decodedJson['features'];
+      int processedWays = 0;
 
-    try {
-      final String geoJsonString =
-          await rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
+      for (var feature in featuresJson) {
+        if (feature is Map<String, dynamic> &&
+            feature['geometry'] is Map<String, dynamic>) {
+          final geometry = feature['geometry'];
+          final properties = Map<String, dynamic>.from(
+              feature['properties'] ?? <String, dynamic>{});
+          final type = geometry['type'];
+          final coordinates = geometry['coordinates'];
+
+          if (type == 'LineString' &&
+              properties['highway'] != null &&
+              _routableHighwayTypes.contains(properties['highway'])) {
+            if (coordinates is List && coordinates.length >= 2) {
+              processedWays++;
+              bool isOneway = properties['oneway'] == 'yes';
+              GraphNode? previousNode;
+
+              for (var coord in coordinates) {
+                if (coord is List &&
+                    coord.length >= 2 &&
+                    coord[0] is num &&
+                    coord[1] is num) {
+                  try {
+                    final LatLng currentLatLng =
+                        LatLng(coord[1].toDouble(), coord[0].toDouble());
+                    final GraphNode currentNode = graph.addNode(currentLatLng);
+                    if (previousNode != null) {
+                      final double weight = _distance(
+                          previousNode.position, currentNode.position);
+                      if (weight > 0) {
+                        graph.addEdge(previousNode, currentNode, weight,
+                            oneway: isOneway);
+                      }
+                    }
+                    previousNode = currentNode;
+                  } catch (e) {
+                    if (kDebugMode) {
+                      print(
+                          "[GeojsonParserService] Fehler beim Verarbeiten einer Koordinate im LineString (alte Methode): $e");
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
       if (kDebugMode) {
         print(
-            "[LocationProvider] GeoJSON-String für ${_selectedLocation!.name} geladen (${geoJsonString.length} Zeichen).");
+            "[GeojsonParserService] Routing-Graph Parsing (alte Methode) abgeschlossen. ${graph.nodes.length} Knoten erstellt aus $processedWays Wegen.");
       }
-
-      // NEU: Aufruf des (noch zu erstellenden) Parsers und Zuweisung der Daten
-      // Diese Methode wird in Teil 2 unseres Plans im GeojsonParserService erstellt.
-      // Sobald sie existiert, wird dieser Code kompilieren.
-      final parsedData =
-          GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString);
-      _currentRoutingGraph = parsedData.graph;
-      _currentSearchableFeatures = parsedData.features;
-
+    } else {
       if (kDebugMode) {
         print(
-            "[LocationProvider] Daten für ${_selectedLocation!.name} erfolgreich geparst und zugewiesen.");
+            "[GeojsonParserService] Fehler (alte Methode): GeoJSON ist keine gültige FeatureCollection.");
       }
-    } catch (e, stacktrace) {
-      if (kDebugMode) {
-        print(
-            "[LocationProvider] Fehler beim Laden oder Parsen der Daten für ${_selectedLocation!.name}: $e");
-        print("[LocationProvider] Stacktrace: $stacktrace");
-      }
-      _currentRoutingGraph = null;
-      _currentSearchableFeatures = [];
+    }
+    return graph;
+  }
+
+  // NEUE METHODE, die Graph und Features zurückgibt
+  static ({RoutingGraph graph, List<SearchableFeature> features})
+      parseGeoJsonToGraphAndFeatures(String geoJsonString) {
+    if (kDebugMode) {
+      print("[GeojsonParserService] Starte parseGeoJsonToGraphAndFeatures...");
     }
 
-    _isLoadingLocationData = false;
-    notifyListeners();
+    final RoutingGraph graph = RoutingGraph();
+    final List<SearchableFeature> searchableFeatures = [];
+    final dynamic decodedJson =
+        jsonDecode(geoJsonString); // Einmal decodieren für beide Operationen
+
+    // --- Logik zur Erstellung des RoutingGraphen ---
+    if (decodedJson is Map<String, dynamic> &&
+        decodedJson['type'] == 'FeatureCollection' &&
+        decodedJson['features'] is List) {
+      List featuresJsonList = decodedJson['features'];
+      int processedWays = 0;
+
+      for (var featureData in featuresJsonList) {
+        if (featureData is Map<String, dynamic> &&
+            featureData['geometry'] is Map<String, dynamic>) {
+          final geometry = featureData['geometry'];
+          final properties = Map<String, dynamic>.from(
+              featureData['properties'] ?? <String, dynamic>{});
+          final type = geometry['type'];
+          final coordinates = geometry['coordinates'];
+
+          // Graph-Erstellung
+          if (type == 'LineString' &&
+              properties['highway'] != null &&
+              _routableHighwayTypes.contains(properties['highway'])) {
+            if (coordinates is List && coordinates.length >= 2) {
+              processedWays++;
+              bool isOneway = properties['oneway'] == 'yes';
+              GraphNode? previousNode;
+              for (var coord in coordinates) {
+                if (coord is List &&
+                    coord.length >= 2 &&
+                    coord[0] is num &&
+                    coord[1] is num) {
+                  try {
+                    final LatLng currentLatLng =
+                        LatLng(coord[1].toDouble(), coord[0].toDouble());
+                    final GraphNode currentNode = graph.addNode(currentLatLng);
+                    if (previousNode != null) {
+                      final double weight = _distance(
+                          previousNode.position, currentNode.position);
+                      if (weight > 0) {
+                        graph.addEdge(previousNode, currentNode, weight,
+                            oneway: isOneway);
+                      }
+                    }
+                    previousNode = currentNode;
+                  } catch (e) {
+                    if (kDebugMode) {
+                      print(
+                          "[GeojsonParserService] Fehler Koordinate (Graph): $e");
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      if (kDebugMode) {
+        print(
+            "[GeojsonParserService] Graph-Teil: ${graph.nodes.length} Knoten aus $processedWays Wegen.");
+      }
+    } else {
+      if (kDebugMode) {
+        print(
+            "[GeojsonParserService] Fehler: GeoJSON ist keine gültige FeatureCollection für Graphen.");
+      }
+    }
+    // --- Ende Logik zur Erstellung des RoutingGraphen ---
+
+    // --- Logik zur Extraktion der SearchableFeatures (aus _internalExtractSearchableFeatures) ---
+    // Rufe die private Hilfsmethode auf, die den bereits dekodierten JSON verwendet
+    searchableFeatures.addAll(_internalExtractSearchableFeatures(decodedJson));
+    // --- Ende Logik zur Extraktion der SearchableFeatures ---
 
     if (kDebugMode) {
       print(
-          "[LocationProvider] Laden der Daten für ${_selectedLocation!.name} abgeschlossen. Graph: ${_currentRoutingGraph != null}, Features: ${_currentSearchableFeatures.isNotEmpty}");
+          "[GeojsonParserService] parseGeoJsonToGraphAndFeatures abgeschlossen. Graph-Knoten: ${graph.nodes.length}, Features: ${searchableFeatures.length}");
     }
+    return (graph: graph, features: searchableFeatures);
+  }
+
+  // NEUE PRIVATE STATISCHE HILFSMETHODE
+  // (Logik aus MapScreenState._extractSearchableFeaturesFromGeoJson wurde hierher verschoben und angepasst)
+  static List<SearchableFeature> _internalExtractSearchableFeatures(
+      dynamic decodedJson) {
+    final List<SearchableFeature> features = [];
+
+    if (kDebugMode) {
+      print(
+          "[GeojsonParserService] Starte _internalExtractSearchableFeatures...");
+    }
+
+    if (decodedJson is Map<String, dynamic> &&
+        decodedJson['type'] == 'FeatureCollection' &&
+        decodedJson['features'] is List) {
+      int featureCount = 0;
+      for (final featureJson in decodedJson['features'] as List) {
+        featureCount++;
+        if (featureJson is Map<String, dynamic>) {
+          final properties = featureJson['properties'] as Map<String, dynamic>?;
+          final geometry = featureJson['geometry'] as Map<String, dynamic>?;
+
+          if (properties != null && geometry != null) {
+            final dynamic id = featureJson['id'] ??
+                properties['@id'] ??
+                'feature_${DateTime.now().millisecondsSinceEpoch}_$featureCount';
+            final String? name = properties['name'] as String?;
+            String type = properties['highway'] as String? ??
+                properties['amenity'] as String? ??
+                properties['shop'] as String? ??
+                properties['building'] as String? ??
+                properties['tourism'] as String? ??
+                'unknown'; // Fallback-Typ
+            if (name != null && name.isNotEmpty) {
+              LatLng? center;
+              final String? geomType = geometry['type'] as String?;
+              final dynamic coordsRaw = geometry['coordinates'];
+              try {
+                if (geomType == 'Point' &&
+                    coordsRaw is List &&
+                    coordsRaw.length >= 2 &&
+                    coordsRaw[0] is num &&
+                    coordsRaw[1] is num) {
+                  center = LatLng((coordsRaw[1] as num).toDouble(),
+                      (coordsRaw[0] as num).toDouble());
+                } else if (geomType == 'LineString' &&
+                    coordsRaw is List &&
+                    coordsRaw.isNotEmpty) {
+                  if (coordsRaw.first is List) {
+                    final firstPointList = coordsRaw.first as List;
+                    if (firstPointList.length >= 2 &&
+                        firstPointList[0] is num &&
+                        firstPointList[1] is num) {
+                      center = LatLng((firstPointList[1] as num).toDouble(),
+                          (firstPointList[0] as num).toDouble());
+                    }
+                  }
+                } else if (geomType == 'Polygon' &&
+                    coordsRaw is List &&
+                    coordsRaw.isNotEmpty) {
+                  if (coordsRaw.first is List) {
+                    final firstRing = coordsRaw.first as List;
+                    if (firstRing.isNotEmpty && firstRing.first is List) {
+                      final firstPointList = firstRing.first as List;
+                      if (firstPointList.length >= 2 &&
+                          firstPointList[0] is num &&
+                          firstPointList[1] is num) {
+                        center = LatLng((firstPointList[1] as num).toDouble(),
+                            (firstPointList[0] as num).toDouble());
+                      }
+                    }
+                  }
+                }
+              } catch (e) {
+                if (kDebugMode) {
+                  print(
+                      "[GeojsonParserService] Fehler beim Parsen der Koordinaten für Feature '$name' (in _internalExtractSearchableFeatures): $e");
+                }
+              }
+
+              if (center != null) {
+                features.add(SearchableFeature(
+                  id: id.toString(),
+                  name: name,
+                  type: type,
+                  center: center,
+                ));
+              }
+            }
+          }
+        }
+      }
+      if (kDebugMode) {
+        print(
+            "[GeojsonParserService] _internalExtractSearchableFeatures: ${features.length} Features extrahiert.");
+      }
+    } else {
+      if (kDebugMode) {
+        print(
+            "[GeojsonParserService] Fehler: GeoJSON ist keine gültige FeatureCollection für Feature-Extraktion.");
+      }
+    }
+    return features;
   }
 }
