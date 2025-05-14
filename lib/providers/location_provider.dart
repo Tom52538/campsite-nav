@@ -15,7 +15,6 @@ class LocationProvider with ChangeNotifier {
       appLocations; // Aus location_info.dart
   LocationInfo? _selectedLocation;
 
-  // NEUE FELDER (ersetzen die Platzhalter-Kommentare)
   RoutingGraph? _currentRoutingGraph;
   List<SearchableFeature> _currentSearchableFeatures = [];
   bool _isLoadingLocationData = false;
@@ -23,15 +22,17 @@ class LocationProvider with ChangeNotifier {
   LocationProvider() {
     if (_availableLocations.isNotEmpty) {
       _selectedLocation = _availableLocations.first;
-      // Hier könnte zukünftig der initiale Ladevorgang für den ersten Standort angestoßen werden
-      // z.B. loadDataForSelectedLocation(); sobald die Methode existiert
+      // Wir rufen hier loadDataForSelectedLocation auf, um die Daten für den initialen Standort zu laden.
+      // Da dies ein Future ist und der Konstruktor nicht async sein kann,
+      // verwenden wir .then() oder ein Future.microtask, um Fehlerbehandlung oder weitere Aktionen
+      // nach dem Laden zu ermöglichen, falls nötig. Fürs Erste reicht der Aufruf.
+      loadDataForSelectedLocation(); // NEU: Initiales Laden anstoßen
     }
   }
 
   List<LocationInfo> get availableLocations => _availableLocations;
   LocationInfo? get selectedLocation => _selectedLocation;
 
-  // NEUE GETTER (ersetzen die Platzhalter-Kommentare)
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
   List<SearchableFeature> get currentSearchableFeatures =>
       _currentSearchableFeatures;
@@ -43,13 +44,60 @@ class LocationProvider with ChangeNotifier {
       if (kDebugMode) {
         print("[LocationProvider] Standort gewechselt zu: ${newLocation.name}");
       }
-      // Hier wird zukünftig loadDataForSelectedLocation() aufgerufen
-      notifyListeners();
+      loadDataForSelectedLocation(); // NEU: Laden für neuen Standort anstoßen
+      // notifyListeners() wird jetzt von loadDataForSelectedLocation übernommen (am Anfang und Ende)
     }
   }
 
-  // Methode zum Laden der Daten (wird in den nächsten Schritten implementiert)
-  // Future<void> loadDataForSelectedLocation() async {
-  //   // Implementierung folgt
-  // }
+  // NEUE METHODE / GRUNDGERÜST
+  Future<void> loadDataForSelectedLocation() async {
+    if (_selectedLocation == null) {
+      if (kDebugMode) {
+        print(
+            "[LocationProvider] Kein Standort ausgewählt, Laden abgebrochen.");
+      }
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _isLoadingLocationData =
+          false; // Sicherstellen, dass der Zustand korrekt ist
+      notifyListeners();
+      return;
+    }
+
+    if (kDebugMode) {
+      print(
+          "[LocationProvider] Starte Laden der Daten für: ${_selectedLocation!.name}");
+    }
+
+    _isLoadingLocationData = true;
+    _currentRoutingGraph = null; // Alte Daten ggf. löschen
+    _currentSearchableFeatures = []; // Alte Daten ggf. löschen
+    notifyListeners(); // UI informieren, dass Ladevorgang startet
+
+    // Simuliert eine Ladezeit, damit man den Ladeindikator später testen kann
+    // await Future.delayed(const Duration(seconds: 2));
+
+    // HIER KOMMT IN SCHRITT 1.4 und 1.5 die Lade- und Parsing-Logik
+    // z.B.
+    // try {
+    //   final String geoJsonString = await rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
+    //   // ... parsen ...
+    //   // _currentRoutingGraph = ...
+    //   // _currentSearchableFeatures = ...
+    // } catch (e) {
+    //   if (kDebugMode) {
+    //     print("[LocationProvider] Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e");
+    //   }
+    //   _currentRoutingGraph = null;
+    //   _currentSearchableFeatures = [];
+    // }
+
+    _isLoadingLocationData = false;
+    notifyListeners(); // UI informieren, dass Ladevorgang beendet ist
+
+    if (kDebugMode) {
+      print(
+          "[LocationProvider] Laden der Daten für ${_selectedLocation!.name} abgeschlossen. Graph: ${_currentRoutingGraph != null}, Features: ${_currentSearchableFeatures.isNotEmpty}");
+    }
+  }
 }
