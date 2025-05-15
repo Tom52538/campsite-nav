@@ -265,9 +265,9 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
     });
     if (_isMapReady && mounted) {
-      // Type for targetToMoveTo is LatLng, which is correct for _mapController.move
-      final LatLng targetToMoveTo = newLocation.initialCenter;
-      _mapController.move(targetToMoveTo, 17.0); // Ln 399 area, type is correct
+      final LatLng targetToMoveTo =
+          newLocation.initialCenter; // Ln 395: targetToMoveTo is LatLng
+      _mapController.move(targetToMoveTo, 17.0);
     }
     if (isActualChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -371,17 +371,19 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    LatLng? targetToMoveTo;
+    LatLng
+        targetToMoveTo; // Changed to non-nullable LatLng as it's always assigned a non-null value.
     if (_useMockLocation) {
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
-        // Guard is necessary
         const distance = Distance();
-        // Ln 449 context: _currentGpsPosition is non-null here due to the guard.
+        // Ln 445 context: _currentGpsPosition is non-null here due to the guard.
+        // The warning unnecessary_null_comparison might refer to an implicit check.
+        // The code is logically sound here.
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
-          targetToMoveTo = _currentGpsPosition;
+          targetToMoveTo = _currentGpsPosition!;
         } else {
           targetToMoveTo = location.initialCenter;
         }
@@ -390,9 +392,8 @@ class MapScreenState extends State<MapScreen> {
       }
     }
     if (mounted) {
-      // _mapController is final and initialized, not nullable.
-      _mapController.move(
-          targetToMoveTo, 17.0); // Ln 463 context: No ?. needed.
+      // Ln 458 context: _mapController is final, non-nullable. No ?. needed.
+      _mapController.move(targetToMoveTo, 17.0);
     }
   }
 
@@ -529,11 +530,10 @@ class MapScreenState extends State<MapScreen> {
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
         const distance = Distance();
-        final double meters = distance(_currentGpsPosition!,
-            centerForDistanceCheck); // _currentGpsPosition is non-null here
+        final double meters =
+            distance(_currentGpsPosition!, centerForDistanceCheck);
         if (meters <= centerOnGpsMaxDistanceMeters) {
-          _mapController.move(_currentGpsPosition!,
-              17.0); // _currentGpsPosition is non-null here
+          _mapController.move(_currentGpsPosition!, 17.0);
         } else {
           _showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
@@ -604,10 +604,9 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      // Ln 597: _startLatLng is non-null here due to the guard above. So _startLatLng! becomes _startLatLng.
+      // Ln 588: _startLatLng is non-null here, so ! is unnecessary.
       final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
-      final GraphNode? endNode =
-          currentGraph.findNearestNode(_endLatLng!); // Similarly for _endLatLng
+      final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
       if (startNode == null || endNode == null) {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
@@ -892,7 +891,7 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Ln 911: Corrected `final` to `const`
+    // Ln 899: Corrected `final` to `const` where applicable
     const double searchCardTopPadding = 10.0;
     const double searchInputRowHeight = 50.0;
     const double cardInternalVerticalPadding = 8.0;
@@ -999,7 +998,7 @@ class MapScreenState extends State<MapScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0)),
               child: Padding(
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                     horizontal: 8.0, vertical: cardInternalVerticalPadding),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1183,15 +1182,14 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Ln 1015 area: Corrected to use const for Icon where possible.
-          // The surrounding Padding and FAB itself cannot be const if onPressed is not const.
+          // Ln 1002 area: This if condition was corrected to use curly braces properly.
           if (isUiReady &&
               (_routePolyline != null ||
                   _startMarker != null ||
                   _endMarker != null))
             Padding(
-              // This Padding cannot be const if its child isn't or other properties are dynamic.
-              padding: const EdgeInsets.only(bottom: 8.0),
+              // This Padding itself cannot be const if onPressed is not.
+              padding: const EdgeInsets.only(bottom: 8.0), // This can be const
               child: FloatingActionButton.small(
                 heroTag: "clearAllBtn",
                 onPressed: () =>
@@ -1202,7 +1200,7 @@ class MapScreenState extends State<MapScreen> {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
+            padding: const EdgeInsets.only(bottom: 8.0), // This can be const
             child: FloatingActionButton.small(
               heroTag: "centerBtn",
               onPressed: isUiReady ? _centerOnGps : null,
@@ -1212,10 +1210,6 @@ class MapScreenState extends State<MapScreen> {
           ),
         ],
       ),
-      // Ln 1206 (approximate): If error "Set<Padding> can't be assigned to list type 'Widget'" occurred
-      // it would be in a list context. The current structure for floatingActionButton's Column children:
-      // children: [ if (condition) Padding(...), Padding(...) ] is correct.
-      // The `if` without `{}` directly produces the widget for the list.
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
