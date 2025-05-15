@@ -73,14 +73,13 @@ class MapScreenState extends State<MapScreen> {
   StreamSubscription<Position>? _positionStreamSubscription;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  List<SearchableFeature> _searchResults =
-      []; // Bleibt für lokale Filterergebnisse
+  List<SearchableFeature> _searchResults = [];
   bool _showSearchResults = false;
 
   bool _useMockLocation = true;
-  bool _isMapReady = false; // Für onMapReady Callback
+  bool _isMapReady = false;
 
-  LocationInfo? _lastProcessedLocation; // Um unnötige UI-Updates zu vermeiden
+  LocationInfo? _lastProcessedLocation;
 
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
@@ -271,7 +270,8 @@ class MapScreenState extends State<MapScreen> {
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
-        const Distance distance = const Distance(); // Korrigiert
+        const Distance distance =
+            Distance(); // Korrigiert: unnecessary_const entfernt
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveTo = _currentGpsPosition;
@@ -439,7 +439,8 @@ class MapScreenState extends State<MapScreen> {
       }
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
-        const Distance distance = const Distance(); // Korrigiert
+        const Distance distance =
+            Distance(); // Korrigiert: unnecessary_const entfernt
         final double meters =
             distance(centerForDistanceCheck, _currentGpsPosition!);
         if (meters <= centerOnGpsMaxDistanceMeters) {
@@ -716,7 +717,6 @@ class MapScreenState extends State<MapScreen> {
 
   void _showErrorDialog(String message) {
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
-      // Originale Logik beibehalten
       if (kDebugMode) {
         print(
             ">>> _showErrorDialog: Dialog NICHT angezeigt. Message: $message");
@@ -764,7 +764,6 @@ class MapScreenState extends State<MapScreen> {
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
-      // Originale Logik beibehalten
       if (kDebugMode) {
         print(
             ">>> _showConfirmationDialog: Dialog NICHT angezeigt. Message: $title");
