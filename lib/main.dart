@@ -1,6 +1,7 @@
 // lib/main.dart
-
+// [Start lib/main.dart mit Distanz/Zeitanzeige Implementierung]
 import 'dart:async';
+import 'dart:math'; // For rounding distance
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -81,6 +82,10 @@ class MapScreenState extends State<MapScreen> {
   bool _isMapReady = false;
 
   LocationInfo? _lastProcessedLocation;
+
+  // NEUE Zustandsvariablen für Distanz und Zeit
+  double? _routeDistance;
+  int? _routeTimeMinutes;
 
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
@@ -263,6 +268,8 @@ class MapScreenState extends State<MapScreen> {
       _searchResults = [];
       _showSearchResults = false;
       _activeSearchField = ActiveSearchField.none;
+      _routeDistance = null; // Distanz/Zeit zurücksetzen
+      _routeTimeMinutes = null; // Distanz/Zeit zurücksetzen
     });
     if (_isMapReady && mounted) {
       _mapController.move(newLocation.initialCenter, 17.0);
@@ -296,6 +303,8 @@ class MapScreenState extends State<MapScreen> {
         _startMarker = null;
         _startSearchController.clear();
         _routePolyline = null;
+        _routeDistance = null; // Distanz/Zeit zurücksetzen
+        _routeTimeMinutes = null; // Distanz/Zeit zurücksetzen
       }
       if (currentLocation != null) {
         _initializeGpsOrMock(currentLocation);
@@ -573,6 +582,12 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
+    // Distanz/Zeit zurücksetzen, bevor eine neue Berechnung gestartet wird oder fehlschlägt
+    setStateIfMounted(() {
+      _routeDistance = null;
+      _routeTimeMinutes = null;
+    });
+
     if (!isDataReadyForRouting) {
       _showErrorDialog(
           "Kartendaten für ${selectedLocationFromProvider?.name ?? ''} nicht bereit.");
@@ -619,9 +634,16 @@ class MapScreenState extends State<MapScreen> {
                 points: routePoints,
                 strokeWidth: 5.0,
                 color: Colors.deepPurpleAccent);
+
+            // Distanz und Zeit berechnen und speichern
+            _routeDistance = RoutingService.calculateTotalDistance(routePoints);
+            _routeTimeMinutes =
+                RoutingService.estimateWalkingTimeMinutes(_routeDistance!);
+
             _showSnackbar("Route berechnet.", durationSeconds: 3);
           } else {
             _routePolyline = null;
+            // Distanz/Zeit bleiben null, da keine Route
             _showErrorDialog("Keine Route gefunden.");
           }
         });
@@ -632,6 +654,7 @@ class MapScreenState extends State<MapScreen> {
       }
       _showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() => _routePolyline = null);
+      // Distanz/Zeit bleiben null
     } finally {
       if (mounted) {
         setStateIfMounted(() => _isCalculatingRoute = false);
@@ -715,6 +738,8 @@ class MapScreenState extends State<MapScreen> {
           relevantController.text = pointName;
         }
         _routePolyline = null;
+        _routeDistance = null; // Distanz/Zeit zurücksetzen bei Punktänderung
+        _routeTimeMinutes = null;
       });
 
       if (_startLatLng != null && _endLatLng != null) {
@@ -743,6 +768,8 @@ class MapScreenState extends State<MapScreen> {
       }
       setStateIfMounted(() {
         _routePolyline = null;
+        _routeDistance = null; // Distanz/Zeit zurücksetzen
+        _routeTimeMinutes = null;
         if (clearMarkers) {
           _startMarker = null;
           _startLatLng = null;
@@ -903,6 +930,10 @@ class MapScreenState extends State<MapScreen> {
         _endMarker = null;
       }
 
+      _routeDistance =
+          null; // Distanz/Zeit zurücksetzen, da Neuberechnung folgt
+      _routeTimeMinutes = null;
+
       if (_startLatLng != null && _endLatLng != null) {
         _calculateAndDisplayRoute();
       } else {
@@ -911,6 +942,16 @@ class MapScreenState extends State<MapScreen> {
     });
 
     _showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
+  }
+
+  // Hilfsfunktion zur Formatierung der Distanz
+  String _formatDistance(double? distanceMeters) {
+    if (distanceMeters == null) return "";
+    if (distanceMeters < 1000) {
+      return "${distanceMeters.round()} m";
+    } else {
+      return "${(distanceMeters / 1000).toStringAsFixed(1)} km";
+    }
   }
 
   @override
@@ -935,12 +976,22 @@ class MapScreenState extends State<MapScreen> {
     }
 
     const double searchCardTopPadding = 10.0;
-    const double searchInputRowHeight = 50.0;
+    const double searchInputRowHeight = 50.0; // Höhe pro Suchfeld-Row
+    const double dividerAndSwapButtonHeight =
+        kMinInteractiveDimension; // Höhe für Divider und Swap-Button
+    const double routeInfoHeight =
+        40.0; // Geschätzte Höhe für Distanz/Zeit Info
     const double cardInternalVerticalPadding = 8.0;
-    final double searchUICardHeight = (searchInputRowHeight * 2) +
-        1.0 +
-        (cardInternalVerticalPadding * 2) +
-        kMinInteractiveDimension;
+
+    // Höhe der Such-UI-Karte dynamisch berechnen
+    double searchUICardHeight = (searchInputRowHeight * 2) + // Zwei Suchfelder
+        dividerAndSwapButtonHeight + // Platz für Divider und Swap Button
+        (cardInternalVerticalPadding * 2); // Oberer und unterer Padding
+
+    if (_routeDistance != null && _routeTimeMinutes != null) {
+      searchUICardHeight += routeInfoHeight; // Zusätzliche Höhe für Routeninfos
+    }
+
     final double searchResultsTopPosition =
         searchCardTopPadding + searchUICardHeight + 5;
 
@@ -1047,16 +1098,13 @@ class MapScreenState extends State<MapScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // START TEXTFIELD CONTAINER - MIT HERVORHEBUNG
                     Container(
                       decoration: BoxDecoration(
                         border: _startFocusNode.hasFocus
                             ? Border.all(
                                 color: Theme.of(context).colorScheme.primary,
                                 width: 1.5)
-                            : Border.all(
-                                color: Colors.transparent,
-                                width: 1.5), // Platzhalter für konsistente Höhe
+                            : Border.all(color: Colors.transparent, width: 1.5),
                         borderRadius: BorderRadius.circular(6.0),
                         color: _startFocusNode.hasFocus
                             ? Theme.of(context)
@@ -1087,6 +1135,8 @@ class MapScreenState extends State<MapScreen> {
                                                   _startLatLng = null;
                                                   _startMarker = null;
                                                   _routePolyline = null;
+                                                  _routeDistance = null;
+                                                  _routeTimeMinutes = null;
                                                 });
                                               },
                                             )
@@ -1094,9 +1144,7 @@ class MapScreenState extends State<MapScreen> {
                                   border: InputBorder.none,
                                   isDense: true,
                                   contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 12.0,
-                                      horizontal:
-                                          8.0), // Etwas horizontalen Padding hinzugefügt
+                                      vertical: 12.0, horizontal: 8.0),
                                 ),
                                 enabled: isUiReady,
                               ),
@@ -1154,28 +1202,46 @@ class MapScreenState extends State<MapScreen> {
                         ),
                       ),
                     ),
-                    Tooltip(
-                      message: "Start und Ziel tauschen",
-                      child: IconButton(
-                        icon: Icon(Icons.swap_vert,
-                            color: Theme.of(context).colorScheme.primary),
-                        onPressed: (isUiReady &&
-                                (_startLatLng != null || _endLatLng != null))
-                            ? _swapStartAndEnd
-                            : null,
+                    SizedBox(
+                      // Container für Swap-Button, um Höhe zu kontrollieren
+                      height: dividerAndSwapButtonHeight,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Expanded(
+                              child: Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  indent: 20,
+                                  endIndent: 5)),
+                          Tooltip(
+                            message: "Start und Ziel tauschen",
+                            child: IconButton(
+                              icon: Icon(Icons.swap_vert,
+                                  color: Theme.of(context).colorScheme.primary),
+                              onPressed: (isUiReady &&
+                                      (_startLatLng != null ||
+                                          _endLatLng != null))
+                                  ? _swapStartAndEnd
+                                  : null,
+                            ),
+                          ),
+                          const Expanded(
+                              child: Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  indent: 5,
+                                  endIndent: 20)),
+                        ],
                       ),
                     ),
-                    const Divider(height: 1, thickness: 1),
-                    // ZIEL TEXTFIELD CONTAINER - MIT HERVORHEBUNG
                     Container(
                       decoration: BoxDecoration(
                         border: _endFocusNode.hasFocus
                             ? Border.all(
                                 color: Theme.of(context).colorScheme.primary,
                                 width: 1.5)
-                            : Border.all(
-                                color: Colors.transparent,
-                                width: 1.5), // Platzhalter für konsistente Höhe
+                            : Border.all(color: Colors.transparent, width: 1.5),
                         borderRadius: BorderRadius.circular(6.0),
                         color: _endFocusNode.hasFocus
                             ? Theme.of(context)
@@ -1187,7 +1253,6 @@ class MapScreenState extends State<MapScreen> {
                       child: SizedBox(
                         height: searchInputRowHeight,
                         child: TextField(
-                          // Row ist hier nicht nötig, da kein "Aktueller Standort"-Button
                           controller: _endSearchController,
                           focusNode: _endFocusNode,
                           decoration: InputDecoration(
@@ -1203,6 +1268,8 @@ class MapScreenState extends State<MapScreen> {
                                         _endLatLng = null;
                                         _endMarker = null;
                                         _routePolyline = null;
+                                        _routeDistance = null;
+                                        _routeTimeMinutes = null;
                                       });
                                     },
                                   )
@@ -1210,14 +1277,61 @@ class MapScreenState extends State<MapScreen> {
                             border: InputBorder.none,
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(
-                                vertical: 12.0,
-                                horizontal:
-                                    8.0), // Etwas horizontalen Padding hinzugefügt
+                                vertical: 12.0, horizontal: 8.0),
                           ),
                           enabled: isUiReady,
                         ),
                       ),
                     ),
+                    // ANZEIGE FÜR DISTANZ UND ZEIT
+                    if (_routeDistance != null && _routeTimeMinutes != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: SizedBox(
+                          height: routeInfoHeight - 8.0, // -8 für Padding oben
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.straighten,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatDistance(_routeDistance),
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.timer_outlined,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "~ ${_routeTimeMinutes} min",
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -1346,3 +1460,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
+// [Ende lib/main.dart mit Distanz/Zeitanzeige Implementierung]
