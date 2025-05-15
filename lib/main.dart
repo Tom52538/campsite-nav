@@ -73,13 +73,14 @@ class MapScreenState extends State<MapScreen> {
   StreamSubscription<Position>? _positionStreamSubscription;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  List<SearchableFeature> _searchResults = [];
+  List<SearchableFeature> _searchResults =
+      []; // Bleibt für lokale Filterergebnisse
   bool _showSearchResults = false;
 
   bool _useMockLocation = true;
-  bool _isMapReady = false;
+  bool _isMapReady = false; // Für onMapReady Callback
 
-  LocationInfo? _lastProcessedLocation;
+  LocationInfo? _lastProcessedLocation; // Um unnötige UI-Updates zu vermeiden
 
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
@@ -106,17 +107,11 @@ class MapScreenState extends State<MapScreen> {
     final newSelectedLocation = locationProvider.selectedLocation;
 
     if (newSelectedLocation != null &&
-        (newSelectedLocation.id != _lastProcessedLocation?.id)) {
+        (_lastProcessedLocation == null ||
+            newSelectedLocation.id != _lastProcessedLocation!.id)) {
       if (kDebugMode) {
         print(
             "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newSelectedLocation.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
-      }
-      _handleLocationChangeUIUpdates(newSelectedLocation);
-      _lastProcessedLocation = newSelectedLocation;
-    } else if (newSelectedLocation != null && _lastProcessedLocation == null) {
-      if (kDebugMode) {
-        print(
-            "<<< didChangeDependencies: Erster Ladevorgang für ${newSelectedLocation.name}. >>>");
       }
       _handleLocationChangeUIUpdates(newSelectedLocation);
       _lastProcessedLocation = newSelectedLocation;
@@ -150,7 +145,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    final bool isInitialLoad = _lastProcessedLocation == null ||
+    final bool isActualChange = _lastProcessedLocation != null &&
         _lastProcessedLocation!.id != newLocation.id;
 
     setState(() {
@@ -167,24 +162,19 @@ class MapScreenState extends State<MapScreen> {
       _mapController.move(newLocation.initialCenter, 17.0);
     }
 
-    if (isInitialLoad) {
-      if (_lastProcessedLocation != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _showSnackbar("Standort geändert zu: ${newLocation.name}",
-                durationSeconds: 3);
-          }
-        });
-      }
+    if (isActualChange) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showSnackbar("Standort geändert zu: ${newLocation.name}",
+              durationSeconds: 3);
+        }
+      });
     }
 
     if (kDebugMode) {
       print(
           "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>");
     }
-
-    Provider.of<LocationProvider>(context, listen: false)
-        .loadDataForSelectedLocation();
     _initializeGpsOrMock(newLocation);
   }
 
@@ -281,7 +271,7 @@ class MapScreenState extends State<MapScreen> {
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
-        final Distance distance = Distance();
+        const Distance distance = const Distance(); // Korrigiert
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveTo = _currentGpsPosition;
@@ -449,7 +439,7 @@ class MapScreenState extends State<MapScreen> {
       }
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
-        final Distance distance = Distance();
+        const Distance distance = const Distance(); // Korrigiert
         final double meters =
             distance(centerForDistanceCheck, _currentGpsPosition!);
         if (meters <= centerOnGpsMaxDistanceMeters) {
@@ -539,14 +529,14 @@ class MapScreenState extends State<MapScreen> {
     if (!isDataReadyForRouting) {
       _showErrorDialog(
           "Kartendaten für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht bereit für Routing.");
+      setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
 
-    // Korrigierte Bedingung: currentGraph wurde bereits durch isDataReadyForRouting auf non-null geprüft.
-    // Es reicht, auf nodes.isEmpty zu prüfen.
-    if (currentGraph!.nodes.isEmpty) {
+    if (currentGraph == null || currentGraph.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten (Graph) für ${selectedLocationFromProvider?.name ?? 'ausgewählten Standort'} nicht verfügbar oder leer.");
+      setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
     if (routeStartPoint == null || _endLatLng == null) {
@@ -554,6 +544,7 @@ class MapScreenState extends State<MapScreen> {
       if (routeStartPoint == null) {
         _showErrorDialog("Startpunkt (GPS/Mock) nicht verfügbar.");
       }
+      setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
 
@@ -563,6 +554,7 @@ class MapScreenState extends State<MapScreen> {
           "<<< _calculateAndDisplayRoute: Starte Routenberechnung von $routeStartPoint nach $_endLatLng >>>");
     }
     try {
+      currentGraph.resetAllNodeCosts();
       final GraphNode? startNode =
           currentGraph.findNearestNode(routeStartPoint);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
@@ -574,7 +566,6 @@ class MapScreenState extends State<MapScreen> {
         _showSnackbar("Start/Ziel identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
-        currentGraph.resetAllNodeCosts();
         final List<LatLng>? routePoints =
             await RoutingService.findPath(currentGraph, startNode, endNode);
         if (!mounted) {
@@ -621,6 +612,15 @@ class MapScreenState extends State<MapScreen> {
       setStateIfMounted(() => _showSearchResults = false);
     } else if (_showSearchResults) {
       setStateIfMounted(() => _showSearchResults = false);
+    }
+
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    if (locationProvider.isLoadingLocationData ||
+        locationProvider.currentRoutingGraph == null) {
+      _showSnackbar("Kartendaten werden noch geladen. Bitte warten.",
+          durationSeconds: 2);
+      return;
     }
 
     if (_isCalculatingRoute) {
@@ -716,6 +716,7 @@ class MapScreenState extends State<MapScreen> {
 
   void _showErrorDialog(String message) {
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+      // Originale Logik beibehalten
       if (kDebugMode) {
         print(
             ">>> _showErrorDialog: Dialog NICHT angezeigt. Message: $message");
@@ -763,6 +764,7 @@ class MapScreenState extends State<MapScreen> {
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+      // Originale Logik beibehalten
       if (kDebugMode) {
         print(
             ">>> _showConfirmationDialog: Dialog NICHT angezeigt. Message: $title");
@@ -847,7 +849,7 @@ class MapScreenState extends State<MapScreen> {
                       ),
                     );
                   }).toList(),
-                  onChanged: _onLocationSelectedFromDropdown,
+                  onChanged: isUiReady ? _onLocationSelectedFromDropdown : null,
                   hint: const Text("Standort wählen",
                       style: TextStyle(color: Colors.white70)),
                 ),
@@ -861,7 +863,7 @@ class MapScreenState extends State<MapScreen> {
               icon: Icon(
                   _useMockLocation ? Icons.location_on : Icons.location_off),
               color: _useMockLocation ? Colors.orangeAccent : Colors.white,
-              onPressed: _toggleMockLocation,
+              onPressed: isUiReady ? _toggleMockLocation : null,
             ),
           ),
         ],
@@ -876,7 +878,7 @@ class MapScreenState extends State<MapScreen> {
               initialZoom: 17.0,
               minZoom: 13.0,
               maxZoom: 19.0,
-              onTap: _handleMapTap,
+              onTap: isUiReady ? _handleMapTap : null,
               onMapReady: () {
                 if (!mounted) {
                   return;
@@ -982,7 +984,7 @@ class MapScreenState extends State<MapScreen> {
                 ),
               ),
             ),
-          if (_isCalculatingRoute)
+          if (_isCalculatingRoute && isUiReady)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withAlpha((0.3 * 255).round()),
@@ -1029,7 +1031,7 @@ class MapScreenState extends State<MapScreen> {
             padding: const EdgeInsets.only(bottom: 8.0),
             child: FloatingActionButton.small(
               heroTag: "centerBtn",
-              onPressed: _centerOnGps,
+              onPressed: isUiReady ? _centerOnGps : null,
               tooltip: 'Auf aktuelle Position zentrieren',
               child: const Icon(Icons.my_location),
             ),
@@ -1053,11 +1055,24 @@ class MapScreenState extends State<MapScreen> {
       case 'tourism':
         return Icons.attractions;
       case 'reception':
+      case 'information':
         return Icons.room_service;
       case 'sanitary':
+      case 'toilets':
         return Icons.wc;
       case 'restaurant':
+      case 'cafe':
+      case 'bar':
         return Icons.restaurant;
+      case 'playground':
+        return Icons.child_friendly;
+      case 'pitch':
+      case 'camp_pitch':
+        return Icons.holiday_village;
+      case 'water_point':
+        return Icons.water_drop;
+      case 'waste_disposal':
+        return Icons.recycling;
       default:
         return Icons.location_pin;
     }
