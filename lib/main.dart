@@ -831,7 +831,7 @@ class MapScreenState extends State<MapScreen> {
       SnackBar(
         content: Text(message),
         duration: Duration(seconds: durationSeconds),
-        behavior: SnackBarBehavior.fixed, // War früher .floating
+        behavior: SnackBarBehavior.fixed,
       ),
     );
   }
@@ -863,11 +863,9 @@ class MapScreenState extends State<MapScreen> {
     );
   }
 
-  // NEUE METHODE zum Tauschen von Start und Ziel
   void _swapStartAndEnd() {
     if (!mounted) return;
 
-    // Nur fortfahren, wenn es etwas zu tauschen gibt
     if (_startLatLng == null && _endLatLng == null) {
       _showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
           durationSeconds: 3);
@@ -875,17 +873,14 @@ class MapScreenState extends State<MapScreen> {
     }
 
     setStateIfMounted(() {
-      // LatLng tauschen
       final LatLng? tempLatLng = _startLatLng;
       _startLatLng = _endLatLng;
       _endLatLng = tempLatLng;
 
-      // TextController-Werte tauschen
       final String tempStartText = _startSearchController.text;
       _startSearchController.text = _endSearchController.text;
       _endSearchController.text = tempStartText;
 
-      // Start-Marker neu erstellen oder löschen
       if (_startLatLng != null) {
         _startMarker = _createMarker(
           _startLatLng!,
@@ -897,7 +892,6 @@ class MapScreenState extends State<MapScreen> {
         _startMarker = null;
       }
 
-      // Ziel-Marker neu erstellen oder löschen
       if (_endLatLng != null) {
         _endMarker = _createMarker(
           _endLatLng!,
@@ -909,7 +903,6 @@ class MapScreenState extends State<MapScreen> {
         _endMarker = null;
       }
 
-      // Route neu berechnen, wenn beide Punkte gesetzt sind, sonst löschen
       if (_startLatLng != null && _endLatLng != null) {
         _calculateAndDisplayRoute();
       } else {
@@ -942,15 +935,12 @@ class MapScreenState extends State<MapScreen> {
     }
 
     const double searchCardTopPadding = 10.0;
-    const double searchInputRowHeight = 50.0; // Höhe pro Suchfeld-Zeile
+    const double searchInputRowHeight = 50.0;
     const double cardInternalVerticalPadding = 8.0;
-    // Die Höhe der Such-UI Karte: 2x Suchfeld + SwapButton + Divider + Padding
-    // Die Höhe des SwapButtons wird hier nicht explizit addiert, da sie in den Constraints des IconButton liegt
-    // und das Layout der Column das handhabt. Die Divider Höhe ist 1px.
     final double searchUICardHeight = (searchInputRowHeight * 2) +
         1.0 +
         (cardInternalVerticalPadding * 2) +
-        kMinInteractiveDimension; // kMinInteractiveDimension für den IconButton
+        kMinInteractiveDimension;
     final double searchResultsTopPosition =
         searchCardTopPadding + searchUICardHeight + 5;
 
@@ -1057,92 +1047,113 @@ class MapScreenState extends State<MapScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      height: searchInputRowHeight,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _startSearchController,
-                              focusNode: _startFocusNode,
-                              decoration: InputDecoration(
-                                hintText: "Startpunkt wählen",
-                                prefixIcon: const Icon(Icons.trip_origin),
-                                suffixIcon:
-                                    _startSearchController.text.isNotEmpty
-                                        ? IconButton(
-                                            icon: const Icon(Icons.clear),
-                                            iconSize: 20,
-                                            onPressed: () {
-                                              _startSearchController.clear();
-                                              setStateIfMounted(() {
-                                                _startLatLng = null;
-                                                _startMarker = null;
-                                                _routePolyline = null;
-                                              });
-                                            },
-                                          )
-                                        : null,
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 12.0),
+                    // START TEXTFIELD CONTAINER - MIT HERVORHEBUNG
+                    Container(
+                      decoration: BoxDecoration(
+                        border: _startFocusNode.hasFocus
+                            ? Border.all(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 1.5)
+                            : Border.all(
+                                color: Colors.transparent,
+                                width: 1.5), // Platzhalter für konsistente Höhe
+                        borderRadius: BorderRadius.circular(6.0),
+                        color: _startFocusNode.hasFocus
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.05)
+                            : null,
+                      ),
+                      child: SizedBox(
+                        height: searchInputRowHeight,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _startSearchController,
+                                focusNode: _startFocusNode,
+                                decoration: InputDecoration(
+                                  hintText: "Startpunkt wählen",
+                                  prefixIcon: const Icon(Icons.trip_origin),
+                                  suffixIcon:
+                                      _startSearchController.text.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.clear),
+                                              iconSize: 20,
+                                              onPressed: () {
+                                                _startSearchController.clear();
+                                                setStateIfMounted(() {
+                                                  _startLatLng = null;
+                                                  _startMarker = null;
+                                                  _routePolyline = null;
+                                                });
+                                              },
+                                            )
+                                          : null,
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 12.0,
+                                      horizontal:
+                                          8.0), // Etwas horizontalen Padding hinzugefügt
+                                ),
+                                enabled: isUiReady,
                               ),
-                              enabled: isUiReady,
                             ),
-                          ),
-                          Tooltip(
-                            message: "Aktuellen Standort als Start verwenden",
-                            child: IconButton(
-                              icon: const Icon(Icons.my_location),
-                              color: Theme.of(context).colorScheme.primary,
-                              iconSize: 22,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: isUiReady
-                                  ? () {
-                                      if (_currentGpsPosition != null) {
-                                        final String locationName = _useMockLocation
-                                            ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
-                                            : "Aktueller Standort";
-                                        setStateIfMounted(() {
-                                          _startLatLng = _currentGpsPosition;
-                                          _startMarker = _createMarker(
-                                              _startLatLng!,
-                                              Colors.green,
-                                              Icons.flag_circle,
-                                              "Start: $locationName");
-                                          WidgetsBinding.instance
-                                              .addPostFrameCallback((_) {
-                                            if (mounted) {
-                                              _startSearchController.text =
-                                                  locationName;
-                                            }
-                                          });
+                            Tooltip(
+                              message: "Aktuellen Standort als Start verwenden",
+                              child: IconButton(
+                                icon: const Icon(Icons.my_location),
+                                color: Theme.of(context).colorScheme.primary,
+                                iconSize: 22,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: isUiReady
+                                    ? () {
+                                        if (_currentGpsPosition != null) {
+                                          final String locationName =
+                                              _useMockLocation
+                                                  ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
+                                                  : "Aktueller Standort";
+                                          setStateIfMounted(() {
+                                            _startLatLng = _currentGpsPosition;
+                                            _startMarker = _createMarker(
+                                                _startLatLng!,
+                                                Colors.green,
+                                                Icons.flag_circle,
+                                                "Start: $locationName");
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                              if (mounted) {
+                                                _startSearchController.text =
+                                                    locationName;
+                                              }
+                                            });
 
-                                          if (_startFocusNode.hasFocus) {
-                                            _startFocusNode.unfocus();
+                                            if (_startFocusNode.hasFocus) {
+                                              _startFocusNode.unfocus();
+                                            }
+                                            _showSearchResults = false;
+                                            _activeSearchField =
+                                                ActiveSearchField.none;
+                                          });
+                                          if (_startLatLng != null &&
+                                              _endLatLng != null) {
+                                            _calculateAndDisplayRoute();
                                           }
-                                          _showSearchResults = false;
-                                          _activeSearchField =
-                                              ActiveSearchField.none;
-                                        });
-                                        if (_startLatLng != null &&
-                                            _endLatLng != null) {
-                                          _calculateAndDisplayRoute();
+                                        } else {
+                                          _showSnackbar(
+                                              "Aktuelle Position nicht verfügbar.");
                                         }
-                                      } else {
-                                        _showSnackbar(
-                                            "Aktuelle Position nicht verfügbar.");
                                       }
-                                    }
-                                  : null,
+                                    : null,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                    // HIER WIRD DER SWAP BUTTON EINGEFÜGT
                     Tooltip(
                       message: "Start und Ziel tauschen",
                       child: IconButton(
@@ -1155,34 +1166,56 @@ class MapScreenState extends State<MapScreen> {
                       ),
                     ),
                     const Divider(height: 1, thickness: 1),
-                    SizedBox(
-                      height: searchInputRowHeight,
-                      child: TextField(
-                        controller: _endSearchController,
-                        focusNode: _endFocusNode,
-                        decoration: InputDecoration(
-                          hintText: "Ziel wählen",
-                          prefixIcon: const Icon(Icons.flag_outlined),
-                          suffixIcon: _endSearchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  iconSize: 20,
-                                  onPressed: () {
-                                    _endSearchController.clear();
-                                    setStateIfMounted(() {
-                                      _endLatLng = null;
-                                      _endMarker = null;
-                                      _routePolyline = null;
-                                    });
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 12.0),
+                    // ZIEL TEXTFIELD CONTAINER - MIT HERVORHEBUNG
+                    Container(
+                      decoration: BoxDecoration(
+                        border: _endFocusNode.hasFocus
+                            ? Border.all(
+                                color: Theme.of(context).colorScheme.primary,
+                                width: 1.5)
+                            : Border.all(
+                                color: Colors.transparent,
+                                width: 1.5), // Platzhalter für konsistente Höhe
+                        borderRadius: BorderRadius.circular(6.0),
+                        color: _endFocusNode.hasFocus
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.05)
+                            : null,
+                      ),
+                      child: SizedBox(
+                        height: searchInputRowHeight,
+                        child: TextField(
+                          // Row ist hier nicht nötig, da kein "Aktueller Standort"-Button
+                          controller: _endSearchController,
+                          focusNode: _endFocusNode,
+                          decoration: InputDecoration(
+                            hintText: "Ziel wählen",
+                            prefixIcon: const Icon(Icons.flag_outlined),
+                            suffixIcon: _endSearchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    iconSize: 20,
+                                    onPressed: () {
+                                      _endSearchController.clear();
+                                      setStateIfMounted(() {
+                                        _endLatLng = null;
+                                        _endMarker = null;
+                                        _routePolyline = null;
+                                      });
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12.0,
+                                horizontal:
+                                    8.0), // Etwas horizontalen Padding hinzugefügt
+                          ),
+                          enabled: isUiReady,
                         ),
-                        enabled: isUiReady,
                       ),
                     ),
                   ],
@@ -1192,8 +1225,7 @@ class MapScreenState extends State<MapScreen> {
           ),
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
-              top:
-                  searchResultsTopPosition, // Dynamische Positionierung basierend auf der Höhe der Suchkarte
+              top: searchResultsTopPosition,
               left: 10,
               right: 10,
               child: Card(
