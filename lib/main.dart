@@ -1,8 +1,6 @@
-// Datei: main.dart
 // lib/main.dart
-// [Start lib/main.dart mit Linter-Korrekturen]
+// [Start lib/main.dart mit optisch angepasster Distanz/Zeitanzeige]
 import 'dart:async';
-// import 'dart:math'; // Entfernt: Unused import
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -84,7 +82,7 @@ class MapScreenState extends State<MapScreen> {
 
   LocationInfo? _lastProcessedLocation;
 
-  // NEUE Zustandsvariablen für Distanz und Zeit
+  // Zustandsvariablen für Distanz und Zeit
   double? _routeDistance;
   int? _routeTimeMinutes;
 
@@ -111,9 +109,6 @@ class MapScreenState extends State<MapScreen> {
     _endFocusNode.addListener(_onEndFocusChanged);
 
     if (kDebugMode) {
-      // Unnecessary braces lint: Keinen Fehler hier gefunden, ${_lastProcessedLocation?.name} ist ein Ausdruck.
-      // Falls es sich auf $_isMapReady bezog und dort `${_isMapReady}` stand, wäre das korrigiert zu `$_isMapReady`.
-      // Der aktuelle Code ist hier bereits korrekt.
       print(
           "<<< initState: MapScreenState initialisiert. _lastProcessedLocation ist anfangs: ${_lastProcessedLocation?.name}, _isMapReady: $_isMapReady >>>");
     }
@@ -126,25 +121,15 @@ class MapScreenState extends State<MapScreen> {
         Provider.of<LocationProvider>(context, listen: false);
     final newSelectedLocation = locationProvider.selectedLocation;
 
-    // The operand can't be 'null', so the condition is always 'true'. (Ln 398, Col 43 in screenshot)
-    // This might refer to _lastProcessedLocation!.id if newSelectedLocation is already checked for null.
-    // The current logic seems okay: if newSelectedLocation is not null, THEN we access _lastProcessedLocation.
-    // If _lastProcessedLocation is null, the first part of OR is true.
-    // If _lastProcessedLocation is NOT null, then its .id is accessed with '!'
-    // The '!' implies we are sure it's not null, so a LATER check for `_lastProcessedLocation != null` might be redundant.
-    // The error seems to be about `_lastProcessedLocation!` if `newSelectedLocation.id != _lastProcessedLocation!.id`
-    // is reached when `_lastProcessedLocation` *is* null.
-    // Let's ensure `_lastProcessedLocation` is not null before accessing `id` with `!`.
-    if (newSelectedLocation != null) {
-      if (_lastProcessedLocation == null ||
-          newSelectedLocation.id != _lastProcessedLocation!.id) {
-        if (kDebugMode) {
-          print(
-              "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newSelectedLocation.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
-        }
-        _handleLocationChangeUIUpdates(newSelectedLocation);
-        _lastProcessedLocation = newSelectedLocation;
+    if (newSelectedLocation != null &&
+        (_lastProcessedLocation == null ||
+            newSelectedLocation.id != _lastProcessedLocation!.id)) {
+      if (kDebugMode) {
+        print(
+            "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newSelectedLocation.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
       }
+      _handleLocationChangeUIUpdates(newSelectedLocation);
+      _lastProcessedLocation = newSelectedLocation;
     }
   }
 
@@ -269,23 +254,8 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
-    // The operand can't be 'null', so the condition is always 'true'. (Ln 449, Col 28 in screenshot)
-    // This likely refers to _lastProcessedLocation != null if newLocation is guaranteed not to be null here
-    // and _lastProcessedLocation has been assigned.
-    // The logic `_lastProcessedLocation != null && _lastProcessedLocation!.id != newLocation.id`
-    // is generally fine. If _lastProcessedLocation IS null, the first part is false.
-    // If it's NOT null, then .id is accessed.
-    // The analyzer might be overly aggressive or there's a subtle flow it detected.
-    // However, the original code `_lastProcessedLocation!.id` (used in didChangeDependencies)
-    // implies a strong assumption. Here, the check `_lastProcessedLocation != null` is good.
-    final bool isActualChange;
-    if (_lastProcessedLocation != null) {
-      isActualChange = _lastProcessedLocation!.id != newLocation.id;
-    } else {
-      isActualChange =
-          true; // If there was no last processed location, it's an actual change.
-    }
-
+    final bool isActualChange = _lastProcessedLocation != null &&
+        _lastProcessedLocation!.id != newLocation.id;
     setState(() {
       _routePolyline = null;
       _startMarker = null;
@@ -297,8 +267,8 @@ class MapScreenState extends State<MapScreen> {
       _searchResults = [];
       _showSearchResults = false;
       _activeSearchField = ActiveSearchField.none;
-      _routeDistance = null; // Distanz/Zeit zurücksetzen
-      _routeTimeMinutes = null; // Distanz/Zeit zurücksetzen
+      _routeDistance = null;
+      _routeTimeMinutes = null;
     });
     if (_isMapReady && mounted) {
       _mapController.move(newLocation.initialCenter, 17.0);
@@ -322,7 +292,7 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
-    final currentLocationInfo = // Renamed to avoid conflict with the local variable in the original screenshot context
+    final currentLocation =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
     setState(() {
       _useMockLocation = !_useMockLocation;
@@ -332,16 +302,16 @@ class MapScreenState extends State<MapScreen> {
         _startMarker = null;
         _startSearchController.clear();
         _routePolyline = null;
-        _routeDistance = null; // Distanz/Zeit zurücksetzen
-        _routeTimeMinutes = null; // Distanz/Zeit zurücksetzen
+        _routeDistance = null;
+        _routeTimeMinutes = null;
       }
-      if (currentLocationInfo != null) {
-        _initializeGpsOrMock(currentLocationInfo);
+      if (currentLocation != null) {
+        _initializeGpsOrMock(currentLocation);
       }
     });
     _showSnackbar(
         _useMockLocation
-            ? "Mock-Position (${currentLocationInfo?.name ?? 'Fallback'}) aktiviert."
+            ? "Mock-Position (${currentLocation?.name ?? 'Fallback'}) aktiviert."
             : "Echtes GPS aktiviert.",
         durationSeconds: 4);
   }
@@ -364,27 +334,20 @@ class MapScreenState extends State<MapScreen> {
       if (mounted) {
         setState(() {
           _currentGpsPosition = activeInitialCenterForMock;
-          final newMarker = _createMarker(
-              // Assign to a local variable first
-              activeInitialCenterForMock, // Use non-nullable
+          _currentLocationMarker = _createMarker(
+              _currentGpsPosition!,
               Colors.orangeAccent,
               Icons.pin_drop,
               "Mock Position (${location.name})");
-          _currentLocationMarker = newMarker;
-
           if (_startSearchController.text == "Aktueller Standort" ||
               (_startSearchController.text
                       .toLowerCase()
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
-            _startLatLng =
-                _currentGpsPosition; // _currentGpsPosition is not null here
-            if (_startLatLng != null) {
-              // Explicit null check for safety, though assigned above
-              _startMarker = _createMarker(_startLatLng!, Colors.green,
-                  Icons.flag_circle, "Start: Mock Position (${location.name})");
-              _startSearchController.text = "Mock Position (${location.name})";
-            }
+            _startLatLng = _currentGpsPosition;
+            _startMarker = _createMarker(_startLatLng!, Colors.green,
+                Icons.flag_circle, "Start: Mock Position (${location.name})");
+            _startSearchController.text = "Mock Position (${location.name})";
           }
         });
         if (_isMapReady && mounted) {
@@ -418,13 +381,11 @@ class MapScreenState extends State<MapScreen> {
     if (_useMockLocation) {
       targetToMoveToNullSafe = _currentGpsPosition ?? location.initialCenter;
     } else {
-      final localCurrentGpsPos =
-          _currentGpsPosition; // Use local variable for type promotion
-      if (localCurrentGpsPos != null) {
+      if (_currentGpsPosition != null) {
         const distance = Distance();
-        if (distance(localCurrentGpsPos, location.initialCenter) <=
+        if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
-          targetToMoveToNullSafe = localCurrentGpsPos;
+          targetToMoveToNullSafe = _currentGpsPosition!;
         } else {
           targetToMoveToNullSafe = location.initialCenter;
         }
@@ -497,12 +458,7 @@ class MapScreenState extends State<MapScreen> {
       _searchResults = [];
     });
 
-    // The receiver can't be 'null', so the null-aware operator '?.' is unnecessary. (Ln 462, Col 17 screenshot)
-    // This means focusToUnset is considered non-null here by the analyzer.
-    if (focusToUnset != null) {
-      // Check for safety, though analyzer implies it's not needed
-      focusToUnset.unfocus();
-    }
+    focusToUnset?.unfocus();
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
@@ -531,23 +487,23 @@ class MapScreenState extends State<MapScreen> {
     try {
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted) _showErrorDialog("GPS ist deaktiviert.");
+        _showErrorDialog("GPS ist deaktiviert.");
         return;
       }
       permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          if (mounted) _showErrorDialog("GPS-Berechtigung verweigert.");
+          _showErrorDialog("GPS-Berechtigung verweigert.");
           return;
         }
       }
       if (permission == LocationPermission.deniedForever) {
-        if (mounted) _showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
+        _showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
         return;
       }
     } catch (e) {
-      if (mounted) _showErrorDialog("Fehler GPS-Berechtigungen: $e");
+      _showErrorDialog("Fehler GPS-Berechtigungen: $e");
       return;
     }
 
@@ -565,35 +521,21 @@ class MapScreenState extends State<MapScreen> {
 
       setStateIfMounted(() {
         _currentGpsPosition = newGpsPos;
-        _currentLocationMarker = _createMarker(
-            newGpsPos, // Use newGpsPos directly
-            Colors.blueAccent,
-            Icons.circle,
-            "Meine Position");
+        _currentLocationMarker = _createMarker(_currentGpsPosition!,
+            Colors.blueAccent, Icons.circle, "Meine Position");
         if (_startSearchController.text == "Aktueller Standort") {
-          _startLatLng = newGpsPos; // Use newGpsPos
-          if (_startLatLng != null) {
-            // Explicit null check
-            _startMarker = _createMarker(
-                _startLatLng!,
-                Colors.green, // Use '!' as it's checked
-                Icons.flag_circle,
-                "Start: Aktueller Standort");
-          }
+          _startLatLng = _currentGpsPosition;
+          _startMarker = _createMarker(_startLatLng!, Colors.green,
+              Icons.flag_circle, "Start: Aktueller Standort");
         }
       });
 
-      final localCurrentGpsForMove =
-          _currentGpsPosition; // Local var for promotion
-      if (isFirstFix &&
-          localCurrentGpsForMove != null &&
-          _isMapReady &&
-          mounted) {
+      if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
         const distance = Distance();
         final double meters =
-            distance(localCurrentGpsForMove, centerForDistanceCheck);
+            distance(_currentGpsPosition!, centerForDistanceCheck);
         if (meters <= centerOnGpsMaxDistanceMeters) {
-          _mapController.move(localCurrentGpsForMove, 17.0);
+          _mapController.move(_currentGpsPosition!, 17.0);
         } else {
           _showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
@@ -604,7 +546,7 @@ class MapScreenState extends State<MapScreen> {
         _calculateAndDisplayRoute();
       }
     }, onError: (error) {
-      if (mounted) _showErrorDialog("Fehler GPS-Empfang: $error");
+      _showErrorDialog("Fehler GPS-Empfang: $error");
     });
   }
 
@@ -645,29 +587,20 @@ class MapScreenState extends State<MapScreen> {
     });
 
     if (!isDataReadyForRouting) {
-      if (mounted) {
-        _showErrorDialog(
-            "Kartendaten für ${selectedLocationFromProvider?.name ?? ''} nicht bereit.");
-      }
+      _showErrorDialog(
+          "Kartendaten für ${selectedLocationFromProvider?.name ?? ''} nicht bereit.");
       setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
 
-    if (currentGraph.nodes.isEmpty) {
-      // No '!' needed due to isDataReadyForRouting check
-      if (mounted) {
-        _showErrorDialog(
-            "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
-      }
+    if (currentGraph!.nodes.isEmpty) {
+      _showErrorDialog(
+          "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
 
-    final localStartLatLng =
-        _startLatLng; // Use local variables for null checks
-    final localEndLatLng = _endLatLng;
-
-    if (localStartLatLng == null || localEndLatLng == null) {
+    if (_startLatLng == null || _endLatLng == null) {
       setStateIfMounted(() {
         _routePolyline = null;
         _isCalculatingRoute = false;
@@ -679,16 +612,14 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      final GraphNode? startNode =
-          currentGraph.findNearestNode(localStartLatLng);
-      final GraphNode? endNode = currentGraph.findNearestNode(localEndLatLng);
+      final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
+      final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
       if (startNode == null || endNode == null) {
-        if (mounted)
-          _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
+        _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
         setStateIfMounted(() => _routePolyline = null);
       } else if (startNode.id == endNode.id) {
-        if (mounted) _showSnackbar("Start- und Zielpunkt sind identisch.");
+        _showSnackbar("Start- und Zielpunkt sind identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
         final List<LatLng>? routePoints =
@@ -704,13 +635,13 @@ class MapScreenState extends State<MapScreen> {
                 color: Colors.deepPurpleAccent);
 
             _routeDistance = RoutingService.calculateTotalDistance(routePoints);
-            _routeTimeMinutes = RoutingService.estimateWalkingTimeMinutes(
-                _routeDistance!); // _routeDistance is non-null here
+            _routeTimeMinutes =
+                RoutingService.estimateWalkingTimeMinutes(_routeDistance!);
 
-            if (mounted) _showSnackbar("Route berechnet.", durationSeconds: 3);
+            _showSnackbar("Route berechnet.", durationSeconds: 3);
           } else {
             _routePolyline = null;
-            if (mounted) _showErrorDialog("Keine Route gefunden.");
+            _showErrorDialog("Keine Route gefunden.");
           }
         });
       }
@@ -718,7 +649,7 @@ class MapScreenState extends State<MapScreen> {
       if (kDebugMode) {
         print(">>> Fehler Routenberechnung: $e\n$stacktrace");
       }
-      if (mounted) _showErrorDialog("Fehler Routenberechnung: $e");
+      _showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() => _routePolyline = null);
     } finally {
       if (mounted) {
@@ -754,8 +685,7 @@ class MapScreenState extends State<MapScreen> {
         Provider.of<LocationProvider>(context, listen: false);
     if (locationProvider.isLoadingLocationData ||
         locationProvider.currentRoutingGraph == null) {
-      if (mounted)
-        _showSnackbar("Kartendaten werden noch geladen.", durationSeconds: 2);
+      _showSnackbar("Kartendaten werden noch geladen.", durationSeconds: 2);
       return;
     }
     if (_isCalculatingRoute) {
@@ -847,13 +777,11 @@ class MapScreenState extends State<MapScreen> {
           _showSearchResults = false;
         }
       });
-      if (mounted) {
-        _showSnackbar(
-            clearMarkers
-                ? "Route, Start- und Zielpunkt gelöscht."
-                : "Route gelöscht.",
-            durationSeconds: 2);
-      }
+      _showSnackbar(
+          clearMarkers
+              ? "Route, Start- und Zielpunkt gelöscht."
+              : "Route gelöscht.",
+          durationSeconds: 2);
     }
 
     final bool somethingToDelete = _routePolyline != null ||
@@ -893,15 +821,12 @@ class MapScreenState extends State<MapScreen> {
     if (centerTarget != null && _isMapReady && mounted) {
       _mapController.move(centerTarget, 17.0);
     } else {
-      if (mounted)
-        _showSnackbar("Keine Position verfügbar oder Karte nicht bereit.");
+      _showSnackbar("Keine Position verfügbar oder Karte nicht bereit.");
     }
   }
 
   void _showErrorDialog(String message) {
-    // Added !mounted check based on screenshot context, though original file had different logic
-    final modalRoute = ModalRoute.of(context);
-    if (!mounted || (modalRoute != null && modalRoute.isCurrent == false)) {
+    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       return;
     }
     showDialog(
@@ -921,10 +846,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showSnackbar(String message, {int durationSeconds = 3}) {
-    final modalRoute =
-        ModalRoute.of(context); // Added based on pattern from _showErrorDialog
-    if (!mounted || (modalRoute != null && modalRoute.isCurrent == false)) {
-      // Consistent check
+    if (!mounted) {
       return;
     }
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
@@ -939,10 +861,7 @@ class MapScreenState extends State<MapScreen> {
 
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
-    final modalRoute =
-        ModalRoute.of(context); // Added based on pattern from _showErrorDialog
-    if (!mounted || (modalRoute != null && modalRoute.isCurrent == false)) {
-      // Consistent check
+    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       return;
     }
     showDialog(
@@ -971,9 +890,8 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) return;
 
     if (_startLatLng == null && _endLatLng == null) {
-      if (mounted)
-        _showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
-            durationSeconds: 3);
+      _showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
+          durationSeconds: 3);
       return;
     }
 
@@ -986,10 +904,9 @@ class MapScreenState extends State<MapScreen> {
       _startSearchController.text = _endSearchController.text;
       _endSearchController.text = tempStartText;
 
-      final localStartLatLng = _startLatLng; // For type promotion
-      if (localStartLatLng != null) {
+      if (_startLatLng != null) {
         _startMarker = _createMarker(
-          localStartLatLng,
+          _startLatLng!,
           Colors.green,
           Icons.flag_circle,
           "Start: ${_startSearchController.text.isNotEmpty ? _startSearchController.text : 'Gesetzter Punkt'}",
@@ -998,10 +915,9 @@ class MapScreenState extends State<MapScreen> {
         _startMarker = null;
       }
 
-      final localEndLatLng = _endLatLng; // For type promotion
-      if (localEndLatLng != null) {
+      if (_endLatLng != null) {
         _endMarker = _createMarker(
-          localEndLatLng,
+          _endLatLng!,
           Colors.red,
           Icons.flag_circle,
           "Ziel: ${_endSearchController.text.isNotEmpty ? _endSearchController.text : 'Gesetzter Punkt'}",
@@ -1020,18 +936,15 @@ class MapScreenState extends State<MapScreen> {
       }
     });
 
-    if (mounted) _showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
+    _showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
   }
 
+  // Hilfsfunktion zur Formatierung der Distanz
   String _formatDistance(double? distanceMeters) {
     if (distanceMeters == null) return "";
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
     } else {
-      // The '!' will have no effect because the receiver can't be null. (Ln 600, Col 21 screenshot)
-      // Assuming distanceMeters is non-null here due to the check above.
-      // The original code `(distanceMeters / 1000).toStringAsFixed(1)` is fine.
-      // If it was `distanceMeters! / 1000 ...` then `!` would be unnecessary.
       return "${(distanceMeters / 1000).toStringAsFixed(1)} km";
     }
   }
@@ -1047,19 +960,15 @@ class MapScreenState extends State<MapScreen> {
     final bool isUiReady = !isLoading && currentGraph != null;
 
     List<Marker> activeMarkers = [];
-    // Correction for: The argument type 'Marker?' can't be assigned to the parameter type 'Marker'.
-    // And to help with type promotion for non-final fields.
     final localCurrentLocationMarker = _currentLocationMarker;
     if (localCurrentLocationMarker != null) {
       activeMarkers.add(localCurrentLocationMarker);
     }
-    final localStartMarker = _startMarker;
-    if (localStartMarker != null) {
-      activeMarkers.add(localStartMarker);
+    if (_startMarker != null) {
+      activeMarkers.add(_startMarker!);
     }
-    final localEndMarker = _endMarker;
-    if (localEndMarker != null) {
-      activeMarkers.add(localEndMarker);
+    if (_endMarker != null) {
+      activeMarkers.add(_endMarker!);
     }
 
     const double searchCardTopPadding = 10.0;
@@ -1163,13 +1072,9 @@ class MapScreenState extends State<MapScreen> {
                 tileProvider: CancellableNetworkTileProvider(),
               ),
               if (isUiReady && _routePolyline != null)
-                PolylineLayer(polylines: [
-                  _routePolyline!
-                ]), // Keep '!' if _routePolyline is checked
+                PolylineLayer(polylines: [_routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
-                MarkerLayer(
-                    markers:
-                        activeMarkers), // activeMarkers is List<Marker> now
+                MarkerLayer(markers: activeMarkers),
             ],
           ),
           Positioned(
@@ -1247,17 +1152,15 @@ class MapScreenState extends State<MapScreen> {
                                 constraints: const BoxConstraints(),
                                 onPressed: isUiReady
                                     ? () {
-                                        final localGpsPos =
-                                            _currentGpsPosition; // for promotion
-                                        if (localGpsPos != null) {
+                                        if (_currentGpsPosition != null) {
                                           final String locationName =
                                               _useMockLocation
                                                   ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
                                                   : "Aktueller Standort";
                                           setStateIfMounted(() {
-                                            _startLatLng = localGpsPos;
+                                            _startLatLng = _currentGpsPosition;
                                             _startMarker = _createMarker(
-                                                localGpsPos, // use promoted localGpsPos
+                                                _startLatLng!,
                                                 Colors.green,
                                                 Icons.flag_circle,
                                                 "Start: $locationName");
@@ -1281,9 +1184,8 @@ class MapScreenState extends State<MapScreen> {
                                             _calculateAndDisplayRoute();
                                           }
                                         } else {
-                                          if (mounted)
-                                            _showSnackbar(
-                                                "Aktuelle Position nicht verfügbar.");
+                                          _showSnackbar(
+                                              "Aktuelle Position nicht verfügbar.");
                                         }
                                       }
                                     : null,
@@ -1373,52 +1275,44 @@ class MapScreenState extends State<MapScreen> {
                         ),
                       ),
                     ),
+                    // NEUE/ANGEPASSTE ANZEIGE FÜR DISTANZ UND ZEIT (Google Maps Inspiriert, Camping-Kontext)
                     if (_routeDistance != null && _routeTimeMinutes != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: SizedBox(
-                          height: routeInfoHeight - 8.0,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.directions_walk,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 20),
+                            const SizedBox(width: 8),
+                            Text.rich(
+                              TextSpan(
                                 children: [
-                                  Icon(Icons.straighten,
+                                  TextSpan(
+                                    text: "~ ${_routeTimeMinutes} min",
+                                    style: TextStyle(
                                       color:
                                           Theme.of(context).colorScheme.primary,
-                                      size: 18),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _formatDistance(_routeDistance),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        " / ${_formatDistance(_routeDistance)}",
                                     style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        fontWeight: FontWeight.bold),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary, // Farbe vereinheitlicht
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ],
                               ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.timer_outlined,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      size: 18),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    "~ ${_routeTimeMinutes!} min", // Added '!' as _routeTimeMinutes is checked non-null
-                                    style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
                       ),
                   ],
@@ -1549,4 +1443,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit Linter-Korrekturen]
+// [Ende lib/main.dart mit optisch angepasster Distanz/Zeitanzeige]
