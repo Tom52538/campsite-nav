@@ -1,17 +1,19 @@
-// [Start lib/services/routing_service.dart Überarbeitet für Linter]
+// lib/services/routing_service.dart
+// [Start lib/services/routing_service.dart Überarbeitet für Linter und mit Distanz/Zeit Methoden]
 import 'package:collection/collection.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:flutter/foundation.dart'; // Import für kDebugMode
+import 'dart:math'; // Für round
 
 class RoutingService {
+  static const double averageWalkingSpeedKmh = 4.5;
+  static const Distance _distanceCalculator = Distance();
+
   static Future<List<LatLng>?> findPath(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) async {
     try {
-      // Für dieses Projekt kann _dijkstra direkt aufgerufen werden.
-      // Für sehr große Graphen könnte man compute() in Betracht ziehen, um UI-Blockaden zu vermeiden:
-      // return await compute(_dijkstraIsolate, {'graph': graph, 'startNodeId': startNode.id, 'endNodeId': endNode.id});
       return _dijkstra(graph, startNode, endNode);
     } catch (e, stacktrace) {
       if (kDebugMode) {
@@ -22,51 +24,26 @@ class RoutingService {
     }
   }
 
-  // Isolate-Wrapper für Dijkstra (optional, falls Performance-Probleme auftreten)
-  // static List<LatLng>? _dijkstraIsolate(Map<String, dynamic> params) {
-  //   final RoutingGraph graph = params['graph'] as RoutingGraph;
-  //   final String startNodeId = params['startNodeId'] as String;
-  //   final String endNodeId = params['endNodeId'] as String;
-  //   // Knoten im Isolate neu abrufen, da Objekte nicht direkt übergeben werden können, wenn sie komplexe Abhängigkeiten haben.
-  //   // Diese Implementierung geht davon aus, dass der Graph selbst serialisierbar ist oder
-  //   // dass wir die relevanten Teile des Graphen (Knoten-IDs, Kanten) übergeben und im Isolate rekonstruieren.
-  //   // Für dieses Projekt ist die direkte Ausführung von _dijkstra wahrscheinlich ausreichend.
-  //   final startNode = graph.nodes[startNodeId];
-  //   final endNode = graph.nodes[endNodeId];
-
-  //   if (startNode == null || endNode == null) {
-  //     if (kDebugMode) {
-  //       print("_dijkstraIsolate: Start- oder Endknoten nicht im Graphen gefunden.");
-  //     }
-  //     return null;
-  //   }
-  //   return _dijkstra(graph, startNode, endNode);
-  // }
-
-
   static List<LatLng>? _dijkstra(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) {
-    final priorityQueue = PriorityQueue<GraphNode>((a, b) => a.gCost.compareTo(b.gCost));
-    
-    // WICHTIG: Es wird davon ausgegangen, dass resetAllNodeCosts()
-    // VOR dem Aufruf von findPath in main.dart aufgerufen wurde!
-    // graph.resetAllNodeCosts(); // Nicht hier, da es in main.dart passieren sollte.
+    final priorityQueue =
+        PriorityQueue<GraphNode>((a, b) => a.gCost.compareTo(b.gCost));
 
     startNode.gCost = 0;
     priorityQueue.add(startNode);
-    
-    final Set<String> visitedNodes = {}; // Um bereits final besuchte Knoten zu überspringen
+
+    final Set<String> visitedNodes = {};
 
     while (priorityQueue.isNotEmpty) {
       GraphNode currentNode;
       try {
-        if (priorityQueue.isEmpty) break; // Sollte durch while-Bedingung abgedeckt sein
+        if (priorityQueue.isEmpty) break;
         currentNode = priorityQueue.removeFirst();
       } catch (e) {
         if (kDebugMode) {
           print("Fehler beim Holen aus PriorityQueue in Dijkstra: $e");
         }
-        continue; 
+        continue;
       }
 
       if (visitedNodes.contains(currentNode.id)) {
@@ -90,20 +67,14 @@ class RoutingService {
         if (tentativeGCost < neighborNode.gCost) {
           neighborNode.parent = currentNode;
           neighborNode.gCost = tentativeGCost;
-          
-          // Standard-Workaround für PriorityQueue ohne decrease-key:
-          // Entfernen (falls vorhanden) und neu hinzufügen, um die Priorität zu aktualisieren.
-          // Das explizite Entfernen ist nicht immer nötig, wenn die Queue Duplikate mit unterschiedlichen Kosten verarbeiten kann
-          // und immer das mit den niedrigsten Kosten zuerst nimmt. Die `collection` PriorityQueue macht das.
-          // Ein erneutes Hinzufügen mit besseren Kosten wird korrekt behandelt.
           priorityQueue.add(neighborNode);
         }
       }
     }
 
     if (kDebugMode) {
-      // Die folgende Zeile war die gemeldete Linter-Warnung (Zeile 135 im Screenshot, hier verschoben durch Kommentare)
-      print("Dijkstra: Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id}.");
+      print(
+          "Dijkstra: Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id}.");
     }
     return null;
   }
@@ -112,7 +83,7 @@ class RoutingService {
     final List<LatLng> path = [];
     GraphNode? currentNode = endNode;
     int safetyBreak = 0;
-    const int maxPathLength = 10000; // Annahme für maximale Pfadlänge
+    const int maxPathLength = 10000;
 
     while (currentNode != null && safetyBreak < maxPathLength) {
       path.add(currentNode.position);
@@ -121,7 +92,8 @@ class RoutingService {
     }
 
     if (safetyBreak >= maxPathLength && kDebugMode) {
-      print("WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge erreicht). Möglicherweise Kreis im Parent-Graph?");
+      print(
+          "WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge erreicht). Möglicherweise Kreis im Parent-Graph?");
     }
 
     if (path.isEmpty) {
@@ -130,5 +102,35 @@ class RoutingService {
       return path.reversed.toList();
     }
   }
+
+  /// Calculates the total distance of a route.
+  ///
+  /// Takes a list of [LatLng] points representing the route
+  /// and returns the total distance in meters.
+  static double calculateTotalDistance(List<LatLng> routePoints) {
+    double totalDistance = 0.0;
+    if (routePoints.length < 2) {
+      return totalDistance;
+    }
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      totalDistance += _distanceCalculator(routePoints[i], routePoints[i + 1]);
+    }
+    return totalDistance;
+  }
+
+  /// Estimates the walking time for a given distance.
+  ///
+  /// Takes the total distance in meters and an optional average walking speed in km/h.
+  /// Returns the estimated time in minutes (rounded).
+  static int estimateWalkingTimeMinutes(double totalDistanceMeters,
+      {double speedKmh = averageWalkingSpeedKmh}) {
+    if (totalDistanceMeters <= 0 || speedKmh <= 0) {
+      return 0;
+    }
+    final double distanceKm = totalDistanceMeters / 1000.0;
+    final double timeHours = distanceKm / speedKmh;
+    final double timeMinutes = timeHours * 60;
+    return timeMinutes.round();
+  }
 }
-// [Ende lib/services/routing_service.dart Überarbeitet für Linter]
+// [Ende lib/services/routing_service.dart Überarbeitet für Linter und mit Distanz/Zeit Methoden]
