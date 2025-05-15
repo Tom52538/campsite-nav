@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit linksbündigem Such-Block]
+// [Start lib/main.dart mit automatischer Kartenanpassung an Route]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -104,7 +104,7 @@ class MapScreenState extends State<MapScreen> {
   static const double routeInfoHeight = 30.0;
   static const double cardInternalVerticalPadding = 4.0;
   static const double searchCardMaxWidth = 360.0;
-  static const double searchCardHorizontalMargin = 10.0; // Neuer Margin
+  static const double searchCardHorizontalMargin = 10.0;
 
   @override
   void initState() {
@@ -628,6 +628,11 @@ class MapScreenState extends State<MapScreen> {
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
+        // Bei identischen Punkten nicht versuchen, Bounds anzupassen,
+        // da es nur ein Punkt wäre. Karte bleibt wie sie ist oder zentriert auf den Punkt.
+        if (_isMapReady && mounted && _startLatLng != null) {
+          _mapController.move(_startLatLng!, _mapController.camera.zoom);
+        }
       } else {
         final List<LatLng>? routePoints =
             await RoutingService.findPath(currentGraph, startNode, endNode);
@@ -646,6 +651,31 @@ class MapScreenState extends State<MapScreen> {
                 RoutingService.estimateWalkingTimeMinutes(_routeDistance!);
 
             _showSnackbar("Route berechnet.", durationSeconds: 3);
+
+            // Karte an die Route anpassen
+            if (_isMapReady && mounted) {
+              try {
+                LatLngBounds bounds = LatLngBounds.fromPoints(routePoints);
+                _mapController.fitBounds(
+                  bounds,
+                  options: const FitBoundsOptions(
+                    // Padding anpassen: oben mehr Platz für Such-UI, sonst moderat
+                    padding: EdgeInsets.only(
+                        top: 180.0, bottom: 50.0, left: 30.0, right: 30.0),
+                  ),
+                );
+              } catch (e) {
+                if (kDebugMode) {
+                  print(
+                      "Fehler beim Anpassen der Kartenansicht an die Route: $e");
+                  if (_endLatLng != null) {
+                    // Fallback: Auf Zielpunkt zentrieren
+                    _mapController.move(
+                        _endLatLng!, _mapController.camera.zoom);
+                  }
+                }
+              }
+            }
           } else {
             _routePolyline = null;
             _showErrorDialog("Keine Route gefunden.");
@@ -1033,7 +1063,6 @@ class MapScreenState extends State<MapScreen> {
         ],
       ),
       body: Stack(
-        // alignment: Alignment.topCenter, // Nicht mehr benötigt, da Positioned left verwendet
         children: [
           FlutterMap(
             mapController: _mapController,
@@ -1080,8 +1109,7 @@ class MapScreenState extends State<MapScreen> {
           ),
           Positioned(
             top: searchCardTopPadding,
-            left: searchCardHorizontalMargin, // Linksbündig mit Margin
-            // right: searchCardHorizontalMargin, // Entfernt, damit es nicht auf die volle Breite spannt
+            left: searchCardHorizontalMargin,
             child: Container(
               constraints: const BoxConstraints(maxWidth: searchCardMaxWidth),
               child: Card(
@@ -1339,10 +1367,9 @@ class MapScreenState extends State<MapScreen> {
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
               top: searchResultsTopPosition,
-              left: searchCardHorizontalMargin, // Linksbündig mit Margin
+              left: searchCardHorizontalMargin,
               child: Container(
-                constraints: const BoxConstraints(
-                    maxWidth: searchCardMaxWidth), // Gleiche Maximalbreite
+                constraints: const BoxConstraints(maxWidth: searchCardMaxWidth),
                 child: Card(
                   elevation: 4.0,
                   shape: RoundedRectangleBorder(
@@ -1462,4 +1489,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit linksbündigem Such-Block]
+// [Ende lib/main.dart mit automatischer Kartenanpassung an Route]
