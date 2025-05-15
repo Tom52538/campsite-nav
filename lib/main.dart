@@ -265,6 +265,7 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
     });
     if (_isMapReady && mounted) {
+      // Ln 393: newLocation.initialCenter is non-nullable. Remove '!'
       _mapController.move(newLocation.initialCenter, 17.0);
     }
     if (isActualChange) {
@@ -369,28 +370,29 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    LatLng?
-        targetToMoveTo; // Declared as LatLng? to allow null before assignment logic
+    LatLng? targetToMoveToNullSafe;
     if (_useMockLocation) {
-      targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
+      targetToMoveToNullSafe = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
         const distance = Distance();
+        // Ln 443: Analyzer warning "unnecessary_null_comparison". The check _currentGpsPosition != null is essential.
+        // The use of _currentGpsPosition! inside this guarded block is correct.
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
-          // Analyzer warning at Ln 445/446: _currentGpsPosition! here is fine due to outer guard
-          targetToMoveTo = _currentGpsPosition!;
+          targetToMoveToNullSafe = _currentGpsPosition!;
         } else {
-          targetToMoveTo = location.initialCenter;
+          targetToMoveToNullSafe = location.initialCenter;
         }
       } else {
-        targetToMoveTo = location.initialCenter;
+        targetToMoveToNullSafe = location.initialCenter;
       }
     }
-    // At this point, targetToMoveTo is guaranteed to be non-null if location was non-null.
-    if (mounted) {
-      // Ln 458/459: _mapController is non-nullable. targetToMoveTo! because move expects LatLng.
-      _mapController.move(targetToMoveTo!, 17.0);
+
+    if (mounted && targetToMoveToNullSafe != null) {
+      // Ensure targetToMoveToNullSafe is not null before calling move
+      // Ln 456: _mapController is non-nullable.
+      _mapController.move(targetToMoveToNullSafe, 17.0);
     }
   }
 
@@ -601,8 +603,8 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      // Ln 588: _startLatLng and _endLatLng are confirmed non-null by the guard above.
-      // So, the '!' non-null assertion operator is unnecessary here.
+      // Ln 585: After the null check above, _startLatLng and _endLatLng are non-null.
+      // Thus, the '!' non-null assertion is unnecessary.
       final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
@@ -889,7 +891,7 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Ln 898: These are already const.
+    // Ln 896: These are already const and should remain so.
     const double searchCardTopPadding = 10.0;
     const double searchInputRowHeight = 50.0;
     const double cardInternalVerticalPadding = 8.0;
@@ -1180,7 +1182,7 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Ln 1002 area: Ensured Icons are const.
+          // Ln 1002 area: Ensured Icons and Paddings are const where possible.
           if (isUiReady &&
               (_routePolyline != null ||
                   _startMarker != null ||
