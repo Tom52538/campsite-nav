@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart korrigiert für newSelectedLocation Fehler]
+// [Start lib/main.dart mit linksbündigem Such-Block]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -104,6 +104,7 @@ class MapScreenState extends State<MapScreen> {
   static const double routeInfoHeight = 30.0;
   static const double cardInternalVerticalPadding = 4.0;
   static const double searchCardMaxWidth = 360.0;
+  static const double searchCardHorizontalMargin = 10.0; // Neuer Margin
 
   @override
   void initState() {
@@ -125,8 +126,7 @@ class MapScreenState extends State<MapScreen> {
     super.didChangeDependencies();
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
-    final newLocationInfo =
-        locationProvider.selectedLocation; // Umbenannt zur Klarheit
+    final newLocationInfo = locationProvider.selectedLocation;
 
     if (newLocationInfo != null &&
         (_lastProcessedLocation == null ||
@@ -135,7 +135,7 @@ class MapScreenState extends State<MapScreen> {
         print(
             "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newLocationInfo.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
       }
-      _handleLocationChangeUIUpdates(newLocationInfo); // Korrekt übergeben
+      _handleLocationChangeUIUpdates(newLocationInfo);
       _lastProcessedLocation = newLocationInfo;
     }
   }
@@ -250,7 +250,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
-    // Parameter umbenannt
     if (newLocationParam == null) {
       return;
     }
@@ -258,14 +257,12 @@ class MapScreenState extends State<MapScreen> {
         .selectLocation(newLocationParam);
   }
 
-  // Parametername ist hier 'newLocation'
   void _handleLocationChangeUIUpdates(LocationInfo newLocation) {
     if (!mounted) {
       return;
     }
     final bool isActualChange = _lastProcessedLocation != null &&
-        _lastProcessedLocation!.id !=
-            newLocation.id; // Korrekt: newLocation verwenden
+        _lastProcessedLocation!.id != newLocation.id;
     setState(() {
       _routePolyline = null;
       _startMarker = null;
@@ -281,23 +278,21 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
     });
     if (_isMapReady && mounted) {
-      _mapController.move(
-          newLocation.initialCenter, 17.0); // Korrekt: newLocation verwenden
+      _mapController.move(newLocation.initialCenter, 17.0);
     }
     if (isActualChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _showSnackbar(
-              "Standort geändert zu: ${newLocation.name}", // Korrekt: newLocation verwenden
+          _showSnackbar("Standort geändert zu: ${newLocation.name}",
               durationSeconds: 3);
         }
       });
     }
     if (kDebugMode) {
       print(
-          "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>"); // Korrekt: newLocation verwenden
+          "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>");
     }
-    _initializeGpsOrMock(newLocation); // Korrekt: newLocation verwenden
+    _initializeGpsOrMock(newLocation);
   }
 
   void _toggleMockLocation() {
@@ -1038,7 +1033,7 @@ class MapScreenState extends State<MapScreen> {
         ],
       ),
       body: Stack(
-        alignment: Alignment.topCenter,
+        // alignment: Alignment.topCenter, // Nicht mehr benötigt, da Positioned left verwendet
         children: [
           FlutterMap(
             mapController: _mapController,
@@ -1085,6 +1080,8 @@ class MapScreenState extends State<MapScreen> {
           ),
           Positioned(
             top: searchCardTopPadding,
+            left: searchCardHorizontalMargin, // Linksbündig mit Margin
+            // right: searchCardHorizontalMargin, // Entfernt, damit es nicht auf die volle Breite spannt
             child: Container(
               constraints: const BoxConstraints(maxWidth: searchCardMaxWidth),
               child: Card(
@@ -1342,11 +1339,10 @@ class MapScreenState extends State<MapScreen> {
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
               top: searchResultsTopPosition,
+              left: searchCardHorizontalMargin, // Linksbündig mit Margin
               child: Container(
-                // Container zur Breitenbeschränkung der Suchergebnisse
                 constraints: const BoxConstraints(
-                    maxWidth: searchCardMaxWidth -
-                        16), // Card-Padding berücksichtigen
+                    maxWidth: searchCardMaxWidth), // Gleiche Maximalbreite
                 child: Card(
                   elevation: 4.0,
                   shape: RoundedRectangleBorder(
@@ -1466,4 +1462,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart korrigiert für newSelectedLocation Fehler]
+// [Ende lib/main.dart mit linksbündigem Such-Block]
