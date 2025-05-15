@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:flutter/foundation.dart'; // Import für kDebugMode
-import 'dart:math'; // Für round
+// import 'dart:math'; // Entfernt: ungenutzt, da round() auf double direkt verfügbar ist
 
 class RoutingService {
   static const double averageWalkingSpeedKmh = 4.5;
