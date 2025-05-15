@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit optisch angepasster Distanz/Zeitanzeige]
+// [Start lib/main.dart mit kompakterem Such-Block Layout]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -82,7 +82,6 @@ class MapScreenState extends State<MapScreen> {
 
   LocationInfo? _lastProcessedLocation;
 
-  // Zustandsvariablen für Distanz und Zeit
   double? _routeDistance;
   int? _routeTimeMinutes;
 
@@ -98,6 +97,16 @@ class MapScreenState extends State<MapScreen> {
   final FocusNode _endFocusNode = FocusNode();
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
+
+  // --- ANGEPASSTE LAYOUT KONSTANTEN ---
+  static const double searchCardTopPadding = 10.0;
+  static const double searchInputRowHeight = 44.0; // Reduziert von 50.0
+  static const double dividerAndSwapButtonHeight =
+      38.0; // Reduziert von kMinInteractiveDimension (ca. 48)
+  static const double routeInfoHeight =
+      38.0; // Höhe für Distanz/Zeit Info, angepasst
+  static const double cardInternalVerticalPadding = 6.0; // Reduziert von 8.0
+  // --- ENDE ANGEPASSTE LAYOUT KONSTANTEN ---
 
   @override
   void initState() {
@@ -939,7 +948,6 @@ class MapScreenState extends State<MapScreen> {
     _showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
   }
 
-  // Hilfsfunktion zur Formatierung der Distanz
   String _formatDistance(double? distanceMeters) {
     if (distanceMeters == null) return "";
     if (distanceMeters < 1000) {
@@ -971,12 +979,8 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    const double searchCardTopPadding = 10.0;
-    const double searchInputRowHeight = 50.0;
-    const double dividerAndSwapButtonHeight = kMinInteractiveDimension;
-    const double routeInfoHeight = 40.0;
-    const double cardInternalVerticalPadding = 8.0;
-
+    // Dynamische Höhenberechnung für Such-UI Card und Suchergebnis-Position
+    // Die Konstanten sind jetzt oben in der Klasse definiert.
     double searchUICardHeight = (searchInputRowHeight * 2) +
         dividerAndSwapButtonHeight +
         (cardInternalVerticalPadding * 2);
@@ -985,8 +989,9 @@ class MapScreenState extends State<MapScreen> {
       searchUICardHeight += routeInfoHeight;
     }
 
-    final double searchResultsTopPosition =
-        searchCardTopPadding + searchUICardHeight + 5;
+    final double searchResultsTopPosition = searchCardTopPadding +
+        searchUICardHeight +
+        5; // 5px Abstand zu den Ergebnissen
 
     return Scaffold(
       appBar: AppBar(
@@ -1087,11 +1092,14 @@ class MapScreenState extends State<MapScreen> {
                   borderRadius: BorderRadius.circular(8.0)),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0, vertical: cardInternalVerticalPadding),
+                    horizontal: 8.0,
+                    vertical:
+                        cardInternalVerticalPadding), // Angepasstes Padding
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
+                      // Start TextField Container
                       decoration: BoxDecoration(
                         border: _startFocusNode.hasFocus
                             ? Border.all(
@@ -1107,6 +1115,7 @@ class MapScreenState extends State<MapScreen> {
                             : null,
                       ),
                       child: SizedBox(
+                        // Höhe für Start-Textfeld
                         height: searchInputRowHeight,
                         child: Row(
                           children: [
@@ -1196,7 +1205,8 @@ class MapScreenState extends State<MapScreen> {
                       ),
                     ),
                     SizedBox(
-                      height: dividerAndSwapButtonHeight,
+                      // Swap Button Container
+                      height: dividerAndSwapButtonHeight, // Angepasste Höhe
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -1209,6 +1219,7 @@ class MapScreenState extends State<MapScreen> {
                           Tooltip(
                             message: "Start und Ziel tauschen",
                             child: IconButton(
+                              // IconButton Padding wird von Material Design gehandhabt
                               icon: Icon(Icons.swap_vert,
                                   color: Theme.of(context).colorScheme.primary),
                               onPressed: (isUiReady &&
@@ -1228,6 +1239,7 @@ class MapScreenState extends State<MapScreen> {
                       ),
                     ),
                     Container(
+                      // Ziel TextField Container
                       decoration: BoxDecoration(
                         border: _endFocusNode.hasFocus
                             ? Border.all(
@@ -1243,6 +1255,7 @@ class MapScreenState extends State<MapScreen> {
                             : null,
                       ),
                       child: SizedBox(
+                        // Höhe für Ziel-Textfeld
                         height: searchInputRowHeight,
                         child: TextField(
                           controller: _endSearchController,
@@ -1275,44 +1288,51 @@ class MapScreenState extends State<MapScreen> {
                         ),
                       ),
                     ),
-                    // NEUE/ANGEPASSTE ANZEIGE FÜR DISTANZ UND ZEIT (Google Maps Inspiriert, Camping-Kontext)
+                    // Distanz-/Zeitanzeige
                     if (_routeDistance != null && _routeTimeMinutes != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.directions_walk,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 20),
-                            const SizedBox(width: 8),
-                            Text.rich(
-                              TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: "~ ${_routeTimeMinutes} min",
-                                    style: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                        padding: const EdgeInsets.only(
+                            top: 6.0, bottom: 2.0), // Padding angepasst
+                        child: SizedBox(
+                          // Höhe explizit für Route Info, falls nötig
+                          height:
+                              routeInfoHeight - 8.0, // (6 top + 2 bottom = 8)
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.directions_walk,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 20),
+                              const SizedBox(width: 8),
+                              Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: "~ ${_routeTimeMinutes} min",
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
                                     ),
-                                  ),
-                                  TextSpan(
-                                    text:
-                                        " / ${_formatDistance(_routeDistance)}",
-                                    style: TextStyle(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary, // Farbe vereinheitlicht
-                                      fontSize: 14,
+                                    TextSpan(
+                                      text:
+                                          " / ${_formatDistance(_routeDistance)}",
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        fontSize: 14,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                   ],
@@ -1322,7 +1342,7 @@ class MapScreenState extends State<MapScreen> {
           ),
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
-              top: searchResultsTopPosition,
+              top: searchResultsTopPosition, // Dynamische Position
               left: 10,
               right: 10,
               child: Card(
@@ -1443,4 +1463,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit optisch angepasster Distanz/Zeitanzeige]
+// [Ende lib/main.dart mit kompakterem Such-Block Layout]
