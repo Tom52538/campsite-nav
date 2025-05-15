@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit Breitenbeschränkung und weiterer Höhenreduktion]
+// [Start lib/main.dart korrigiert für newSelectedLocation Fehler]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -98,14 +98,12 @@ class MapScreenState extends State<MapScreen> {
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
 
-  // --- NEUE/ANGEPASSTE LAYOUT KONSTANTEN ---
-  static const double searchCardTopPadding = 8.0; // Leicht reduziert
-  static const double searchInputRowHeight = 40.0; // Reduziert
-  static const double dividerAndSwapButtonHeight = 28.0; // Stark reduziert
-  static const double routeInfoHeight = 30.0; // Reduziert
-  static const double cardInternalVerticalPadding = 4.0; // Reduziert
-  static const double searchCardMaxWidth = 360.0; // Feste maximale Breite
-  // --- ENDE NEUE/ANGEPASSTE LAYOUT KONSTANTEN ---
+  static const double searchCardTopPadding = 8.0;
+  static const double searchInputRowHeight = 40.0;
+  static const double dividerAndSwapButtonHeight = 28.0;
+  static const double routeInfoHeight = 30.0;
+  static const double cardInternalVerticalPadding = 4.0;
+  static const double searchCardMaxWidth = 360.0;
 
   @override
   void initState() {
@@ -127,17 +125,18 @@ class MapScreenState extends State<MapScreen> {
     super.didChangeDependencies();
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
-    final newSelectedLocation = locationProvider.selectedLocation;
+    final newLocationInfo =
+        locationProvider.selectedLocation; // Umbenannt zur Klarheit
 
-    if (newSelectedLocation != null &&
+    if (newLocationInfo != null &&
         (_lastProcessedLocation == null ||
-            newSelectedLocation.id != _lastProcessedLocation!.id)) {
+            newLocationInfo.id != _lastProcessedLocation!.id)) {
       if (kDebugMode) {
         print(
-            "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newSelectedLocation.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
+            "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newLocationInfo.name}. Vorheriger: ${_lastProcessedLocation?.name} >>>");
       }
-      _handleLocationChangeUIUpdates(newSelectedLocation);
-      _lastProcessedLocation = newSelectedLocation;
+      _handleLocationChangeUIUpdates(newLocationInfo); // Korrekt übergeben
+      _lastProcessedLocation = newLocationInfo;
     }
   }
 
@@ -250,20 +249,23 @@ class MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _onLocationSelectedFromDropdown(LocationInfo? newLocation) {
-    if (newLocation == null) {
+  void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
+    // Parameter umbenannt
+    if (newLocationParam == null) {
       return;
     }
     Provider.of<LocationProvider>(context, listen: false)
-        .selectLocation(newLocation);
+        .selectLocation(newLocationParam);
   }
 
+  // Parametername ist hier 'newLocation'
   void _handleLocationChangeUIUpdates(LocationInfo newLocation) {
     if (!mounted) {
       return;
     }
     final bool isActualChange = _lastProcessedLocation != null &&
-        _lastProcessedLocation!.id != newLocation.id;
+        _lastProcessedLocation!.id !=
+            newLocation.id; // Korrekt: newLocation verwenden
     setState(() {
       _routePolyline = null;
       _startMarker = null;
@@ -279,21 +281,23 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
     });
     if (_isMapReady && mounted) {
-      _mapController.move(newSelectedLocation.initialCenter, 17.0);
+      _mapController.move(
+          newLocation.initialCenter, 17.0); // Korrekt: newLocation verwenden
     }
     if (isActualChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _showSnackbar("Standort geändert zu: ${newSelectedLocation.name}",
+          _showSnackbar(
+              "Standort geändert zu: ${newLocation.name}", // Korrekt: newLocation verwenden
               durationSeconds: 3);
         }
       });
     }
     if (kDebugMode) {
       print(
-          "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newSelectedLocation.name}. GeoJSON: ${newSelectedLocation.geojsonAssetPath} >>>");
+          "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>"); // Korrekt: newLocation verwenden
     }
-    _initializeGpsOrMock(newSelectedLocation);
+    _initializeGpsOrMock(newLocation); // Korrekt: newLocation verwenden
   }
 
   void _toggleMockLocation() {
@@ -1034,8 +1038,7 @@ class MapScreenState extends State<MapScreen> {
         ],
       ),
       body: Stack(
-        alignment:
-            Alignment.topCenter, // Zentriert das Positioned Widget horizontal
+        alignment: Alignment.topCenter,
         children: [
           FlutterMap(
             mapController: _mapController,
@@ -1081,10 +1084,8 @@ class MapScreenState extends State<MapScreen> {
             ],
           ),
           Positioned(
-            // Geändert: keine left/right Constraints mehr
             top: searchCardTopPadding,
             child: Container(
-              // Neuer Container zur Breitenbeschränkung
               constraints: const BoxConstraints(maxWidth: searchCardMaxWidth),
               child: Card(
                 elevation: 6.0,
@@ -1143,9 +1144,7 @@ class MapScreenState extends State<MapScreen> {
                                     border: InputBorder.none,
                                     isDense: true,
                                     contentPadding: const EdgeInsets.symmetric(
-                                        // Angepasst
-                                        vertical: 8.0,
-                                        horizontal: 8.0),
+                                        vertical: 8.0, horizontal: 8.0),
                                   ),
                                   enabled: isUiReady,
                                 ),
@@ -1222,9 +1221,8 @@ class MapScreenState extends State<MapScreen> {
                                 icon: Icon(Icons.swap_vert,
                                     color:
                                         Theme.of(context).colorScheme.primary),
-                                iconSize: 20, // Ggf. Icongröße anpassen
-                                padding: const EdgeInsets.all(
-                                    4.0), // Padding für kleinere Touch-Ziele
+                                iconSize: 20,
+                                padding: const EdgeInsets.all(4.0),
                                 constraints: const BoxConstraints(),
                                 onPressed: (isUiReady &&
                                         (_startLatLng != null ||
@@ -1285,9 +1283,7 @@ class MapScreenState extends State<MapScreen> {
                               border: InputBorder.none,
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
-                                  // Angepasst
-                                  vertical: 8.0,
-                                  horizontal: 8.0),
+                                  vertical: 8.0, horizontal: 8.0),
                             ),
                             enabled: isUiReady,
                           ),
@@ -1295,18 +1291,16 @@ class MapScreenState extends State<MapScreen> {
                       ),
                       if (_routeDistance != null && _routeTimeMinutes != null)
                         Padding(
-                          padding: const EdgeInsets.only(
-                              top: 4.0, bottom: 2.0), // Padding angepasst
+                          padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
                           child: SizedBox(
-                            height:
-                                routeInfoHeight - 6.0, // (4 top + 2 bottom = 6)
+                            height: routeInfoHeight - 6.0,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.directions_walk,
                                     color:
                                         Theme.of(context).colorScheme.primary,
-                                    size: 18), // Icongröße ggf. anpassen
+                                    size: 18),
                                 const SizedBox(width: 6),
                                 Text.rich(
                                   TextSpan(
@@ -1318,8 +1312,7 @@ class MapScreenState extends State<MapScreen> {
                                               .colorScheme
                                               .primary,
                                           fontWeight: FontWeight.bold,
-                                          fontSize:
-                                              14, // Ggf. Schriftgröße anpassen
+                                          fontSize: 14,
                                         ),
                                       ),
                                       TextSpan(
@@ -1329,8 +1322,7 @@ class MapScreenState extends State<MapScreen> {
                                           color: Theme.of(context)
                                               .colorScheme
                                               .primary,
-                                          fontSize:
-                                              13, // Ggf. Schriftgröße anpassen
+                                          fontSize: 13,
                                         ),
                                       ),
                                     ],
@@ -1349,13 +1341,12 @@ class MapScreenState extends State<MapScreen> {
           ),
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
-              // Suchergebnisse, Breite orientiert sich nun an der Card-Breite
               top: searchResultsTopPosition,
-              // Zentrierung durch Stack Alignment.topCenter und Container der Card
               child: Container(
+                // Container zur Breitenbeschränkung der Suchergebnisse
                 constraints: const BoxConstraints(
-                    maxWidth:
-                        searchCardMaxWidth - 16), // - Card Padding horizontal
+                    maxWidth: searchCardMaxWidth -
+                        16), // Card-Padding berücksichtigen
                 child: Card(
                   elevation: 4.0,
                   shape: RoundedRectangleBorder(
@@ -1475,4 +1466,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit Breitenbeschränkung und weiterer Höhenreduktion]
+// [Ende lib/main.dart korrigiert für newSelectedLocation Fehler]
