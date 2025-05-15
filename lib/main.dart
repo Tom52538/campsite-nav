@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit kompakterem Such-Block Layout]
+// [Start lib/main.dart mit Breitenbeschränkung und weiterer Höhenreduktion]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -98,15 +98,14 @@ class MapScreenState extends State<MapScreen> {
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
 
-  // --- ANGEPASSTE LAYOUT KONSTANTEN ---
-  static const double searchCardTopPadding = 10.0;
-  static const double searchInputRowHeight = 44.0; // Reduziert von 50.0
-  static const double dividerAndSwapButtonHeight =
-      38.0; // Reduziert von kMinInteractiveDimension (ca. 48)
-  static const double routeInfoHeight =
-      38.0; // Höhe für Distanz/Zeit Info, angepasst
-  static const double cardInternalVerticalPadding = 6.0; // Reduziert von 8.0
-  // --- ENDE ANGEPASSTE LAYOUT KONSTANTEN ---
+  // --- NEUE/ANGEPASSTE LAYOUT KONSTANTEN ---
+  static const double searchCardTopPadding = 8.0; // Leicht reduziert
+  static const double searchInputRowHeight = 40.0; // Reduziert
+  static const double dividerAndSwapButtonHeight = 28.0; // Stark reduziert
+  static const double routeInfoHeight = 30.0; // Reduziert
+  static const double cardInternalVerticalPadding = 4.0; // Reduziert
+  static const double searchCardMaxWidth = 360.0; // Feste maximale Breite
+  // --- ENDE NEUE/ANGEPASSTE LAYOUT KONSTANTEN ---
 
   @override
   void initState() {
@@ -280,21 +279,21 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
     });
     if (_isMapReady && mounted) {
-      _mapController.move(newLocation.initialCenter, 17.0);
+      _mapController.move(newSelectedLocation.initialCenter, 17.0);
     }
     if (isActualChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _showSnackbar("Standort geändert zu: ${newLocation.name}",
+          _showSnackbar("Standort geändert zu: ${newSelectedLocation.name}",
               durationSeconds: 3);
         }
       });
     }
     if (kDebugMode) {
       print(
-          "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>");
+          "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newSelectedLocation.name}. GeoJSON: ${newSelectedLocation.geojsonAssetPath} >>>");
     }
-    _initializeGpsOrMock(newLocation);
+    _initializeGpsOrMock(newSelectedLocation);
   }
 
   void _toggleMockLocation() {
@@ -979,19 +978,16 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Dynamische Höhenberechnung für Such-UI Card und Suchergebnis-Position
-    // Die Konstanten sind jetzt oben in der Klasse definiert.
-    double searchUICardHeight = (searchInputRowHeight * 2) +
+    double searchUICardCalculatedHeight = (searchInputRowHeight * 2) +
         dividerAndSwapButtonHeight +
         (cardInternalVerticalPadding * 2);
 
     if (_routeDistance != null && _routeTimeMinutes != null) {
-      searchUICardHeight += routeInfoHeight;
+      searchUICardCalculatedHeight += routeInfoHeight;
     }
 
-    final double searchResultsTopPosition = searchCardTopPadding +
-        searchUICardHeight +
-        5; // 5px Abstand zu den Ergebnissen
+    final double searchResultsTopPosition =
+        searchCardTopPadding + searchUICardCalculatedHeight + 5;
 
     return Scaffold(
       appBar: AppBar(
@@ -1038,6 +1034,8 @@ class MapScreenState extends State<MapScreen> {
         ],
       ),
       body: Stack(
+        alignment:
+            Alignment.topCenter, // Zentriert das Positioned Widget horizontal
         children: [
           FlutterMap(
             mapController: _mapController,
@@ -1083,288 +1081,302 @@ class MapScreenState extends State<MapScreen> {
             ],
           ),
           Positioned(
+            // Geändert: keine left/right Constraints mehr
             top: searchCardTopPadding,
-            left: 10,
-            right: 10,
-            child: Card(
-              elevation: 6.0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0,
-                    vertical:
-                        cardInternalVerticalPadding), // Angepasstes Padding
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      // Start TextField Container
-                      decoration: BoxDecoration(
-                        border: _startFocusNode.hasFocus
-                            ? Border.all(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 1.5)
-                            : Border.all(color: Colors.transparent, width: 1.5),
-                        borderRadius: BorderRadius.circular(6.0),
-                        color: _startFocusNode.hasFocus
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withAlpha((255 * 0.05).round())
-                            : null,
-                      ),
-                      child: SizedBox(
-                        // Höhe für Start-Textfeld
-                        height: searchInputRowHeight,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _startSearchController,
-                                focusNode: _startFocusNode,
-                                decoration: InputDecoration(
-                                  hintText: "Startpunkt wählen",
-                                  prefixIcon: const Icon(Icons.trip_origin),
-                                  suffixIcon:
-                                      _startSearchController.text.isNotEmpty
-                                          ? IconButton(
-                                              icon: const Icon(Icons.clear),
-                                              iconSize: 20,
-                                              onPressed: () {
-                                                _startSearchController.clear();
-                                                setStateIfMounted(() {
-                                                  _startLatLng = null;
-                                                  _startMarker = null;
-                                                  _routePolyline = null;
-                                                  _routeDistance = null;
-                                                  _routeTimeMinutes = null;
-                                                });
-                                              },
-                                            )
-                                          : null,
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 12.0, horizontal: 8.0),
-                                ),
-                                enabled: isUiReady,
-                              ),
-                            ),
-                            Tooltip(
-                              message: "Aktuellen Standort als Start verwenden",
-                              child: IconButton(
-                                icon: const Icon(Icons.my_location),
-                                color: Theme.of(context).colorScheme.primary,
-                                iconSize: 22,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: isUiReady
-                                    ? () {
-                                        if (_currentGpsPosition != null) {
-                                          final String locationName =
-                                              _useMockLocation
-                                                  ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
-                                                  : "Aktueller Standort";
-                                          setStateIfMounted(() {
-                                            _startLatLng = _currentGpsPosition;
-                                            _startMarker = _createMarker(
-                                                _startLatLng!,
-                                                Colors.green,
-                                                Icons.flag_circle,
-                                                "Start: $locationName");
-                                            WidgetsBinding.instance
-                                                .addPostFrameCallback((_) {
-                                              if (mounted) {
-                                                _startSearchController.text =
-                                                    locationName;
-                                              }
-                                            });
-
-                                            if (_startFocusNode.hasFocus) {
-                                              _startFocusNode.unfocus();
-                                            }
-                                            _showSearchResults = false;
-                                            _activeSearchField =
-                                                ActiveSearchField.none;
-                                          });
-                                          if (_startLatLng != null &&
-                                              _endLatLng != null) {
-                                            _calculateAndDisplayRoute();
-                                          }
-                                        } else {
-                                          _showSnackbar(
-                                              "Aktuelle Position nicht verfügbar.");
-                                        }
-                                      }
-                                    : null,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(
-                      // Swap Button Container
-                      height: dividerAndSwapButtonHeight, // Angepasste Höhe
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Expanded(
-                              child: Divider(
-                                  height: 1,
-                                  thickness: 0.5,
-                                  indent: 20,
-                                  endIndent: 5)),
-                          Tooltip(
-                            message: "Start und Ziel tauschen",
-                            child: IconButton(
-                              // IconButton Padding wird von Material Design gehandhabt
-                              icon: Icon(Icons.swap_vert,
-                                  color: Theme.of(context).colorScheme.primary),
-                              onPressed: (isUiReady &&
-                                      (_startLatLng != null ||
-                                          _endLatLng != null))
-                                  ? _swapStartAndEnd
-                                  : null,
-                            ),
-                          ),
-                          const Expanded(
-                              child: Divider(
-                                  height: 1,
-                                  thickness: 0.5,
-                                  indent: 5,
-                                  endIndent: 20)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      // Ziel TextField Container
-                      decoration: BoxDecoration(
-                        border: _endFocusNode.hasFocus
-                            ? Border.all(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 1.5)
-                            : Border.all(color: Colors.transparent, width: 1.5),
-                        borderRadius: BorderRadius.circular(6.0),
-                        color: _endFocusNode.hasFocus
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withAlpha((255 * 0.05).round())
-                            : null,
-                      ),
-                      child: SizedBox(
-                        // Höhe für Ziel-Textfeld
-                        height: searchInputRowHeight,
-                        child: TextField(
-                          controller: _endSearchController,
-                          focusNode: _endFocusNode,
-                          decoration: InputDecoration(
-                            hintText: "Ziel wählen",
-                            prefixIcon: const Icon(Icons.flag_outlined),
-                            suffixIcon: _endSearchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    iconSize: 20,
-                                    onPressed: () {
-                                      _endSearchController.clear();
-                                      setStateIfMounted(() {
-                                        _endLatLng = null;
-                                        _endMarker = null;
-                                        _routePolyline = null;
-                                        _routeDistance = null;
-                                        _routeTimeMinutes = null;
-                                      });
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 12.0, horizontal: 8.0),
-                          ),
-                          enabled: isUiReady,
-                        ),
-                      ),
-                    ),
-                    // Distanz-/Zeitanzeige
-                    if (_routeDistance != null && _routeTimeMinutes != null)
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            top: 6.0, bottom: 2.0), // Padding angepasst
-                        child: SizedBox(
-                          // Höhe explizit für Route Info, falls nötig
-                          height:
-                              routeInfoHeight - 8.0, // (6 top + 2 bottom = 8)
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.directions_walk,
+            child: Container(
+              // Neuer Container zur Breitenbeschränkung
+              constraints: const BoxConstraints(maxWidth: searchCardMaxWidth),
+              child: Card(
+                elevation: 6.0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: cardInternalVerticalPadding),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: _startFocusNode.hasFocus
+                              ? Border.all(
                                   color: Theme.of(context).colorScheme.primary,
-                                  size: 20),
-                              const SizedBox(width: 8),
-                              Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: "~ ${_routeTimeMinutes} min",
-                                      style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                    TextSpan(
-                                      text:
-                                          " / ${_formatDistance(_routeDistance)}",
-                                      style: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
+                                  width: 1.5)
+                              : Border.all(
+                                  color: Colors.transparent, width: 1.5),
+                          borderRadius: BorderRadius.circular(6.0),
+                          color: _startFocusNode.hasFocus
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withAlpha((255 * 0.05).round())
+                              : null,
+                        ),
+                        child: SizedBox(
+                          height: searchInputRowHeight,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _startSearchController,
+                                  focusNode: _startFocusNode,
+                                  decoration: InputDecoration(
+                                    hintText: "Startpunkt wählen",
+                                    prefixIcon: const Icon(Icons.trip_origin),
+                                    suffixIcon: _startSearchController
+                                            .text.isNotEmpty
+                                        ? IconButton(
+                                            icon: const Icon(Icons.clear),
+                                            iconSize: 20,
+                                            onPressed: () {
+                                              _startSearchController.clear();
+                                              setStateIfMounted(() {
+                                                _startLatLng = null;
+                                                _startMarker = null;
+                                                _routePolyline = null;
+                                                _routeDistance = null;
+                                                _routeTimeMinutes = null;
+                                              });
+                                            },
+                                          )
+                                        : null,
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        // Angepasst
+                                        vertical: 8.0,
+                                        horizontal: 8.0),
+                                  ),
+                                  enabled: isUiReady,
                                 ),
-                                textAlign: TextAlign.center,
+                              ),
+                              Tooltip(
+                                message:
+                                    "Aktuellen Standort als Start verwenden",
+                                child: IconButton(
+                                  icon: const Icon(Icons.my_location),
+                                  color: Theme.of(context).colorScheme.primary,
+                                  iconSize: 22,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  onPressed: isUiReady
+                                      ? () {
+                                          if (_currentGpsPosition != null) {
+                                            final String locationName =
+                                                _useMockLocation
+                                                    ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
+                                                    : "Aktueller Standort";
+                                            setStateIfMounted(() {
+                                              _startLatLng =
+                                                  _currentGpsPosition;
+                                              _startMarker = _createMarker(
+                                                  _startLatLng!,
+                                                  Colors.green,
+                                                  Icons.flag_circle,
+                                                  "Start: $locationName");
+                                              WidgetsBinding.instance
+                                                  .addPostFrameCallback((_) {
+                                                if (mounted) {
+                                                  _startSearchController.text =
+                                                      locationName;
+                                                }
+                                              });
+
+                                              if (_startFocusNode.hasFocus) {
+                                                _startFocusNode.unfocus();
+                                              }
+                                              _showSearchResults = false;
+                                              _activeSearchField =
+                                                  ActiveSearchField.none;
+                                            });
+                                            if (_startLatLng != null &&
+                                                _endLatLng != null) {
+                                              _calculateAndDisplayRoute();
+                                            }
+                                          } else {
+                                            _showSnackbar(
+                                                "Aktuelle Position nicht verfügbar.");
+                                          }
+                                        }
+                                      : null,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ),
-                  ],
+                      SizedBox(
+                        height: dividerAndSwapButtonHeight,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Expanded(
+                                child: Divider(
+                                    height: 1,
+                                    thickness: 0.5,
+                                    indent: 20,
+                                    endIndent: 5)),
+                            Tooltip(
+                              message: "Start und Ziel tauschen",
+                              child: IconButton(
+                                icon: Icon(Icons.swap_vert,
+                                    color:
+                                        Theme.of(context).colorScheme.primary),
+                                iconSize: 20, // Ggf. Icongröße anpassen
+                                padding: const EdgeInsets.all(
+                                    4.0), // Padding für kleinere Touch-Ziele
+                                constraints: const BoxConstraints(),
+                                onPressed: (isUiReady &&
+                                        (_startLatLng != null ||
+                                            _endLatLng != null))
+                                    ? _swapStartAndEnd
+                                    : null,
+                              ),
+                            ),
+                            const Expanded(
+                                child: Divider(
+                                    height: 1,
+                                    thickness: 0.5,
+                                    indent: 5,
+                                    endIndent: 20)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: _endFocusNode.hasFocus
+                              ? Border.all(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 1.5)
+                              : Border.all(
+                                  color: Colors.transparent, width: 1.5),
+                          borderRadius: BorderRadius.circular(6.0),
+                          color: _endFocusNode.hasFocus
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withAlpha((255 * 0.05).round())
+                              : null,
+                        ),
+                        child: SizedBox(
+                          height: searchInputRowHeight,
+                          child: TextField(
+                            controller: _endSearchController,
+                            focusNode: _endFocusNode,
+                            decoration: InputDecoration(
+                              hintText: "Ziel wählen",
+                              prefixIcon: const Icon(Icons.flag_outlined),
+                              suffixIcon: _endSearchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      iconSize: 20,
+                                      onPressed: () {
+                                        _endSearchController.clear();
+                                        setStateIfMounted(() {
+                                          _endLatLng = null;
+                                          _endMarker = null;
+                                          _routePolyline = null;
+                                          _routeDistance = null;
+                                          _routeTimeMinutes = null;
+                                        });
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  // Angepasst
+                                  vertical: 8.0,
+                                  horizontal: 8.0),
+                            ),
+                            enabled: isUiReady,
+                          ),
+                        ),
+                      ),
+                      if (_routeDistance != null && _routeTimeMinutes != null)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                              top: 4.0, bottom: 2.0), // Padding angepasst
+                          child: SizedBox(
+                            height:
+                                routeInfoHeight - 6.0, // (4 top + 2 bottom = 6)
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.directions_walk,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    size: 18), // Icongröße ggf. anpassen
+                                const SizedBox(width: 6),
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: "~ ${_routeTimeMinutes} min",
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize:
+                                              14, // Ggf. Schriftgröße anpassen
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text:
+                                            " / ${_formatDistance(_routeDistance)}",
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          fontSize:
+                                              13, // Ggf. Schriftgröße anpassen
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
-              top: searchResultsTopPosition, // Dynamische Position
-              left: 10,
-              right: 10,
-              child: Card(
-                elevation: 4.0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0)),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.3),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _searchResults.length,
-                    itemBuilder: (context, index) {
-                      final feature = _searchResults[index];
-                      return ListTile(
-                        leading: Icon(_getIconForFeatureType(feature.type)),
-                        title: Text(feature.name),
-                        subtitle: Text("Typ: ${feature.type}"),
-                        onTap: () => _selectFeatureAndSetPoint(feature),
-                        dense: true,
-                      );
-                    },
+              // Suchergebnisse, Breite orientiert sich nun an der Card-Breite
+              top: searchResultsTopPosition,
+              // Zentrierung durch Stack Alignment.topCenter und Container der Card
+              child: Container(
+                constraints: const BoxConstraints(
+                    maxWidth:
+                        searchCardMaxWidth - 16), // - Card Padding horizontal
+                child: Card(
+                  elevation: 4.0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0)),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.3),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final feature = _searchResults[index];
+                        return ListTile(
+                          leading: Icon(_getIconForFeatureType(feature.type)),
+                          title: Text(feature.name),
+                          subtitle: Text("Typ: ${feature.type}"),
+                          onTap: () => _selectFeatureAndSetPoint(feature),
+                          dense: true,
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -1463,4 +1475,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit kompakterem Such-Block Layout]
+// [Ende lib/main.dart mit Breitenbeschränkung und weiterer Höhenreduktion]
