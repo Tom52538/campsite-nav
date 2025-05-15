@@ -265,8 +265,7 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
     });
     if (_isMapReady && mounted) {
-      // newLocation.initialCenter is LatLng (non-nullable)
-      _mapController.move(newLocation.initialCenter, 17.0); // Ln 395 area
+      _mapController.move(newLocation.initialCenter, 17.0);
     }
     if (isActualChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -370,21 +369,16 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    LatLng targetToMoveTo;
+    LatLng?
+        targetToMoveTo; // Declared as LatLng? to allow null before assignment logic
     if (_useMockLocation) {
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
-        // This guard is essential
         const distance = Distance();
-        // Ln 445/446 area: Inside this block, _currentGpsPosition is confirmed non-null.
-        // The analyzer warning "unnecessary_null_comparison" for "operand can't be null"
-        // might refer to _currentGpsPosition! itself if it thinks the '!' is a comparison.
-        // However, '!' is an assertion. If it means the result of distance() or the comparison
-        // with centerOnGpsMaxDistanceMeters is always true, that's a different issue.
-        // The code relies on _currentGpsPosition being non-null here.
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
+          // Analyzer warning at Ln 445/446: _currentGpsPosition! here is fine due to outer guard
           targetToMoveTo = _currentGpsPosition!;
         } else {
           targetToMoveTo = location.initialCenter;
@@ -393,10 +387,10 @@ class MapScreenState extends State<MapScreen> {
         targetToMoveTo = location.initialCenter;
       }
     }
+    // At this point, targetToMoveTo is guaranteed to be non-null if location was non-null.
     if (mounted) {
-      // Ln 458/459 area: _mapController is final, non-nullable. No ?. needed.
-      // targetToMoveTo is LatLng (non-nullable), so no ! needed here.
-      _mapController.move(targetToMoveTo, 17.0);
+      // Ln 458/459: _mapController is non-nullable. targetToMoveTo! because move expects LatLng.
+      _mapController.move(targetToMoveTo!, 17.0);
     }
   }
 
@@ -607,9 +601,8 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      // Ln 588 area: After the guard (_startLatLng == null || _endLatLng == null),
-      // _startLatLng and _endLatLng are guaranteed non-null.
-      // So, the '!' non-null assertion operator is unnecessary.
+      // Ln 588: _startLatLng and _endLatLng are confirmed non-null by the guard above.
+      // So, the '!' non-null assertion operator is unnecessary here.
       final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
@@ -798,7 +791,7 @@ class MapScreenState extends State<MapScreen> {
     }
     final selectedLocationFromProvider =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
-    LatLng? centerTarget; // Use LatLng? as _currentGpsPosition is nullable
+    LatLng? centerTarget;
     if (_useMockLocation) {
       centerTarget = _currentGpsPosition ??
           selectedLocationFromProvider?.initialCenter ??
@@ -808,7 +801,6 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (centerTarget != null && _isMapReady && mounted) {
-      // Check centerTarget for null
       _mapController.move(centerTarget, 17.0);
     } else {
       _showSnackbar("Keine Position verfügbar oder Karte nicht bereit.");
@@ -897,7 +889,7 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Ln 898: searchCardTopPadding etc. are already const.
+    // Ln 898: These are already const.
     const double searchCardTopPadding = 10.0;
     const double searchInputRowHeight = 50.0;
     const double cardInternalVerticalPadding = 8.0;
