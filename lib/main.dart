@@ -97,21 +97,14 @@ class MapScreenState extends State<MapScreen> {
   LatLng? _startLatLng; // Für den expliziten Startpunkt
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
 
-  // Die alten _searchController und _searchFocusNode werden nicht mehr benötigt
-
   @override
   void initState() {
     super.initState();
 
-    // PHASE 1, SCHRITT 1.3: Initialisierung und Listener für neue Controller/FocusNodes
     _startSearchController.addListener(_onStartSearchChanged);
     _endSearchController.addListener(_onEndSearchChanged);
     _startFocusNode.addListener(_onStartFocusChanged);
     _endFocusNode.addListener(_onEndFocusChanged);
-
-    // Alten Listener entfernen (ersetzt durch obige)
-    // _searchController.addListener(_onSearchChanged);
-    // _searchFocusNode.addListener(_onSearchFocusChanged);
 
     if (kDebugMode) {
       print(
@@ -146,32 +139,19 @@ class MapScreenState extends State<MapScreen> {
     _mapController.dispose();
     _positionStreamSubscription?.cancel();
 
-    // PHASE 1, SCHRITT 1.3: Neue Controller und FocusNodes entsorgen
-    _startSearchController
-        .removeListener(_onStartSearchChanged); // Listener entfernen
+    _startSearchController.removeListener(_onStartSearchChanged);
     _startSearchController.dispose();
-    _endSearchController
-        .removeListener(_onEndSearchChanged); // Listener entfernen
+    _endSearchController.removeListener(_onEndSearchChanged);
     _endSearchController.dispose();
-    _startFocusNode.removeListener(_onStartFocusChanged); // Listener entfernen
+    _startFocusNode.removeListener(_onStartFocusChanged);
     _startFocusNode.dispose();
-    _endFocusNode.removeListener(_onEndFocusChanged); // Listener entfernen
+    _endFocusNode.removeListener(_onEndFocusChanged);
     _endFocusNode.dispose();
 
-    // Alte Controller und FocusNodes entfernen
-    // _searchController.removeListener(_onSearchChanged);
-    // _searchController.dispose();
-    // _searchFocusNode.removeListener(_onSearchFocusChanged);
-    // _searchFocusNode.dispose();
     super.dispose();
   }
 
-  // Platzhalter für Listener-Methoden (Logik folgt in Phase 3)
   void _onStartSearchChanged() {
-    // Logik für Änderungen im Start-Suchfeld (wird in Phase 3 implementiert)
-    // Vorerst eine Basis-Suchlogik, die _searchResults aktualisiert.
-    // Die alte _onSearchChanged Logik kann hier als Basis dienen,
-    // aber _showSearchResults muss spezifisch für das Startfeld gehandhabt werden.
     if (!mounted) return;
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
@@ -185,8 +165,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onEndSearchChanged() {
-    // Logik für Änderungen im Ziel-Suchfeld (wird in Phase 3 implementiert)
-    // Vorerst eine Basis-Suchlogik, die _searchResults aktualisiert.
     if (!mounted) return;
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
@@ -211,28 +189,31 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onStartFocusChanged() {
-    // Logik für Fokusänderungen des Start-Suchfelds (wird in Phase 3 implementiert)
     if (!mounted) return;
     final bool hasFocus = _startFocusNode.hasFocus;
     setStateIfMounted(() {
       if (hasFocus) {
         _activeSearchField = ActiveSearchField.start;
-        // Suchergebnisse nur anzeigen, wenn auch Text da ist
         _showSearchResults =
             _startSearchController.text.isNotEmpty && _searchResults.isNotEmpty;
       } else {
-        // Optional: Suchergebnisse ausblenden, wenn Fokus verloren geht und keine Auswahl erfolgte
-        // Dies wird feiner in _selectFeatureAndSetPoint gehandhabt
-        if (_activeSearchField == ActiveSearchField.start) {
-          // _activeSearchField = ActiveSearchField.none; // Wird später genauer gesteuert
-          // _showSearchResults = false;
-        }
+        // Verhindern, dass Suchergebnisse offen bleiben, wenn Fokus verloren geht,
+        // außer eine Auswahl wird gerade getroffen (was _selectFeatureAndSetPoint handhabt)
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted &&
+              !_startFocusNode.hasFocus &&
+              _activeSearchField == ActiveSearchField.start) {
+            setStateIfMounted(() {
+              _showSearchResults = false;
+              // _activeSearchField = ActiveSearchField.none; // Nur wenn keine Auswahl getätigt wird
+            });
+          }
+        });
       }
     });
   }
 
   void _onEndFocusChanged() {
-    // Logik für Fokusänderungen des Ziel-Suchfelds (wird in Phase 3 implementiert)
     if (!mounted) return;
     final bool hasFocus = _endFocusNode.hasFocus;
     setStateIfMounted(() {
@@ -241,64 +222,19 @@ class MapScreenState extends State<MapScreen> {
         _showSearchResults =
             _endSearchController.text.isNotEmpty && _searchResults.isNotEmpty;
       } else {
-        if (_activeSearchField == ActiveSearchField.end) {
-          // _activeSearchField = ActiveSearchField.none;
-          // _showSearchResults = false;
-        }
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted &&
+              !_endFocusNode.hasFocus &&
+              _activeSearchField == ActiveSearchField.end) {
+            setStateIfMounted(() {
+              _showSearchResults = false;
+              // _activeSearchField = ActiveSearchField.none;
+            });
+          }
+        });
       }
     });
   }
-
-  // Alte Such- und Fokus-Handler (werden durch neue Logik ersetzt)
-  /*
-  void _onSearchChanged() {
-    if (!mounted) {
-      return;
-    }
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final List<SearchableFeature> currentSearchableFeatures =
-        locationProvider.currentSearchableFeatures;
-
-    final query = _searchController.text.toLowerCase().trim();
-    List<SearchableFeature> results = [];
-
-    if (query.isNotEmpty && currentSearchableFeatures.isNotEmpty) {
-      results = currentSearchableFeatures.where((feature) {
-        return feature.name.toLowerCase().contains(query) ||
-            feature.type.toLowerCase().contains(query);
-      }).toList();
-    }
-    setStateIfMounted(() {
-      _searchResults = results;
-      _showSearchResults =
-          _searchFocusNode.hasFocus && results.isNotEmpty && query.isNotEmpty;
-    });
-  }
-
-  void _onSearchFocusChanged() {
-    if (!mounted) {
-      return;
-    }
-    final bool hasFocus = _searchFocusNode.hasFocus;
-    final bool hasText = _searchController.text.isNotEmpty;
-    final bool hasResults = _searchResults.isNotEmpty;
-    if (kDebugMode) {
-      print(
-          "<<< _onSearchFocusChanged: hasFocus: $hasFocus, hasText: $hasText, hasResults: $hasResults. Current _showSearchResults: $_showSearchResults >>>");
-    }
-    if (hasFocus) {
-      setStateIfMounted(() {
-        _showSearchResults = hasText && hasResults;
-      });
-    } else {
-      if (kDebugMode) {
-        print(
-            "<<< _onSearchFocusChanged: Focus LOST. Intentionally NOT changing _showSearchResults state here. Waiting for item selection or map tap. >>>");
-      }
-    }
-  }
-  */
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocation) {
     if (newLocation == null) {
@@ -320,13 +256,13 @@ class MapScreenState extends State<MapScreen> {
       _routePolyline = null;
       _startMarker = null;
       _endMarker = null;
-      _startLatLng = null; // Neues Start LatLng auch zurücksetzen
+      _startLatLng = null;
       _endLatLng = null;
-      _startSearchController.clear(); // Neues Suchfeld leeren
-      _endSearchController.clear(); // Neues Suchfeld leeren
+      _startSearchController.clear();
+      _endSearchController.clear();
       _searchResults = [];
       _showSearchResults = false;
-      _activeSearchField = ActiveSearchField.none; // Aktives Feld zurücksetzen
+      _activeSearchField = ActiveSearchField.none;
     });
 
     if (_isMapReady && mounted) {
@@ -377,9 +313,6 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() {
       _currentGpsPosition = null;
       _currentLocationMarker = null;
-      // Ggf. auch _startLatLng zurücksetzen, wenn es auf GPS basiert und GPS neu initialisiert wird
-      // Dies hängt von der späteren Logik für "Aktueller Standort" ab.
-      // Fürs Erste lassen wir _startLatLng unberührt, es sei denn, es wird explizit gelöscht.
     });
     final LatLng activeInitialCenterForMock = location.initialCenter;
 
@@ -404,15 +337,8 @@ class MapScreenState extends State<MapScreen> {
                 "<<< _initializeGpsOrMock (mock): Karte bewegt, da _isMapReady true. >>>");
           }
         }
-        // Wenn Start- und Zielpunkt definiert sind, Route neu berechnen
         if (_startLatLng != null && _endLatLng != null) {
           _calculateAndDisplayRoute();
-        } else if (_endLatLng != null &&
-            _activeSearchField != ActiveSearchField.start) {
-          // Wenn nur Ziel definiert ist und wir nicht gerade den Start aktiv suchen,
-          // und der Startpunkt implizit die aktuelle (Mock-)Position sein soll (alte Logik).
-          // Dies wird durch explizites _startLatLng obsolet.
-          // _calculateAndDisplayRoute(); // Diese Zeile ist in der neuen Logik überflüssig
         }
       }
     } else {
@@ -491,49 +417,55 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (_activeSearchField == ActiveSearchField.start) {
-      _startSearchController.text = feature.name; // Text setzen
-      // Listener kurz entfernen, um Endlosschleife zu vermeiden, oder value direkt setzen
-      // _startSearchController.removeListener(_onStartSearchChanged);
-      // _startSearchController.text = feature.name;
-      // _startSearchController.addListener(_onStartSearchChanged);
+    FocusNode? currentFocusNode;
+    TextEditingController? currentController;
 
+    if (_activeSearchField == ActiveSearchField.start) {
+      currentFocusNode = _startFocusNode;
+      currentController = _startSearchController;
       setStateIfMounted(() {
         _startLatLng = feature.center;
         _startMarker = _createMarker(feature.center, Colors.green,
             Icons.flag_circle, "Start: ${feature.name}");
-        _startFocusNode.unfocus(); // Fokus entfernen
-        // Optional: Fokus auf das Zielfeld, wenn es leer ist
-        if (_endSearchController.text.isEmpty) {
-          FocusScope.of(context).requestFocus(_endFocusNode);
-          _activeSearchField =
-              ActiveSearchField.end; // Aktiv setzen für nächste Aktion
-        } else {
-          _activeSearchField = ActiveSearchField.none;
-        }
       });
     } else if (_activeSearchField == ActiveSearchField.end) {
-      _endSearchController.text = feature.name; // Text setzen
+      currentFocusNode = _endFocusNode;
+      currentController = _endSearchController;
       setStateIfMounted(() {
         _endLatLng = feature.center;
         _endMarker = _createMarker(feature.center, Colors.red,
             Icons.flag_circle, "Ziel: ${feature.name}");
-        _endFocusNode.unfocus(); // Fokus entfernen
-        // Optional: Fokus auf das Startfeld, wenn es leer ist
-        if (_startSearchController.text.isEmpty) {
-          FocusScope.of(context).requestFocus(_startFocusNode);
-          _activeSearchField = ActiveSearchField.start;
-        } else {
-          _activeSearchField = ActiveSearchField.none;
-        }
       });
     }
 
-    // Suchergebnisse ausblenden und Controller leeren (nur den, der nicht aktiv ausgewählt wurde)
-    // _searchController.clear(); // Alt
-    _searchResults = [];
-    _showSearchResults = false;
-    // _searchFocusNode.unfocus(); // Alt
+    if (currentController != null) {
+      // Um Listener-Schleifen zu vermeiden, den Text direkt über value setzen oder Listener kurz deaktivieren
+      currentController.value = TextEditingValue(
+        text: feature.name,
+        selection: TextSelection.fromPosition(
+            TextPosition(offset: feature.name.length)),
+      );
+    }
+
+    setStateIfMounted(() {
+      _showSearchResults = false;
+      _searchResults = [];
+    });
+
+    currentFocusNode?.unfocus();
+    // Nach Auswahl eines Punktes, das aktive Feld zurücksetzen
+    // und optional den Fokus auf das nächste leere Feld setzen.
+    if (_activeSearchField == ActiveSearchField.start &&
+        _endSearchController.text.isEmpty) {
+      FocusScope.of(context).requestFocus(_endFocusNode);
+      // _activeSearchField = ActiveSearchField.end; // Wird durch den Focus Listener gesetzt
+    } else if (_activeSearchField == ActiveSearchField.end &&
+        _startSearchController.text.isEmpty) {
+      FocusScope.of(context).requestFocus(_startFocusNode);
+      // _activeSearchField = ActiveSearchField.start; // Wird durch den Focus Listener gesetzt
+    } else {
+      _activeSearchField = ActiveSearchField.none;
+    }
 
     if (_startLatLng != null && _endLatLng != null) {
       _calculateAndDisplayRoute();
@@ -622,7 +554,6 @@ class MapScreenState extends State<MapScreen> {
               durationSeconds: 4);
         }
       }
-      // Route neu berechnen, wenn Start- und Zielpunkt definiert sind
       if (_startLatLng != null && _endLatLng != null) {
         _calculateAndDisplayRoute();
       }
@@ -656,12 +587,7 @@ class MapScreenState extends State<MapScreen> {
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
     final bool isLoadingData = locationProvider.isLoadingLocationData;
     final bool isDataReadyForRouting = !isLoadingData && currentGraph != null;
-
     final selectedLocationFromProvider = locationProvider.selectedLocation;
-
-    // Der Startpunkt ist jetzt explizit _startLatLng
-    // Der alte Codeblock für routeStartPoint und startPointType wird für die Logik nicht mehr benötigt,
-    // aber der _startMarker wird bereits über _startLatLng gesetzt.
 
     if (kDebugMode) {
       print(
@@ -684,14 +610,16 @@ class MapScreenState extends State<MapScreen> {
       setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
-    // Überprüfe explizit _startLatLng und _endLatLng
     if (_startLatLng == null || _endLatLng == null) {
       setStateIfMounted(() => _routePolyline = null);
-      if (_startLatLng == null) {
+      if (_startLatLng == null &&
+          _activeSearchField != ActiveSearchField.start) {
+        // Nur anzeigen, wenn nicht gerade aktiv gesucht wird
         _showSnackbar("Startpunkt nicht definiert.");
       }
-      if (_endLatLng == null && _startLatLng != null) {
-        // Nur wenn Start schon da ist, aber Ziel fehlt
+      if (_endLatLng == null &&
+          _startLatLng != null &&
+          _activeSearchField != ActiveSearchField.end) {
         _showSnackbar("Zielpunkt nicht definiert.");
       }
       setStateIfMounted(() => _isCalculatingRoute = false);
@@ -702,8 +630,7 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      final GraphNode? startNode =
-          currentGraph.findNearestNode(_startLatLng!); // Verwende _startLatLng
+      final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
       if (startNode == null || endNode == null) {
@@ -711,8 +638,7 @@ class MapScreenState extends State<MapScreen> {
         setStateIfMounted(() => _routePolyline = null);
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
-        _clearRoute(
-            showConfirmation: false, clearMarkers: false); // Nur Route löschen
+        _clearRoute(showConfirmation: false, clearMarkers: false);
       } else {
         final List<LatLng>? routePoints =
             await RoutingService.findPath(currentGraph, startNode, endNode);
@@ -755,13 +681,18 @@ class MapScreenState extends State<MapScreen> {
     if (!mounted) {
       return;
     }
-    // Suchergebnisse ausblenden, wenn auf Karte getippt wird
+
+    bool hadFocus = _startFocusNode.hasFocus || _endFocusNode.hasFocus;
     if (_startFocusNode.hasFocus) _startFocusNode.unfocus();
     if (_endFocusNode.hasFocus) _endFocusNode.unfocus();
-    setStateIfMounted(() {
-      _showSearchResults = false;
-      // _activeSearchField = ActiveSearchField.none; // Nicht hier zurücksetzen, damit die Logik unten greift
-    });
+
+    // Nur Suchergebnisse ausblenden, wenn sie vorher sichtbar waren oder Fokus bestand
+    if (hadFocus || _showSearchResults) {
+      setStateIfMounted(() {
+        _showSearchResults = false;
+        // _activeSearchField = ActiveSearchField.none; // Nicht hier, da es die Logik unten beeinflusst
+      });
+    }
 
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
@@ -776,29 +707,33 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    // Logik zum Setzen von Start oder Ziel basierend auf _activeSearchField
-    // oder einem Standardverhalten (z.B. immer Ziel setzen, wenn kein Feld aktiv)
+    ActiveSearchField fieldToSetByTap =
+        _activeSearchField; // Behalte das aktive Feld, falls eines aktiv war
 
-    bool pointSet = false;
-
-    if (_activeSearchField == ActiveSearchField.start) {
-      _setPointFromMapTap(latLng, ActiveSearchField.start);
-      pointSet = true;
-    } else if (_activeSearchField == ActiveSearchField.end) {
-      _setPointFromMapTap(latLng, ActiveSearchField.end);
-      pointSet = true;
-    } else {
-      // _activeSearchField == ActiveSearchField.none
-      // Standardverhalten: Ziel setzen, wenn kein Feld aktiv ist.
-      // Oder: Wenn _startLatLng noch nicht gesetzt ist, dann Start setzen, sonst Ziel.
-      if (_startLatLng == null) {
-        _setPointFromMapTap(latLng, ActiveSearchField.start);
+    if (fieldToSetByTap == ActiveSearchField.none) {
+      // Kein Feld war aktiv durch Tastaturfokus
+      if (_startLatLng == null && _startSearchController.text.isEmpty) {
+        // Wenn Start leer, setze Start
+        fieldToSetByTap = ActiveSearchField.start;
+      } else if (_endLatLng == null && _endSearchController.text.isEmpty) {
+        // Sonst, wenn Ziel leer, setze Ziel
+        fieldToSetByTap = ActiveSearchField.end;
       } else {
-        _setPointFromMapTap(latLng, ActiveSearchField.end);
+        // Wenn beide schon was haben (oder per Text gesetzt sind), priorisiere Ziel oder das "logisch nächste"
+        fieldToSetByTap = ActiveSearchField
+            .end; // Standardmäßig Ziel setzen oder letztes gewähltes
       }
-      pointSet = true;
     }
-    if (pointSet && _startLatLng != null && _endLatLng != null) {
+
+    _setPointFromMapTap(latLng, fieldToSetByTap);
+
+    // Nach dem Tap das _activeSearchField zurücksetzen, da der Tap die Aktion beendet.
+    // Es sei denn, man möchte, dass das Feld "aktiv" bleibt für weitere Taps (nicht üblich)
+    setStateIfMounted(() {
+      _activeSearchField = ActiveSearchField.none;
+    });
+
+    if (_startLatLng != null && _endLatLng != null) {
       _calculateAndDisplayRoute();
     }
   }
@@ -812,21 +747,21 @@ class MapScreenState extends State<MapScreen> {
             ? _startSearchController
             : _endSearchController;
 
-    void updateState() {
+    void performUpdate() {
       if (fieldToSet == ActiveSearchField.start) {
         _startLatLng = latLng;
         _startMarker =
             _createMarker(latLng, Colors.green, Icons.flag_circle, pointName);
-        // Listener-Problematik beim Textsetzen beachten
-        _startSearchController.text = pointName;
+        relevantController.text =
+            pointName; // Direkt setzen, Listener-Problematik ist in _onSearchChanged zu lösen
       } else {
+        // ActiveSearchField.end
         _endLatLng = latLng;
         _endMarker =
             _createMarker(latLng, Colors.red, Icons.flag_circle, pointName);
-        _endSearchController.text = pointName;
+        relevantController.text = pointName;
       }
-      // Nach dem Setzen per Map-Tap das aktive Feld zurücksetzen, wenn man nicht explizit im Feld war
-      // _activeSearchField = ActiveSearchField.none; // Handhaben wir außerhalb bei Bedarf
+      _routePolyline = null; // Route löschen, da ein Punkt geändert wurde
     }
 
     bool isOverwriting =
@@ -839,13 +774,18 @@ class MapScreenState extends State<MapScreen> {
           "Alten ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt verwerfen und neuen Punkt auf Karte setzen?",
           () {
         if (!mounted) return;
-        setStateIfMounted(() {
-          _routePolyline = null; // Route löschen, wenn ein Punkt geändert wird
-          updateState();
-        });
+        setStateIfMounted(performUpdate);
+        if (_startLatLng != null && _endLatLng != null) {
+          // Neu berechnen nach Bestätigung
+          _calculateAndDisplayRoute();
+        }
       });
     } else {
-      setStateIfMounted(updateState);
+      setStateIfMounted(performUpdate);
+      if (_startLatLng != null && _endLatLng != null) {
+        // Neu berechnen
+        _calculateAndDisplayRoute();
+      }
     }
   }
 
@@ -857,13 +797,13 @@ class MapScreenState extends State<MapScreen> {
       setStateIfMounted(() {
         _routePolyline = null;
         if (clearMarkers) {
-          _startMarker = null; // Startmarker auch löschen
-          _startLatLng = null; // Start LatLng auch löschen
-          _startSearchController.clear(); // Start-Textfeld leeren
+          _startMarker = null;
+          _startLatLng = null;
+          _startSearchController.clear();
 
           _endMarker = null;
           _endLatLng = null;
-          _endSearchController.clear(); // Ziel-Textfeld leeren
+          _endSearchController.clear();
         }
       });
       _showSnackbar(
@@ -958,7 +898,7 @@ class MapScreenState extends State<MapScreen> {
       SnackBar(
         content: Text(message),
         duration: Duration(seconds: durationSeconds),
-        behavior: SnackBarBehavior.fixed, // Geändert für bessere Sichtbarkeit
+        behavior: SnackBarBehavior.fixed,
       ),
     );
   }
@@ -1014,17 +954,23 @@ class MapScreenState extends State<MapScreen> {
 
     List<Marker> activeMarkers = [];
     if (_currentLocationMarker != null) {
-      // Marker für aktuelle Position
       activeMarkers.add(_currentLocationMarker!);
     }
     if (_startMarker != null) {
-      // Expliziter Startmarker
       activeMarkers.add(_startMarker!);
     }
     if (_endMarker != null) {
-      // Expliziter Endmarker
       activeMarkers.add(_endMarker!);
     }
+
+    const double searchCardTopPadding = 10.0;
+    const double searchInputHeight = 56.0;
+    const double searchCardItemSpacing = 0; // Divider height is 1
+    final double searchUICardHeight = (searchInputHeight * 2) +
+        (searchCardItemSpacing * 1) +
+        16; // 2 TextFields, 1 Divider, Card Padding
+    final double searchResultsTopPosition =
+        searchCardTopPadding + searchUICardHeight + 5;
 
     return Scaffold(
       appBar: AppBar(
@@ -1101,11 +1047,9 @@ class MapScreenState extends State<MapScreen> {
                     (_startFocusNode.hasFocus || _endFocusNode.hasFocus)) {
                   if (_startFocusNode.hasFocus) _startFocusNode.unfocus();
                   if (_endFocusNode.hasFocus) _endFocusNode.unfocus();
-                  if (mounted) {
-                    setStateIfMounted(() => _showSearchResults = false);
-                  }
+                  // Das Ausblenden der Suchergebnisse wird jetzt von den FocusListenern (mit Verzögerung) gehandhabt
                 } else if (hasGesture && _showSearchResults) {
-                  setStateIfMounted(() => _showSearchResults = false);
+                  // setStateIfMounted(() => _showSearchResults = false); // Auch hier, Fokus-Listener sind primär
                 }
               },
             ),
@@ -1121,11 +1065,8 @@ class MapScreenState extends State<MapScreen> {
                 MarkerLayer(markers: activeMarkers),
             ],
           ),
-          // UI für Start- und Ziel-Textfelder wird in Phase 2 hinzugefügt
-          // Das alte einzelne Suchfeld wird entfernt (oder auskommentiert, wenn es später als Basis dient)
-          /*
           Positioned(
-            top: 10,
+            top: searchCardTopPadding,
             left: 10,
             right: 10,
             child: Card(
@@ -1133,70 +1074,145 @@ class MapScreenState extends State<MapScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8.0)),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: TextField(
-                  controller: _searchController, // Wird durch _startSearchController / _endSearchController ersetzt
-                  focusNode: _searchFocusNode,   // Wird durch _startFocusNode / _endFocusNode ersetzt
-                  decoration: InputDecoration(
-                    hintText:
-                        "Suche in ${selectedLocationFromUI?.name ?? 'aktuellem Standort'}...",
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty // Anpassen für neue Controller
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () => _searchController.clear(), // Anpassen
-                          )
-                        : null,
-                    border: InputBorder.none,
-                  ),
-                  enabled: isUiReady,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _startSearchController,
+                            focusNode: _startFocusNode,
+                            decoration: InputDecoration(
+                              hintText: "Startpunkt wählen",
+                              prefixIcon: const Icon(Icons.trip_origin),
+                              suffixIcon: _startSearchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      iconSize: 20,
+                                      onPressed: () {
+                                        _startSearchController.clear();
+                                        setStateIfMounted(() {
+                                          _startLatLng = null;
+                                          _startMarker = null;
+                                          _routePolyline = null;
+                                          _searchResults = [];
+                                          _showSearchResults = false;
+                                        });
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                            enabled: isUiReady,
+                          ),
+                        ),
+                        Tooltip(
+                          message: "Aktuellen Standort als Start verwenden",
+                          child: IconButton(
+                            icon: const Icon(Icons.my_location),
+                            color: Theme.of(context).colorScheme.primary,
+                            iconSize: 22,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: isUiReady
+                                ? () {
+                                    if (_currentGpsPosition != null) {
+                                      setStateIfMounted(() {
+                                        _startLatLng = _currentGpsPosition;
+                                        _startMarker = _createMarker(
+                                            _startLatLng!,
+                                            Colors.green,
+                                            Icons.flag_circle,
+                                            _useMockLocation
+                                                ? "Start: Mock Position (${selectedLocationFromUI?.name ?? ''})"
+                                                : "Start: Echte GPS Position");
+                                        _startSearchController.text =
+                                            _useMockLocation
+                                                ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
+                                                : "Aktueller Standort";
+                                        if (_startFocusNode.hasFocus)
+                                          _startFocusNode.unfocus();
+                                        _showSearchResults = false;
+                                        _activeSearchField =
+                                            ActiveSearchField.none;
+                                      });
+                                      if (_startLatLng != null &&
+                                          _endLatLng != null) {
+                                        _calculateAndDisplayRoute();
+                                      }
+                                    } else {
+                                      _showSnackbar(
+                                          "Aktuelle Position nicht verfügbar.");
+                                    }
+                                  }
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 1, thickness: 1),
+                    TextField(
+                      controller: _endSearchController,
+                      focusNode: _endFocusNode,
+                      decoration: InputDecoration(
+                        hintText: "Ziel wählen",
+                        prefixIcon: const Icon(Icons.flag_outlined),
+                        suffixIcon: _endSearchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                iconSize: 20,
+                                onPressed: () {
+                                  _endSearchController.clear();
+                                  setStateIfMounted(() {
+                                    _endLatLng = null;
+                                    _endMarker = null;
+                                    _routePolyline = null;
+                                    _searchResults = [];
+                                    _showSearchResults = false;
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                      enabled: isUiReady,
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          */
-          // Die Suchergebnisliste muss auch angepasst werden, um unter dem aktiven Feld zu erscheinen (Phase 2)
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
-              // Positionierung muss dynamisch sein (unter Start- oder Zielfeld)
-              top:
-                  75, // Dies ist nur ein Platzhalterwert, muss in Phase 2 angepasst werden
+              top: searchResultsTopPosition,
               left: 10,
               right: 10,
-              child: GestureDetector(
-                onTap: () {
-                  // Sollte Suchergebnisse schließen
-                  if (mounted) {
-                    if (_startFocusNode.hasFocus) _startFocusNode.unfocus();
-                    if (_endFocusNode.hasFocus) _endFocusNode.unfocus();
-                    setStateIfMounted(() => _showSearchResults = false);
-                  }
-                },
-                behavior: HitTestBehavior
-                    .opaque, // Damit der Tap auf den Hintergrund wirkt
-                child: Card(
-                  elevation: 4.0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0)),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.of(context).size.height * 0.35,
-                    ),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final feature = _searchResults[index];
-                        return ListTile(
-                          leading: Icon(_getIconForFeatureType(feature.type)),
-                          title: Text(feature.name),
-                          subtitle: Text("Typ: ${feature.type}"),
-                          onTap: () => _selectFeatureAndSetPoint(
-                              feature), // Muss _activeSearchField berücksichtigen
-                          dense: true,
-                        );
-                      },
-                    ),
+              child: Card(
+                elevation: 4.0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0)),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.3,
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      final feature = _searchResults[index];
+                      return ListTile(
+                        leading: Icon(_getIconForFeatureType(feature.type)),
+                        title: Text(feature.name),
+                        subtitle: Text("Typ: ${feature.type}"),
+                        onTap: () => _selectFeatureAndSetPoint(feature),
+                        dense: true,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -1234,7 +1250,6 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // "Alles löschen" Button (inkl. Start- und Zielpunkt)
           if (isUiReady &&
               (_routePolyline != null ||
                   _startMarker != null ||
@@ -1242,12 +1257,11 @@ class MapScreenState extends State<MapScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: FloatingActionButton.small(
-                heroTag: "clearAllBtn", // Eindeutiger HeroTag
+                heroTag: "clearAllBtn",
                 onPressed: () =>
                     _clearRoute(showConfirmation: true, clearMarkers: true),
                 tooltip: 'Route, Start & Ziel löschen',
-                child: const Icon(
-                    Icons.delete_forever_outlined), // Ggf. passenderes Icon
+                child: const Icon(Icons.delete_forever_outlined),
               ),
             ),
           Padding(
