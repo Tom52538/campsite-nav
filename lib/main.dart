@@ -265,7 +265,6 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
     });
     if (_isMapReady && mounted) {
-      // Ln 393: newLocation.initialCenter ist non-nullable. '!' entfernt.
       _mapController.move(newLocation.initialCenter, 17.0);
     }
     if (isActualChange) {
@@ -376,9 +375,6 @@ class MapScreenState extends State<MapScreen> {
     } else {
       if (_currentGpsPosition != null) {
         const distance = Distance();
-        // Ln 443/445: Analyzer warning "unnecessary_null_comparison".
-        // Die äußere if (_currentGpsPosition != null) ist die entscheidende Null-Prüfung.
-        // Die Verwendung von _currentGpsPosition! innerhalb dieses geschützten Blocks ist korrekt.
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveToNullSafe = _currentGpsPosition!;
@@ -391,9 +387,6 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (mounted && targetToMoveToNullSafe != null) {
-      // Ln 456/458: _mapController ist non-nullable.
-      // targetToMoveToNullSafe wird hier mit ! verwendet, da move LatLng erwartet und die Logik oben sicherstellt,
-      // dass es nicht null ist, wenn location nicht null war.
       _mapController.move(targetToMoveToNullSafe, 17.0);
     }
   }
@@ -605,8 +598,6 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      // Ln 585/587: After the null check above, _startLatLng and _endLatLng are non-null.
-      // '!' is removed as it's unnecessary.
       final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
@@ -840,7 +831,7 @@ class MapScreenState extends State<MapScreen> {
       SnackBar(
         content: Text(message),
         duration: Duration(seconds: durationSeconds),
-        behavior: SnackBarBehavior.fixed,
+        behavior: SnackBarBehavior.fixed, // War früher .floating
       ),
     );
   }
@@ -872,6 +863,63 @@ class MapScreenState extends State<MapScreen> {
     );
   }
 
+  // NEUE METHODE zum Tauschen von Start und Ziel
+  void _swapStartAndEnd() {
+    if (!mounted) return;
+
+    // Nur fortfahren, wenn es etwas zu tauschen gibt
+    if (_startLatLng == null && _endLatLng == null) {
+      _showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
+          durationSeconds: 3);
+      return;
+    }
+
+    setStateIfMounted(() {
+      // LatLng tauschen
+      final LatLng? tempLatLng = _startLatLng;
+      _startLatLng = _endLatLng;
+      _endLatLng = tempLatLng;
+
+      // TextController-Werte tauschen
+      final String tempStartText = _startSearchController.text;
+      _startSearchController.text = _endSearchController.text;
+      _endSearchController.text = tempStartText;
+
+      // Start-Marker neu erstellen oder löschen
+      if (_startLatLng != null) {
+        _startMarker = _createMarker(
+          _startLatLng!,
+          Colors.green,
+          Icons.flag_circle,
+          "Start: ${_startSearchController.text.isNotEmpty ? _startSearchController.text : 'Gesetzter Punkt'}",
+        );
+      } else {
+        _startMarker = null;
+      }
+
+      // Ziel-Marker neu erstellen oder löschen
+      if (_endLatLng != null) {
+        _endMarker = _createMarker(
+          _endLatLng!,
+          Colors.red,
+          Icons.flag_circle,
+          "Ziel: ${_endSearchController.text.isNotEmpty ? _endSearchController.text : 'Gesetzter Punkt'}",
+        );
+      } else {
+        _endMarker = null;
+      }
+
+      // Route neu berechnen, wenn beide Punkte gesetzt sind, sonst löschen
+      if (_startLatLng != null && _endLatLng != null) {
+        _calculateAndDisplayRoute();
+      } else {
+        _routePolyline = null;
+      }
+    });
+
+    _showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
+  }
+
   @override
   Widget build(BuildContext context) {
     final locationProvider = Provider.of<LocationProvider>(context);
@@ -893,12 +941,16 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Ln 896/898: These are already const.
     const double searchCardTopPadding = 10.0;
-    const double searchInputRowHeight = 50.0;
+    const double searchInputRowHeight = 50.0; // Höhe pro Suchfeld-Zeile
     const double cardInternalVerticalPadding = 8.0;
-    final double searchUICardHeight =
-        (searchInputRowHeight * 2) + 1.0 + (cardInternalVerticalPadding * 2);
+    // Die Höhe der Such-UI Karte: 2x Suchfeld + SwapButton + Divider + Padding
+    // Die Höhe des SwapButtons wird hier nicht explizit addiert, da sie in den Constraints des IconButton liegt
+    // und das Layout der Column das handhabt. Die Divider Höhe ist 1px.
+    final double searchUICardHeight = (searchInputRowHeight * 2) +
+        1.0 +
+        (cardInternalVerticalPadding * 2) +
+        kMinInteractiveDimension; // kMinInteractiveDimension für den IconButton
     final double searchResultsTopPosition =
         searchCardTopPadding + searchUICardHeight + 5;
 
@@ -1090,6 +1142,18 @@ class MapScreenState extends State<MapScreen> {
                         ],
                       ),
                     ),
+                    // HIER WIRD DER SWAP BUTTON EINGEFÜGT
+                    Tooltip(
+                      message: "Start und Ziel tauschen",
+                      child: IconButton(
+                        icon: Icon(Icons.swap_vert,
+                            color: Theme.of(context).colorScheme.primary),
+                        onPressed: (isUiReady &&
+                                (_startLatLng != null || _endLatLng != null))
+                            ? _swapStartAndEnd
+                            : null,
+                      ),
+                    ),
                     const Divider(height: 1, thickness: 1),
                     SizedBox(
                       height: searchInputRowHeight,
@@ -1128,7 +1192,8 @@ class MapScreenState extends State<MapScreen> {
           ),
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
-              top: searchResultsTopPosition,
+              top:
+                  searchResultsTopPosition, // Dynamische Positionierung basierend auf der Höhe der Suchkarte
               left: 10,
               right: 10,
               child: Card(
