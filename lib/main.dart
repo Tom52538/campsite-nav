@@ -265,9 +265,8 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
     });
     if (_isMapReady && mounted) {
-      final LatLng targetToMoveTo =
-          newLocation.initialCenter; // Ln 395: targetToMoveTo is LatLng
-      _mapController.move(targetToMoveTo, 17.0);
+      // newLocation.initialCenter is LatLng (non-nullable)
+      _mapController.move(newLocation.initialCenter, 17.0); // Ln 395 area
     }
     if (isActualChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -371,16 +370,19 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    LatLng
-        targetToMoveTo; // Changed to non-nullable LatLng as it's always assigned a non-null value.
+    LatLng targetToMoveTo;
     if (_useMockLocation) {
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
+        // This guard is essential
         const distance = Distance();
-        // Ln 445 context: _currentGpsPosition is non-null here due to the guard.
-        // The warning unnecessary_null_comparison might refer to an implicit check.
-        // The code is logically sound here.
+        // Ln 445/446 area: Inside this block, _currentGpsPosition is confirmed non-null.
+        // The analyzer warning "unnecessary_null_comparison" for "operand can't be null"
+        // might refer to _currentGpsPosition! itself if it thinks the '!' is a comparison.
+        // However, '!' is an assertion. If it means the result of distance() or the comparison
+        // with centerOnGpsMaxDistanceMeters is always true, that's a different issue.
+        // The code relies on _currentGpsPosition being non-null here.
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveTo = _currentGpsPosition!;
@@ -392,7 +394,8 @@ class MapScreenState extends State<MapScreen> {
       }
     }
     if (mounted) {
-      // Ln 458 context: _mapController is final, non-nullable. No ?. needed.
+      // Ln 458/459 area: _mapController is final, non-nullable. No ?. needed.
+      // targetToMoveTo is LatLng (non-nullable), so no ! needed here.
       _mapController.move(targetToMoveTo, 17.0);
     }
   }
@@ -604,7 +607,9 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      // Ln 588: _startLatLng is non-null here, so ! is unnecessary.
+      // Ln 588 area: After the guard (_startLatLng == null || _endLatLng == null),
+      // _startLatLng and _endLatLng are guaranteed non-null.
+      // So, the '!' non-null assertion operator is unnecessary.
       final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
@@ -793,7 +798,7 @@ class MapScreenState extends State<MapScreen> {
     }
     final selectedLocationFromProvider =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
-    LatLng? centerTarget;
+    LatLng? centerTarget; // Use LatLng? as _currentGpsPosition is nullable
     if (_useMockLocation) {
       centerTarget = _currentGpsPosition ??
           selectedLocationFromProvider?.initialCenter ??
@@ -803,6 +808,7 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (centerTarget != null && _isMapReady && mounted) {
+      // Check centerTarget for null
       _mapController.move(centerTarget, 17.0);
     } else {
       _showSnackbar("Keine Position verfügbar oder Karte nicht bereit.");
@@ -891,7 +897,7 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Ln 899: Corrected `final` to `const` where applicable
+    // Ln 898: searchCardTopPadding etc. are already const.
     const double searchCardTopPadding = 10.0;
     const double searchInputRowHeight = 50.0;
     const double cardInternalVerticalPadding = 8.0;
@@ -1182,30 +1188,28 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Ln 1002 area: This if condition was corrected to use curly braces properly.
+          // Ln 1002 area: Ensured Icons are const.
           if (isUiReady &&
               (_routePolyline != null ||
                   _startMarker != null ||
                   _endMarker != null))
             Padding(
-              // This Padding itself cannot be const if onPressed is not.
-              padding: const EdgeInsets.only(bottom: 8.0), // This can be const
+              padding: const EdgeInsets.only(bottom: 8.0),
               child: FloatingActionButton.small(
                 heroTag: "clearAllBtn",
                 onPressed: () =>
                     _clearRoute(showConfirmation: true, clearMarkers: true),
                 tooltip: 'Route, Start & Ziel löschen',
-                child: const Icon(
-                    Icons.delete_forever_outlined), // Icon can be const
+                child: const Icon(Icons.delete_forever_outlined),
               ),
             ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8.0), // This can be const
+            padding: const EdgeInsets.only(bottom: 8.0),
             child: FloatingActionButton.small(
               heroTag: "centerBtn",
               onPressed: isUiReady ? _centerOnGps : null,
               tooltip: 'Auf aktuelle Position zentrieren',
-              child: const Icon(Icons.my_location), // Icon can be const
+              child: const Icon(Icons.my_location),
             ),
           ),
         ],
