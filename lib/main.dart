@@ -1,7 +1,7 @@
 // lib/main.dart
-// [Start lib/main.dart mit Distanz/Zeitanzeige Implementierung]
+// [Start lib/main.dart mit Linter-Korrekturen]
 import 'dart:async';
-import 'dart:math'; // For rounding distance
+// import 'dart:math'; // Entfernt: Unused import
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -571,6 +571,7 @@ class MapScreenState extends State<MapScreen> {
         Provider.of<LocationProvider>(context, listen: false);
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
     final bool isLoadingData = locationProvider.isLoadingLocationData;
+    // Beibehalten der expliziten currentGraph != null Prüfung für Klarheit und Sicherheit
     final bool isDataReadyForRouting = !isLoadingData && currentGraph != null;
     final selectedLocationFromProvider = locationProvider.selectedLocation;
 
@@ -589,11 +590,13 @@ class MapScreenState extends State<MapScreen> {
     });
 
     if (!isDataReadyForRouting) {
+      // Verwendet die kombinierte Prüfung
       _showErrorDialog(
           "Kartendaten für ${selectedLocationFromProvider?.name ?? ''} nicht bereit.");
       setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
+    // Da isDataReadyForRouting currentGraph != null prüft, ist currentGraph! hier sicher.
     if (currentGraph!.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
@@ -612,7 +615,8 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() => _isCalculatingRoute = true);
 
     try {
-      currentGraph.resetAllNodeCosts();
+      currentGraph
+          .resetAllNodeCosts(); // currentGraph ist hier sicher nicht null
       final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
@@ -629,6 +633,7 @@ class MapScreenState extends State<MapScreen> {
           return;
         }
         setStateIfMounted(() {
+          // Beibehalten der expliziten routePoints != null Prüfung
           if (routePoints != null && routePoints.isNotEmpty) {
             _routePolyline = Polyline(
                 points: routePoints,
@@ -830,7 +835,8 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showErrorDialog(String message) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+    if (!mounted || (ModalRoute.of(context).isCurrent == false)) {
+      // Korrigiert: ?. zu .
       return;
     }
     showDialog(
@@ -865,7 +871,8 @@ class MapScreenState extends State<MapScreen> {
 
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+    if (!mounted || (ModalRoute.of(context).isCurrent == false)) {
+      // Korrigiert: ?. zu .
       return;
     }
     showDialog(
@@ -962,11 +969,12 @@ class MapScreenState extends State<MapScreen> {
 
     final bool isLoading = locationProvider.isLoadingLocationData;
     final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
+    // Beibehalten der expliziten currentGraph != null Prüfung für Klarheit und Sicherheit
     final bool isUiReady = !isLoading && currentGraph != null;
 
     List<Marker> activeMarkers = [];
     if (_currentLocationMarker != null) {
-      activeMarkers.add(_currentLocationMarker!);
+      activeMarkers.add(_currentLocationMarker); // Korrigiert: ! entfernt
     }
     if (_startMarker != null) {
       activeMarkers.add(_startMarker!);
@@ -1107,10 +1115,8 @@ class MapScreenState extends State<MapScreen> {
                             : Border.all(color: Colors.transparent, width: 1.5),
                         borderRadius: BorderRadius.circular(6.0),
                         color: _startFocusNode.hasFocus
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.05)
+                            ? Theme.of(context).colorScheme.primary.withAlpha(
+                                (255 * 0.05).round()) // Korrigiert: withOpacity
                             : null,
                       ),
                       child: SizedBox(
@@ -1244,10 +1250,8 @@ class MapScreenState extends State<MapScreen> {
                             : Border.all(color: Colors.transparent, width: 1.5),
                         borderRadius: BorderRadius.circular(6.0),
                         color: _endFocusNode.hasFocus
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.05)
+                            ? Theme.of(context).colorScheme.primary.withAlpha(
+                                (255 * 0.05).round()) // Korrigiert: withOpacity
                             : null,
                       ),
                       child: SizedBox(
@@ -1319,6 +1323,7 @@ class MapScreenState extends State<MapScreen> {
                                       size: 18),
                                   const SizedBox(width: 4),
                                   Text(
+                                    // Beibehalten der Klammern hier für Klarheit mit dem Tilde-Präfix
                                     "~ ${_routeTimeMinutes} min",
                                     style: TextStyle(
                                         color: Theme.of(context)
@@ -1382,6 +1387,7 @@ class MapScreenState extends State<MapScreen> {
                   const CircularProgressIndicator(color: Colors.white),
                   const SizedBox(height: 16),
                   Text(
+                      // Beibehalten der Klammern hier für Klarheit
                       "Lade Kartendaten für ${selectedLocationFromUI?.name ?? '...'}...",
                       textAlign: TextAlign.center,
                       style:
@@ -1460,4 +1466,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit Distanz/Zeitanzeige Implementierung]
+// [Ende lib/main.dart mit Linter-Korrekturen]
