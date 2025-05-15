@@ -270,7 +270,7 @@ class MapScreenState extends State<MapScreen> {
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
       if (_currentGpsPosition != null) {
-        final distance = Distance(); // Korrigiert
+        final distance = const Distance(); // Korrigiert
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveTo = _currentGpsPosition;
@@ -438,7 +438,7 @@ class MapScreenState extends State<MapScreen> {
       }
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
-        final distance = Distance(); // Korrigiert
+        final distance = const Distance(); // Korrigiert
         final double meters =
             distance(centerForDistanceCheck, _currentGpsPosition!);
         if (meters <= centerOnGpsMaxDistanceMeters) {
