@@ -265,7 +265,7 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
     });
     if (_isMapReady && mounted) {
-      // Ln 393: newLocation.initialCenter is non-nullable. Remove '!'
+      // Ln 393: Korrektur - newLocation.initialCenter ist non-nullable, '!' entfernt.
       _mapController.move(newLocation.initialCenter, 17.0);
     }
     if (isActualChange) {
@@ -376,8 +376,9 @@ class MapScreenState extends State<MapScreen> {
     } else {
       if (_currentGpsPosition != null) {
         const distance = Distance();
-        // Ln 443: Analyzer warning "unnecessary_null_comparison". The check _currentGpsPosition != null is essential.
-        // The use of _currentGpsPosition! inside this guarded block is correct.
+        // Ln 443/445: Analyzer warning "unnecessary_null_comparison".
+        // The outer if (_currentGpsPosition != null) is the crucial null check.
+        // The '!' on _currentGpsPosition! inside is correct given this guard.
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveToNullSafe = _currentGpsPosition!;
@@ -390,8 +391,7 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (mounted && targetToMoveToNullSafe != null) {
-      // Ensure targetToMoveToNullSafe is not null before calling move
-      // Ln 456: _mapController is non-nullable.
+      // Ln 456/458: _mapController is non-nullable. targetToMoveToNullSafe! is used due to its nullable declaration.
       _mapController.move(targetToMoveToNullSafe, 17.0);
     }
   }
@@ -603,8 +603,8 @@ class MapScreenState extends State<MapScreen> {
 
     try {
       currentGraph.resetAllNodeCosts();
-      // Ln 585: After the null check above, _startLatLng and _endLatLng are non-null.
-      // Thus, the '!' non-null assertion is unnecessary.
+      // Ln 585/587: After the null check above, _startLatLng and _endLatLng are non-null.
+      // '!' is unnecessary.
       final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
       final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
@@ -891,7 +891,7 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Ln 896: These are already const and should remain so.
+    // Ln 896/898: These are already const and should remain so.
     const double searchCardTopPadding = 10.0;
     const double searchInputRowHeight = 50.0;
     const double cardInternalVerticalPadding = 8.0;
@@ -1182,7 +1182,7 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Ln 1002 area: Ensured Icons and Paddings are const where possible.
+          // Ln 1002: Ensured Icons and Paddings are const where possible.
           if (isUiReady &&
               (_routePolyline != null ||
                   _startMarker != null ||
