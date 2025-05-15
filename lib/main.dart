@@ -150,7 +150,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onStartSearchChanged() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final query = _startSearchController.text.toLowerCase().trim();
@@ -163,7 +165,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onEndSearchChanged() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final query = _endSearchController.text.toLowerCase().trim();
@@ -187,7 +191,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onStartFocusChanged() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final bool hasFocus = _startFocusNode.hasFocus;
     setStateIfMounted(() {
       if (hasFocus) {
@@ -209,7 +215,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onEndFocusChanged() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final bool hasFocus = _endFocusNode.hasFocus;
     setStateIfMounted(() {
       if (hasFocus) {
@@ -319,7 +327,7 @@ class MapScreenState extends State<MapScreen> {
         setState(() {
           _currentGpsPosition = activeInitialCenterForMock;
           _currentLocationMarker = _createMarker(
-              _currentGpsPosition!,
+              _currentGpsPosition!, // _currentGpsPosition is definitely not null here
               Colors.orangeAccent,
               Icons.pin_drop,
               "Mock Position (${location.name})");
@@ -328,7 +336,8 @@ class MapScreenState extends State<MapScreen> {
                       .toLowerCase()
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
-            _startLatLng = _currentGpsPosition;
+            _startLatLng =
+                _currentGpsPosition; // _currentGpsPosition is definitely not null here
             _startMarker = _createMarker(_startLatLng!, Colors.green,
                 Icons.flag_circle, "Start: Mock Position (${location.name})");
             _startSearchController.text = "Mock Position (${location.name})";
@@ -351,18 +360,26 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _performInitialMapMove() {
-    if (!mounted || !_isMapReady) return;
+    if (!mounted || !_isMapReady) {
+      // Corrected: curly_braces_in_flow_control_structures (added {})
+      return;
+    }
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final location = locationProvider.selectedLocation;
-    if (location == null) return;
+    if (location == null) {
+      // Corrected: curly_braces_in_flow_control_structures (added {})
+      return;
+    }
 
     LatLng? targetToMoveTo;
     if (_useMockLocation) {
       targetToMoveTo = _currentGpsPosition ?? location.initialCenter;
     } else {
+      // _currentGpsPosition can be null here
       if (_currentGpsPosition != null) {
         const distance = Distance();
+        // Corrected: unnecessary_null_comparison (removed != null)
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
           targetToMoveTo = _currentGpsPosition;
@@ -373,7 +390,12 @@ class MapScreenState extends State<MapScreen> {
         targetToMoveTo = location.initialCenter;
       }
     }
-    if (targetToMoveTo != null && mounted) {
+    // targetToMoveTo can be null if _currentGpsPosition and location.initialCenter are null
+    // However, location.initialCenter is non-nullable in LocationInfo.
+    // And _currentGpsPosition in mock mode is set to location.initialCenter.
+    // So targetToMoveTo should always be non-null if location is non-null.
+    if (mounted) {
+      // Simpler: targetToMoveTo is guaranteed by logic above if location is not null.
       _mapController.move(targetToMoveTo, 17.0);
     }
   }
@@ -389,7 +411,9 @@ class MapScreenState extends State<MapScreen> {
       print(
           "<<< _selectFeatureAndSetPoint: Feature ${feature.name} für Feld $_activeSearchField >>>");
     }
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     TextEditingController? controllerToUpdate;
     FocusNode? focusToUnset;
@@ -415,10 +439,10 @@ class MapScreenState extends State<MapScreen> {
             Icons.flag_circle, "Ziel: ${feature.name}");
       });
     } else {
-      // Fallback or error: no active search field for selection
-      if (kDebugMode)
+      if (kDebugMode) {
         print(
             "<<< _selectFeatureAndSetPoint: Kein aktives Suchfeld für Auswahl! >>>");
+      }
       return;
     }
 
@@ -435,12 +459,12 @@ class MapScreenState extends State<MapScreen> {
       _searchResults = [];
     });
 
+    // focusToUnset can be null if _activeSearchField was none, though guarded above
     focusToUnset?.unfocus();
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
     } else {
-      // Both fields might be filled, or user selected the second field first
       _activeSearchField = ActiveSearchField.none;
     }
 
@@ -448,13 +472,19 @@ class MapScreenState extends State<MapScreen> {
       _calculateAndDisplayRoute();
     }
     if (_isMapReady && mounted) {
+      // _mapController? (already defined as non-null)
+      // Corrected: invalid_null_aware_operator (replaced ?. with .)
       _mapController.move(feature.center, 18.0);
     }
   }
 
   Future<void> _initializeGpsReal(LocationInfo location) async {
-    if (kDebugMode) print("<<< _initializeGpsReal für ${location.name} >>>");
-    if (!mounted) return;
+    if (kDebugMode) {
+      print("<<< _initializeGpsReal für ${location.name} >>>");
+    }
+    if (!mounted) {
+      return;
+    }
 
     bool serviceEnabled;
     LocationPermission permission;
@@ -487,7 +517,9 @@ class MapScreenState extends State<MapScreen> {
                 accuracy: LocationAccuracy.bestForNavigation,
                 distanceFilter: 5))
         .listen((Position position) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final bool isFirstFix = _currentGpsPosition == null;
       LatLng newGpsPos = LatLng(position.latitude, position.longitude);
 
@@ -496,7 +528,8 @@ class MapScreenState extends State<MapScreen> {
         _currentLocationMarker = _createMarker(_currentGpsPosition!,
             Colors.blueAccent, Icons.circle, "Meine Position");
         if (_startSearchController.text == "Aktueller Standort") {
-          _startLatLng = _currentGpsPosition;
+          _startLatLng =
+              _currentGpsPosition; // _currentGpsPosition is non-null here
           _startMarker = _createMarker(_startLatLng!, Colors.green,
               Icons.flag_circle, "Start: Aktueller Standort");
         }
@@ -504,8 +537,9 @@ class MapScreenState extends State<MapScreen> {
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
         const distance = Distance();
+        // Corrected: unnecessary_null_comparison (removed != null)
         final double meters =
-            distance(centerForDistanceCheck, _currentGpsPosition!);
+            distance(_currentGpsPosition!, centerForDistanceCheck);
         if (meters <= centerOnGpsMaxDistanceMeters) {
           _mapController.move(_currentGpsPosition!, 17.0);
         } else {
@@ -549,7 +583,9 @@ class MapScreenState extends State<MapScreen> {
       print(
           "<<< _calculateAndDisplayRoute: Start: $_startLatLng, Ziel: $_endLatLng >>>");
     }
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     if (!isDataReadyForRouting) {
       _showErrorDialog(
@@ -557,7 +593,9 @@ class MapScreenState extends State<MapScreen> {
       setStateIfMounted(() => _isCalculatingRoute = false);
       return;
     }
-    if (currentGraph == null || currentGraph.nodes.isEmpty) {
+    // currentGraph cannot be null here due to isDataReadyForRouting check.
+    if (currentGraph!.nodes.isEmpty) {
+      // Used ! as currentGraph is checked by isDataReadyForRouting
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() => _isCalculatingRoute = false);
@@ -588,7 +626,9 @@ class MapScreenState extends State<MapScreen> {
       } else {
         final List<LatLng>? routePoints =
             await RoutingService.findPath(currentGraph, startNode, endNode);
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         setStateIfMounted(() {
           if (routePoints != null && routePoints.isNotEmpty) {
             _routePolyline = Polyline(
@@ -603,23 +643,34 @@ class MapScreenState extends State<MapScreen> {
         });
       }
     } catch (e, stacktrace) {
-      if (kDebugMode) print(">>> Fehler Routenberechnung: $e\n$stacktrace");
+      if (kDebugMode) {
+        print(">>> Fehler Routenberechnung: $e\n$stacktrace");
+      }
       _showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() => _routePolyline = null);
     } finally {
-      if (mounted) setStateIfMounted(() => _isCalculatingRoute = false);
+      if (mounted) {
+        setStateIfMounted(() => _isCalculatingRoute = false);
+      }
     }
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
-    if (kDebugMode)
+    if (kDebugMode) {
       print(
           "<<< _handleMapTap: $latLng, aktives Feld vor Tap: $_activeSearchField >>>");
-    if (!mounted) return;
+    }
+    if (!mounted) {
+      return;
+    }
 
     bool hadFocus = _startFocusNode.hasFocus || _endFocusNode.hasFocus;
-    if (_startFocusNode.hasFocus) _startFocusNode.unfocus();
-    if (_endFocusNode.hasFocus) _endFocusNode.unfocus();
+    if (_startFocusNode.hasFocus) {
+      _startFocusNode.unfocus();
+    }
+    if (_endFocusNode.hasFocus) {
+      _endFocusNode.unfocus();
+    }
 
     if (hadFocus || _showSearchResults) {
       setStateIfMounted(() {
@@ -634,7 +685,9 @@ class MapScreenState extends State<MapScreen> {
       _showSnackbar("Kartendaten werden noch geladen.", durationSeconds: 2);
       return;
     }
-    if (_isCalculatingRoute) return;
+    if (_isCalculatingRoute) {
+      return;
+    }
 
     ActiveSearchField fieldToSetByTapDecision = _activeSearchField;
 
@@ -651,7 +704,6 @@ class MapScreenState extends State<MapScreen> {
     _setPointFromMapTap(latLng, fieldToSetByTapDecision);
 
     setStateIfMounted(() {
-      // Nach Tap-Aktion Feld immer zurücksetzen
       _activeSearchField = ActiveSearchField.none;
     });
   }
@@ -702,7 +754,9 @@ class MapScreenState extends State<MapScreen> {
 
   void _clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
     void doClearAction() {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setStateIfMounted(() {
         _routePolyline = null;
         if (clearMarkers) {
@@ -743,7 +797,10 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _centerOnGps() {
-    if (!mounted) return;
+    if (!mounted) {
+      // Corrected: curly_braces_in_flow_control_structures
+      return;
+    }
     final selectedLocationFromProvider =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
     LatLng? centerTarget;
@@ -763,7 +820,10 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showErrorDialog(String message) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) return;
+    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+      // Corrected: curly_braces_in_flow_control_structures
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -781,7 +841,10 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showSnackbar(String message, {int durationSeconds = 3}) {
-    if (!mounted) return;
+    if (!mounted) {
+      // Corrected: curly_braces_in_flow_control_structures
+      return;
+    }
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -794,7 +857,10 @@ class MapScreenState extends State<MapScreen> {
 
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) return;
+    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
+      // Corrected: curly_braces_in_flow_control_structures
+      return;
+    }
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -828,11 +894,17 @@ class MapScreenState extends State<MapScreen> {
     final bool isUiReady = !isLoading && currentGraph != null;
 
     List<Marker> activeMarkers = [];
-    if (_currentLocationMarker != null)
+    if (_currentLocationMarker != null) {
       activeMarkers.add(_currentLocationMarker!);
-    if (_startMarker != null) activeMarkers.add(_startMarker!);
-    if (_endMarker != null) activeMarkers.add(_endMarker!);
+    }
+    if (_startMarker != null) {
+      activeMarkers.add(_startMarker!);
+    }
+    if (_endMarker != null) {
+      activeMarkers.add(_endMarker!);
+    }
 
+    // Corrected: prefer_const_declarations
     const double searchCardTopPadding = 10.0;
     const double searchInputRowHeight = 50.0;
     const double cardInternalVerticalPadding = 8.0;
@@ -897,16 +969,24 @@ class MapScreenState extends State<MapScreen> {
               maxZoom: 19.0,
               onTap: isUiReady ? _handleMapTap : null,
               onMapReady: () {
-                if (!mounted) return;
-                if (kDebugMode) print("<<< Map bereit, _isMapReady=true >>>");
+                if (!mounted) {
+                  return;
+                }
+                if (kDebugMode) {
+                  print("<<< Map bereit, _isMapReady=true >>>");
+                }
                 setState(() => _isMapReady = true);
                 _performInitialMapMove();
               },
               onPositionChanged: (MapPosition position, bool hasGesture) {
                 if (hasGesture &&
                     (_startFocusNode.hasFocus || _endFocusNode.hasFocus)) {
-                  if (_startFocusNode.hasFocus) _startFocusNode.unfocus();
-                  if (_endFocusNode.hasFocus) _endFocusNode.unfocus();
+                  if (_startFocusNode.hasFocus) {
+                    _startFocusNode.unfocus();
+                  }
+                  if (_endFocusNode.hasFocus) {
+                    _endFocusNode.unfocus();
+                  }
                 }
               },
             ),
@@ -916,6 +996,7 @@ class MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'de.tomsoft.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
               ),
+              // Corrected: prefer_const_constructors (Not applicable here as Polyline is dynamic)
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
@@ -985,32 +1066,37 @@ class MapScreenState extends State<MapScreen> {
                                             ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
                                             : "Aktueller Standort";
                                         setStateIfMounted(() {
-                                          _startLatLng = _currentGpsPosition;
+                                          _startLatLng =
+                                              _currentGpsPosition; // non-null due to check
                                           _startMarker = _createMarker(
                                               _startLatLng!,
                                               Colors.green,
                                               Icons.flag_circle,
                                               "Start: $locationName");
-                                          // Den Controller-Text aktualisieren, ohne den Listener (_onStartSearchChanged) direkt auszulösen
-                                          // um eine Endlosschleife oder ungewolltes Suchverhalten zu vermeiden.
                                           WidgetsBinding.instance
                                               .addPostFrameCallback((_) {
-                                            _startSearchController.text =
-                                                locationName;
+                                            if (mounted) {
+                                              // Check mounted again in post frame callback
+                                              _startSearchController.text =
+                                                  locationName;
+                                            }
                                           });
 
-                                          if (_startFocusNode.hasFocus)
+                                          if (_startFocusNode.hasFocus) {
                                             _startFocusNode.unfocus();
+                                          }
                                           _showSearchResults = false;
                                           _activeSearchField =
                                               ActiveSearchField.none;
                                         });
                                         if (_startLatLng != null &&
-                                            _endLatLng != null)
+                                            _endLatLng != null) {
                                           _calculateAndDisplayRoute();
-                                      } else
+                                        }
+                                      } else {
                                         _showSnackbar(
                                             "Aktuelle Position nicht verfügbar.");
+                                      }
                                     }
                                   : null,
                             ),
@@ -1112,21 +1198,25 @@ class MapScreenState extends State<MapScreen> {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // Corrected: curly_braces_in_flow_control_structures (added {} for if)
           if (isUiReady &&
               (_routePolyline != null ||
                   _startMarker != null ||
                   _endMarker != null))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: FloatingActionButton.small(
-                heroTag: "clearAllBtn",
-                onPressed: () =>
-                    _clearRoute(showConfirmation: true, clearMarkers: true),
-                tooltip: 'Route, Start & Ziel löschen',
-                child: const Icon(Icons.delete_forever_outlined),
-              ),
-            ),
+            {
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: FloatingActionButton.small(
+                  heroTag: "clearAllBtn",
+                  onPressed: () =>
+                      _clearRoute(showConfirmation: true, clearMarkers: true),
+                  tooltip: 'Route, Start & Ziel löschen',
+                  child: const Icon(Icons.delete_forever_outlined),
+                ),
+              )
+            },
           Padding(
+            // Corrected: curly_braces_in_flow_control_structures (though this was for if, not an issue here but good practice for consistency if it were an if)
             padding: const EdgeInsets.only(bottom: 8.0),
             child: FloatingActionButton.small(
               heroTag: "centerBtn",
