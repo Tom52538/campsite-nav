@@ -1,5 +1,5 @@
 // lib/services/routing_service.dart
-// [Start lib/services/routing_service.dart mit ANGEPASSTEN SCHWELLENWERTEN]
+// [Start lib/services/routing_service.dart mit Generierung von Anweisungstexten]
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -15,6 +15,7 @@ class RoutingService {
 
   static Future<List<LatLng>?> findPath(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) async {
+    // ... (bestehender Code bleibt gleich) ...
     try {
       return _dijkstra(graph, startNode, endNode);
     } catch (e, stacktrace) {
@@ -28,6 +29,7 @@ class RoutingService {
 
   static List<LatLng>? _dijkstra(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) {
+    // ... (bestehender Code bleibt gleich) ...
     final priorityQueue =
         PriorityQueue<GraphNode>((a, b) => a.gCost.compareTo(b.gCost));
 
@@ -82,6 +84,7 @@ class RoutingService {
   }
 
   static List<LatLng>? _reconstructPath(GraphNode endNode) {
+    // ... (bestehender Code bleibt gleich) ...
     final List<LatLng> path = [];
     GraphNode? currentNode = endNode;
     int safetyBreak = 0;
@@ -106,6 +109,7 @@ class RoutingService {
   }
 
   static double calculateTotalDistance(List<LatLng> routePoints) {
+    // ... (bestehender Code bleibt gleich) ...
     double totalDistance = 0.0;
     if (routePoints.length < 2) {
       return totalDistance;
@@ -118,6 +122,7 @@ class RoutingService {
 
   static int estimateWalkingTimeMinutes(double totalDistanceMeters,
       {double speedKmh = averageWalkingSpeedKmh}) {
+    // ... (bestehender Code bleibt gleich) ...
     if (totalDistanceMeters <= 0 || speedKmh <= 0) {
       return 0;
     }
@@ -127,19 +132,52 @@ class RoutingService {
     return timeMinutes.round();
   }
 
+  static String _getInstructionTextForTurnType(TurnType turnType) {
+    switch (turnType) {
+      case TurnType.depart:
+        return "Route starten";
+      case TurnType.slightLeft:
+        return "Leicht links halten";
+      case TurnType.slightRight:
+        return "Leicht rechts halten";
+      case TurnType.turnLeft:
+        return "Links abbiegen";
+      case TurnType.turnRight:
+        return "Rechts abbiegen";
+      case TurnType.sharpLeft:
+        return "Scharf links abbiegen";
+      case TurnType.sharpRight:
+        return "Scharf rechts abbiegen";
+      case TurnType.uTurnLeft:
+        return "Bitte wenden (linksherum)";
+      case TurnType.uTurnRight:
+        return "Bitte wenden (rechtsherum)";
+      case TurnType.straight:
+        return "Geradeaus weiter"; // Vorerst beibehalten, falls wir es doch nutzen
+      case TurnType.arrive:
+        return "Sie haben Ihr Ziel erreicht";
+      default:
+        return ""; // Sollte nicht passieren
+    }
+  }
+
   static List<Maneuver> analyzeRouteForTurns(List<LatLng> routePoints) {
     if (routePoints.length < 2) {
       return [];
     }
 
     final List<Maneuver> maneuvers = [];
-    maneuvers
-        .add(Maneuver(point: routePoints.first, turnType: TurnType.depart));
+    maneuvers.add(Maneuver(
+        point: routePoints.first,
+        turnType: TurnType.depart,
+        instructionText: _getInstructionTextForTurnType(TurnType.depart)));
 
     if (routePoints.length < 3) {
       if (routePoints.length == 2) {
-        maneuvers
-            .add(Maneuver(point: routePoints.last, turnType: TurnType.arrive));
+        maneuvers.add(Maneuver(
+            point: routePoints.last,
+            turnType: TurnType.arrive,
+            instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
       }
       return maneuvers;
     }
@@ -164,7 +202,6 @@ class RoutingService {
 
       TurnType turnType = TurnType.straight;
 
-      // ANGEPASSTE SCHWELLENWERTE
       const double slightTurnThreshold = 35.0;
       const double normalTurnThreshold = 75.0;
       const double sharpTurnThreshold = 135.0;
@@ -195,23 +232,28 @@ class RoutingService {
           angleDegrees > -uTurnAngleThreshold) {
         turnType = TurnType.sharpLeft;
       }
-      // ENDE ANGEPASSTE SCHWELLENWERTE
 
       if (turnType != TurnType.straight) {
-        maneuvers.add(Maneuver(point: p2, turnType: turnType));
+        maneuvers.add(Maneuver(
+            point: p2,
+            turnType: turnType,
+            instructionText: _getInstructionTextForTurnType(turnType)));
       }
     }
 
-    maneuvers.add(Maneuver(point: routePoints.last, turnType: TurnType.arrive));
+    maneuvers.add(Maneuver(
+        point: routePoints.last,
+        turnType: TurnType.arrive,
+        instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
 
     if (kDebugMode) {
       print(
           "[RoutingService] Analyzed route for turns: ${maneuvers.length} maneuvers found.");
       for (var maneuver in maneuvers) {
-        print(maneuver);
+        print(maneuver); // toString() in Maneuver wird jetzt den Text anzeigen
       }
     }
     return maneuvers;
   }
 }
-// [Ende lib/services/routing_service.dart mit ANGEPASSTEN SCHWELLENWERTEN]
+// [Ende lib/services/routing_service.dart mit Generierung von Anweisungstexten]
