@@ -1,5 +1,5 @@
 // lib/services/routing_service.dart
-// [Start lib/services/routing_service.dart mit Import von maneuver.dart]
+// [Start lib/services/routing_service.dart mit ANGEPASSTEN SCHWELLENWERTEN]
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -7,7 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:flutter/foundation.dart';
-import 'package:camping_osm_navi/models/maneuver.dart'; // NEUER IMPORT
+import 'package:camping_osm_navi/models/maneuver.dart';
 
 class RoutingService {
   static const double averageWalkingSpeedKmh = 4.5;
@@ -164,24 +164,38 @@ class RoutingService {
 
       TurnType turnType = TurnType.straight;
 
-      if (angleDegrees > 15 && angleDegrees <= 60) {
+      // ANGEPASSTE SCHWELLENWERTE
+      const double slightTurnThreshold = 35.0;
+      const double normalTurnThreshold = 75.0;
+      const double sharpTurnThreshold = 135.0;
+      const double uTurnAngleThreshold = 165.0;
+
+      if (angleDegrees > slightTurnThreshold &&
+          angleDegrees <= normalTurnThreshold) {
         turnType = TurnType.slightRight;
-      } else if (angleDegrees > 60 && angleDegrees <= 120) {
+      } else if (angleDegrees > normalTurnThreshold &&
+          angleDegrees <= sharpTurnThreshold) {
         turnType = TurnType.turnRight;
-      } else if (angleDegrees > 120 && angleDegrees <= 160) {
+      } else if (angleDegrees > sharpTurnThreshold &&
+          angleDegrees < uTurnAngleThreshold) {
         turnType = TurnType.sharpRight;
-      } else if (angleDegrees > 160 || angleDegrees < -160) {
+      } else if (angleDegrees >= uTurnAngleThreshold ||
+          angleDegrees <= -uTurnAngleThreshold) {
         if (angleDegrees > 0)
           turnType = TurnType.uTurnRight;
         else
           turnType = TurnType.uTurnLeft;
-      } else if (angleDegrees < -15 && angleDegrees >= -60) {
+      } else if (angleDegrees < -slightTurnThreshold &&
+          angleDegrees >= -normalTurnThreshold) {
         turnType = TurnType.slightLeft;
-      } else if (angleDegrees < -60 && angleDegrees >= -120) {
+      } else if (angleDegrees < -normalTurnThreshold &&
+          angleDegrees >= -sharpTurnThreshold) {
         turnType = TurnType.turnLeft;
-      } else if (angleDegrees < -120 && angleDegrees >= -160) {
+      } else if (angleDegrees < -sharpTurnThreshold &&
+          angleDegrees > -uTurnAngleThreshold) {
         turnType = TurnType.sharpLeft;
       }
+      // ENDE ANGEPASSTE SCHWELLENWERTE
 
       if (turnType != TurnType.straight) {
         maneuvers.add(Maneuver(point: p2, turnType: turnType));
@@ -200,4 +214,4 @@ class RoutingService {
     return maneuvers;
   }
 }
-// [Ende lib/services/routing_service.dart mit Import von maneuver.dart]
+// [Ende lib/services/routing_service.dart mit ANGEPASSTEN SCHWELLENWERTEN]
