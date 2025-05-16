@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit angepasster UI-Position und fitBounds-Logik]
+// [Start lib/main.dart mit Fortschrittsverfolgung Phase 1, Schritt 1 & 2]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +19,6 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 
 IconData _getIconForTurnType(TurnType turnType) {
-  // ... ( bleibt gleich wie vorher )
   switch (turnType) {
     case TurnType.depart:
       return Icons.navigation;
@@ -55,7 +54,6 @@ class TurnInstructionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Keine Positioned mehr hier, wird im Stack anders gehandhabt
       constraints:
           const BoxConstraints(maxWidth: MapScreen.searchCardMaxWidth + 50),
       child: Card(
@@ -92,7 +90,6 @@ class TurnInstructionCard extends StatelessWidget {
 }
 
 void main() {
-  // ... ( bleibt gleich wie vorher )
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ChangeNotifierProvider(
@@ -104,7 +101,6 @@ void main() {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-  // ... ( bleibt gleich wie vorher )
 
   @override
   Widget build(BuildContext context) {
@@ -139,8 +135,7 @@ class MapScreen extends StatefulWidget {
   static const double cardInternalVerticalPadding = 4.0;
   static const double searchCardMaxWidth = 360.0;
   static const double searchCardHorizontalMargin = 10.0;
-  static const double instructionCardSpacing =
-      5.0; // Abstand zwischen Such-UI und Anweisungs-UI
+  static const double instructionCardSpacing = 5.0;
 
   @override
   MapScreenState createState() => MapScreenState();
@@ -150,8 +145,8 @@ enum ActiveSearchField { none, start, end }
 
 class MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
+  final Distance _distanceCalculator = const Distance(); // NEU: Für Distanzberechnungen
 
-  // ... (Variablen bleiben weitgehend gleich) ...
   Polyline? _routePolyline;
   Marker? _currentLocationMarker;
   Marker? _startMarker;
@@ -174,6 +169,8 @@ class MapScreenState extends State<MapScreen> {
 
   List<Maneuver> _currentManeuvers = [];
   Maneuver? _currentDisplayedManeuver;
+  int _currentManeuverIndex = -1; // NEU: Index für das aktuelle Manöver
+  static const double _maneuverReachedThresholdMeters = 20.0; // NEU: Distanzschwelle
 
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
@@ -188,7 +185,6 @@ class MapScreenState extends State<MapScreen> {
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
 
-  // Zugriff auf die Konstanten der äußeren Klasse (vereinfacht für den State)
   static const double searchCardTopPadding = MapScreen.searchCardTopPadding;
   static const double searchInputRowHeight = MapScreen.searchInputRowHeight;
   static const double dividerAndSwapButtonHeight =
@@ -204,7 +200,6 @@ class MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    // ... ( bleibt gleich wie vorher )
     _startSearchController.addListener(_onStartSearchChanged);
     _endSearchController.addListener(_onEndSearchChanged);
     _startFocusNode.addListener(_onStartFocusChanged);
@@ -219,7 +214,6 @@ class MapScreenState extends State<MapScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // ... ( bleibt gleich wie vorher )
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final newLocationInfo = locationProvider.selectedLocation;
@@ -238,7 +232,6 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
-    // ... ( bleibt gleich wie vorher )
     if (kDebugMode) {
       print("<<< dispose: MapScreen wird zerstört. >>>");
     }
@@ -258,7 +251,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onStartSearchChanged() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -274,7 +266,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onEndSearchChanged() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -290,7 +281,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _updateSearchResults(String query, List<SearchableFeature> features) {
-    // ... ( bleibt gleich wie vorher )
     if (query.isNotEmpty && features.isNotEmpty) {
       _searchResults = features.where((feature) {
         return feature.name.toLowerCase().contains(query) ||
@@ -302,7 +292,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onStartFocusChanged() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -327,7 +316,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onEndFocusChanged() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -352,7 +340,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
-    // ... ( bleibt gleich wie vorher )
     if (newLocationParam == null) {
       return;
     }
@@ -361,7 +348,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _handleLocationChangeUIUpdates(LocationInfo newLocation) {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -382,6 +368,7 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
+      _currentManeuverIndex = -1; // MODIFIZIERT: Index zurücksetzen
     });
     if (_isMapReady && mounted) {
       _mapController.move(newLocation.initialCenter, 17.0);
@@ -402,7 +389,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _toggleMockLocation() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -420,6 +406,7 @@ class MapScreenState extends State<MapScreen> {
         _routeTimeMinutes = null;
         _currentManeuvers = [];
         _currentDisplayedManeuver = null;
+        _currentManeuverIndex = -1; // MODIFIZIERT: Index zurücksetzen
       }
       if (currentLocation != null) {
         _initializeGpsOrMock(currentLocation);
@@ -433,7 +420,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _initializeGpsOrMock(LocationInfo location) {
-    // ... ( bleibt gleich wie vorher )
     _positionStreamSubscription?.cancel();
     LatLng? oldGpsPosition = _currentGpsPosition;
 
@@ -471,7 +457,10 @@ class MapScreenState extends State<MapScreen> {
           _mapController.move(activeInitialCenterForMock, 17.0);
         }
         if (_startLatLng != null && _endLatLng != null) {
+           // MODIFIZIERT: calculateAndDisplayRoute ruft _updateManeuverProgress intern
           _calculateAndDisplayRoute();
+        } else {
+           _updateManeuverProgress(); // NEU: Aufrufen, falls keine Route, aber GPS da ist
         }
       }
     } else {
@@ -484,7 +473,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _performInitialMapMove() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted || !_isMapReady) {
       return;
     }
@@ -518,14 +506,12 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void setStateIfMounted(VoidCallback fn) {
-    // ... ( bleibt gleich wie vorher )
     if (mounted) {
       setState(fn);
     }
   }
 
   void _selectFeatureAndSetPoint(SearchableFeature feature) {
-    // ... ( bleibt gleich wie vorher )
     if (kDebugMode) {
       print(
           "<<< _selectFeatureAndSetPoint: Feature ${feature.name} für Feld $_activeSearchField >>>");
@@ -595,7 +581,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initializeGpsReal(LocationInfo location) async {
-    // ... ( bleibt gleich wie vorher )
     if (kDebugMode) {
       print("<<< _initializeGpsReal für ${location.name} >>>");
     }
@@ -665,18 +650,68 @@ class MapScreenState extends State<MapScreen> {
               durationSeconds: 4);
         }
       }
-      if (_startLatLng != null && _endLatLng != null) {
-        _calculateAndDisplayRoute();
+      // MODIFIZIERT: _calculateAndDisplayRoute ruft _updateManeuverProgress intern
+      if (_startLatLng != null && _endLatLng != null && _routePolyline == null) {
+        // Nur neu berechnen, wenn keine Route existiert, um ständiges Neuberechnen zu vermeiden
+         _calculateAndDisplayRoute();
+      } else {
+        _updateManeuverProgress(); // NEU: Immer aufrufen, um Manöverfortschritt zu prüfen
       }
     }, onError: (error) {
       _showErrorDialog("Fehler GPS-Empfang: $error");
     });
   }
 
+  // NEU: Methode zur Aktualisierung des Manöverfortschritts
+  void _updateManeuverProgress() {
+    if (!mounted ||
+        _routePolyline == null ||
+        _currentGpsPosition == null ||
+        _currentManeuvers.isEmpty ||
+        _currentManeuverIndex < 0 ||
+        _currentManeuverIndex >= _currentManeuvers.length) {
+      return;
+    }
+
+    final Maneuver targetManeuver = _currentManeuvers[_currentManeuverIndex];
+    final double distanceToManeuver =
+        _distanceCalculator(_currentGpsPosition!, targetManeuver.point);
+
+    if (kDebugMode) {
+        print("Distanz zu Manöver '${targetManeuver.instructionText}' (#$_currentManeuverIndex): ${distanceToManeuver.toStringAsFixed(1)}m");
+    }
+
+    if (distanceToManeuver < _maneuverReachedThresholdMeters) {
+      if (kDebugMode) {
+        print("Manöver #${_currentManeuverIndex} erreicht: ${targetManeuver.instructionText}");
+      }
+      if (_currentManeuverIndex < _currentManeuvers.length - 1) {
+        // Es gibt noch weitere Manöver
+        setStateIfMounted(() {
+          _currentManeuverIndex++;
+          _currentDisplayedManeuver = _currentManeuvers[_currentManeuverIndex];
+          if (kDebugMode) {
+            print("Nächstes Manöver #${_currentManeuverIndex}: ${_currentDisplayedManeuver?.instructionText}");
+          }
+        });
+      } else {
+        // Letztes Manöver (Ziel) erreicht
+        if (kDebugMode) {
+          print("Ziel erreicht!");
+        }
+        // Optional: Besondere Aktion bei Zielerreichung, z.B. Route hervorheben oder löschen
+        // Vorerst bleibt das "Arrive"-Manöver angezeigt.
+        // Man könnte _currentManeuverIndex auf -1 setzen, um weitere Updates zu stoppen,
+        // oder ein _isRouteCompleted Flag setzen.
+      }
+    }
+    // Die Logik zur Distanzanzeige in der TurnInstructionCard kommt in Phase 2.
+  }
+
+
   Marker _createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
       {double size = 30.0}) {
-    // ... ( bleibt gleich wie vorher )
     return Marker(
       width: markerWidth,
       height: markerHeight,
@@ -710,6 +745,7 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
+      _currentManeuverIndex = -1; // MODIFIZIERT: Index zurücksetzen
     });
 
     if (!isDataReadyForRouting) {
@@ -746,11 +782,21 @@ class MapScreenState extends State<MapScreen> {
         setStateIfMounted(() => _routePolyline = null);
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
-        _currentDisplayedManeuver = Maneuver(
-            point: _startLatLng!,
-            turnType: TurnType.arrive,
-            instructionText: "Start- und Zielpunkt sind identisch.");
-        _clearRoute(showConfirmation: false, clearMarkers: false);
+         // MODIFIZIERT: Logik für Start = Ziel
+        setStateIfMounted(() {
+          _currentManeuvers = [
+            Maneuver(
+                point: _startLatLng!,
+                turnType: TurnType.arrive,
+                instructionText: "Start- und Zielpunkt sind identisch.")
+          ];
+          _currentManeuverIndex = 0;
+          _currentDisplayedManeuver = _currentManeuvers[0];
+          _routePolyline = null; // Keine Route zeichnen
+          _routeDistance = 0;
+          _routeTimeMinutes = 0;
+        });
+
         if (_isMapReady && mounted && _startLatLng != null) {
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
         }
@@ -773,57 +819,60 @@ class MapScreenState extends State<MapScreen> {
 
             _currentManeuvers =
                 RoutingService.analyzeRouteForTurns(routePoints);
-            if (kDebugMode) {
-              print("Berechnete Manöver für die aktuelle Route:");
-              for (var maneuver in _currentManeuvers) {
-                print(maneuver.toString());
-              }
-            }
+            
+            // MODIFIZIERT: Logik für _currentManeuverIndex und _currentDisplayedManeuver
+            if (_currentManeuvers.isNotEmpty) {
+                _currentManeuverIndex = 0; // Standard: Ziel ist das erste Manöver
 
-            if (_currentManeuvers.length > 1) {
-              if (_currentManeuvers[1].turnType != TurnType.arrive) {
-                _currentDisplayedManeuver = _currentManeuvers[1];
-              } else {
-                // Nur depart und arrive
-                _currentDisplayedManeuver =
-                    _currentManeuvers.last; // Zeige Ankunft
-              }
-            } else if (_currentManeuvers.isNotEmpty) {
-              // Nur depart (sollte nicht passieren) oder nur arrive (sehr kurze Route)
-              _currentDisplayedManeuver = _currentManeuvers.first;
+                // Logik für das initial anzuzeigende Manöver (_currentDisplayedManeuver)
+                // und Anpassung von _currentManeuverIndex, falls das erste Manöver 'Depart' ist
+                // und es weitere Manöver gibt.
+                if (_currentManeuvers[0].turnType == TurnType.depart && _currentManeuvers.length > 1) {
+                    // Wenn das erste Manöver "Depart" ist und es mehr als ein Manöver gibt,
+                    // setzen wir den Index auf das zweite Manöver (das erste echte Abbiegemanöver oder Ankunft).
+                    _currentManeuverIndex = 1;
+                    _currentDisplayedManeuver = _currentManeuvers[1]; // Zeige das zweite Manöver an
+
+                     if (kDebugMode) {
+                        print("Route beginnt mit Depart. Zeige Manöver #1: ${_currentManeuvers[1].instructionText}");
+                    }
+
+                } else {
+                    // Entweder ist das erste Manöver nicht "Depart" oder es ist das einzige Manöver.
+                    // In beiden Fällen ist das Ziel und das angezeigte Manöver das erste (Index 0).
+                    _currentDisplayedManeuver = _currentManeuvers[0];
+                     if (kDebugMode) {
+                        print("Zeige Manöver #0: ${_currentManeuvers[0].instructionText}");
+                    }
+                }
             } else {
-              _currentDisplayedManeuver = null;
+                _currentManeuverIndex = -1;
+                _currentDisplayedManeuver = null;
             }
 
             _showSnackbar("Route berechnet.", durationSeconds: 3);
 
             if (_isMapReady && mounted) {
               try {
-                // Erweitere die Bounds um Start- und Ziel-LatLng explizit, falls sie von den Routenpunkten abweichen
                 List<LatLng> pointsForBounds = List.from(routePoints);
                 if (_startLatLng != null &&
-                    !pointsForBounds.contains(_startLatLng))
+                    !pointsForBounds.contains(_startLatLng)) {
                   pointsForBounds.insert(0, _startLatLng!);
-                if (_endLatLng != null && !pointsForBounds.contains(_endLatLng))
+                }
+                if (_endLatLng != null && !pointsForBounds.contains(_endLatLng)) {
                   pointsForBounds.add(_endLatLng!);
+                }
 
                 _mapController.fitCamera(
                   CameraFit.bounds(
-                    bounds: LatLngBounds.fromPoints(
-                        pointsForBounds), // Verwendung der erweiterten Punkte
-                    // Padding anpassen, besonders oben für die UI Elemente und unten für FABs
+                    bounds: LatLngBounds.fromPoints(pointsForBounds),
                     padding: const EdgeInsets.only(
-                        top:
-                            230.0, // Mehr Platz oben für AppBar, Such-UI und Anweisungs-UI
-                        bottom: 80.0, // Mehr Platz unten für FABs
-                        left: 30.0,
-                        right: 30.0),
+                        top: 230.0, bottom: 80.0, left: 30.0, right: 30.0),
                   ),
                 );
               } catch (e) {
                 if (kDebugMode) {
-                  print(
-                      "Fehler beim Anpassen der Kartenansicht an die Route: $e");
+                  print("Fehler beim Anpassen der Kartenansicht: $e");
                   if (_endLatLng != null) {
                     _mapController.move(
                         _endLatLng!, _mapController.camera.zoom);
@@ -831,9 +880,11 @@ class MapScreenState extends State<MapScreen> {
                 }
               }
             }
+            _updateManeuverProgress(); // NEU: Initialen Zustand/Distanz prüfen
           } else {
             _routePolyline = null;
             _currentDisplayedManeuver = null;
+            _currentManeuverIndex = -1; 
             _showErrorDialog("Keine Route gefunden.");
           }
         });
@@ -843,7 +894,10 @@ class MapScreenState extends State<MapScreen> {
         print(">>> Fehler Routenberechnung: $e\n$stacktrace");
       }
       _showErrorDialog("Fehler Routenberechnung: $e");
-      setStateIfMounted(() => _routePolyline = null);
+      setStateIfMounted(() {
+         _routePolyline = null;
+         _currentManeuverIndex = -1;
+      });
     } finally {
       if (mounted) {
         setStateIfMounted(() => _isCalculatingRoute = false);
@@ -852,7 +906,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
-    // ... ( bleibt gleich wie vorher )
     if (kDebugMode) {
       print(
           "<<< _handleMapTap: $latLng, aktives Feld vor Tap: $_activeSearchField >>>");
@@ -906,7 +959,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _setPointFromMapTap(LatLng latLng, ActiveSearchField fieldToSet) {
-    // ... ( bleibt gleich wie vorher )
     String pointName = (fieldToSet == ActiveSearchField.start)
         ? "Start (Karte)"
         : "Ziel (Karte)";
@@ -933,6 +985,7 @@ class MapScreenState extends State<MapScreen> {
         _routeTimeMinutes = null;
         _currentManeuvers = [];
         _currentDisplayedManeuver = null;
+        _currentManeuverIndex = -1; // MODIFIZIERT
       });
 
       if (_startLatLng != null && _endLatLng != null) {
@@ -955,7 +1008,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
-    // ... ( bleibt gleich wie vorher )
     void doClearAction() {
       if (!mounted) {
         return;
@@ -966,6 +1018,7 @@ class MapScreenState extends State<MapScreen> {
         _routeTimeMinutes = null;
         _currentManeuvers = [];
         _currentDisplayedManeuver = null;
+        _currentManeuverIndex = -1; // MODIFIZIERT
         if (clearMarkers) {
           _startMarker = null;
           _startLatLng = null;
@@ -1004,7 +1057,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _centerOnGps() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -1027,7 +1079,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showErrorDialog(String message) {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       return;
     }
@@ -1048,7 +1099,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _showSnackbar(String message, {int durationSeconds = 3}) {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) {
       return;
     }
@@ -1064,7 +1114,6 @@ class MapScreenState extends State<MapScreen> {
 
   void _showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       return;
     }
@@ -1091,7 +1140,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _swapStartAndEnd() {
-    // ... ( bleibt gleich wie vorher )
     if (!mounted) return;
 
     if (_startLatLng == null && _endLatLng == null) {
@@ -1135,6 +1183,7 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
+      _currentManeuverIndex = -1; // MODIFIZIERT
 
       if (_startLatLng != null && _endLatLng != null) {
         _calculateAndDisplayRoute();
@@ -1147,7 +1196,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   String _formatDistance(double? distanceMeters) {
-    // ... ( bleibt gleich wie vorher )
     if (distanceMeters == null) return "";
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
@@ -1156,7 +1204,6 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  // Globale Keys für die Widgets, deren Höhe wir benötigen
   final GlobalKey _searchUiCardKey = GlobalKey();
 
   @override
@@ -1181,9 +1228,6 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    // Berechne die Höhe der Such-UI Card dynamisch NACHDEM sie gebaut wurde (für Positionierung der Anweisung)
-    // Für die erste Anzeige verwenden wir eine Schätzung oder einen Standardwert.
-    // Die tatsächliche Höhe wird im PostFrameCallback aktualisiert, falls nötig.
     double searchUiCardHeight = (MapScreen.searchInputRowHeight * 2) +
         MapScreen.dividerAndSwapButtonHeight +
         (MapScreen.cardInternalVerticalPadding * 2);
@@ -1191,28 +1235,44 @@ class MapScreenState extends State<MapScreen> {
       searchUiCardHeight += MapScreen.routeInfoHeight;
     }
 
-    // Position der Anweisungskarte: unter der Such-UI
     double instructionCardTop = MapScreen.searchCardTopPadding +
         searchUiCardHeight +
         MapScreen.instructionCardSpacing;
 
-    // Position der Suchergebnisliste: unter der Anweisungskarte (falls sichtbar), sonst unter Such-UI
     double searchResultsTopPosition = instructionCardTop;
-    if (_currentDisplayedManeuver != null &&
-        _currentDisplayedManeuver!.turnType != TurnType.depart &&
-        _currentDisplayedManeuver!.turnType != TurnType.arrive &&
-        !(_currentManeuvers.length <= 2)) {
-      // Annahme: Höhe der Anweisungskarte ist ca. 60-70px
-      searchResultsTopPosition += 65.0 + MapScreen.instructionCardSpacing;
+    
+    // MODIFIZIERT: Sichtbarkeitslogik für Anweisungskarte, um "Depart" nicht prominent zu zeigen,
+    // außer es ist das einzige Manöver oder das Ziel ist direkt nach Depart.
+    bool showInstructionCard = _currentDisplayedManeuver != null;
+    if (_currentDisplayedManeuver != null) {
+        // Fall 1: Erstes Manöver ist "Depart" UND es gibt mehr als dieses eine Manöver (also ein echtes nächstes Manöver)
+        // UND das nächste Manöver ist NICHT "Arrive" direkt nach "Depart".
+        // Dann wollen wir "Depart" nicht unbedingt prominent anzeigen, sondern die nächste "echte" Anweisung.
+        // Die Logik in _calculateAndDisplayRoute sollte _currentDisplayedManeuver bereits auf das zweite Manöver setzen.
+        // Hier geht es eher darum, ob die Karte *überhaupt* angezeigt wird.
+        // Wir zeigen sie an, wenn _currentDisplayedManeuver gesetzt ist.
+        // Die Logik, WAS angezeigt wird, ist in _calculateAndDisplayRoute und _updateManeuverProgress.
+
+        // Die Bedingung, ob die Karte für Suchergebnisse nach unten rutscht, bleibt:
+        if (_currentDisplayedManeuver!.turnType != TurnType.depart || _currentManeuvers.length == 1) {
+            // Wenn es nicht "Depart" ist ODER es nur ein einziges Manöver ist (z.B. "Depart" dann "Arrive", oder nur "Arrive")
+            // dann berücksichtige die Höhe der Anweisungskarte.
+            if (!(_currentManeuvers.length <= 2 && _currentDisplayedManeuver!.turnType == TurnType.arrive && _currentManeuvers.first.turnType == TurnType.depart)) {
+                 // Nicht nur depart & arrive (wo Ankunft gezeigt wird)
+                  searchResultsTopPosition += 65.0 + MapScreen.instructionCardSpacing; // Annahme Höhe Anweisungskarte
+            } else if (_currentManeuvers.length == 1 && _currentDisplayedManeuver!.turnType == TurnType.arrive) {
+                // Nur "Arrive" (z.B. Start = Ziel)
+                 searchResultsTopPosition += 65.0 + MapScreen.instructionCardSpacing;
+            }
+        }
+
     } else {
-      searchResultsTopPosition = MapScreen.searchCardTopPadding +
-          searchUiCardHeight +
-          MapScreen.instructionCardSpacing;
+        showInstructionCard = false; // Kein Manöver zum Anzeigen
     }
+
 
     return Scaffold(
       appBar: AppBar(
-        // ... ( bleibt gleich wie vorher ) ...
         title: const Text("Campground Navigator"),
         actions: [
           if (availableLocationsFromUI.isNotEmpty &&
@@ -1258,7 +1318,6 @@ class MapScreenState extends State<MapScreen> {
       body: Stack(
         children: [
           FlutterMap(
-            // ... ( bleibt gleich wie vorher ) ...
             mapController: _mapController,
             options: MapOptions(
               initialCenter: selectedLocationFromUI?.initialCenter ??
@@ -1302,10 +1361,8 @@ class MapScreenState extends State<MapScreen> {
             ],
           ),
 
-          // Such-UI Card
           Positioned(
-            key:
-                _searchUiCardKey, // Key für Höhenberechnung (optional für Zukunft)
+            key: _searchUiCardKey,
             top: MapScreen.searchCardTopPadding,
             left: MapScreen.searchCardHorizontalMargin,
             child: Container(
@@ -1322,7 +1379,6 @@ class MapScreenState extends State<MapScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ... (Inhalt der Such-UI Card bleibt gleich) ...
                       Container(
                         decoration: BoxDecoration(
                           border: _startFocusNode.hasFocus
@@ -1364,8 +1420,8 @@ class MapScreenState extends State<MapScreen> {
                                                 _routeDistance = null;
                                                 _routeTimeMinutes = null;
                                                 _currentManeuvers = [];
-                                                _currentDisplayedManeuver =
-                                                    null;
+                                                _currentDisplayedManeuver = null;
+                                                _currentManeuverIndex = -1; // MODIFIZIERT
                                               });
                                             },
                                           )
@@ -1509,6 +1565,7 @@ class MapScreenState extends State<MapScreen> {
                                           _routeTimeMinutes = null;
                                           _currentManeuvers = [];
                                           _currentDisplayedManeuver = null;
+                                          _currentManeuverIndex = -1; // MODIFIZIERT
                                         });
                                       },
                                     )
@@ -1572,33 +1629,23 @@ class MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-
-          // Anweisungs-Card (unter der Such-UI)
-          if (_currentDisplayedManeuver != null &&
-                  _currentDisplayedManeuver!.turnType !=
-                      TurnType.depart && // Depart nicht anzeigen
-                  !(_currentManeuvers.length <= 2 &&
-                      _currentDisplayedManeuver!.turnType ==
-                          TurnType.arrive) // Nicht nur depart & arrive
-              )
+          
+          // MODIFIZIERT: Anzeigelogik für TurnInstructionCard
+          if (showInstructionCard)
             Positioned(
-                top: instructionCardTop, // Dynamisch berechnet
+                top: instructionCardTop,
                 left: MapScreen.searchCardHorizontalMargin,
-                right: MapScreen
-                    .searchCardHorizontalMargin, // Stellt sicher, dass es zentriert ist, wenn maxWidth von TurnInstructionCard kleiner ist
+                right: MapScreen.searchCardHorizontalMargin,
                 child: Center(
-                  // Zentriert die TurnInstructionCard horizontal
                   child:
                       TurnInstructionCard(maneuver: _currentDisplayedManeuver!),
                 )),
 
-          // Suchergebnisse (positioniert unter der Anweisungs-UI oder Such-UI)
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
               top: searchResultsTopPosition,
               left: MapScreen.searchCardHorizontalMargin,
               child: Container(
-                // ... (Rest der Suchergebnis-UI bleibt gleich) ...
                 constraints: const BoxConstraints(
                     maxWidth: MapScreen.searchCardMaxWidth),
                 child: Card(
@@ -1627,7 +1674,6 @@ class MapScreenState extends State<MapScreen> {
               ),
             ),
 
-          // Ladeanzeigen
           if (_isCalculatingRoute && isUiReady)
             Positioned.fill(
                 child: Container(
@@ -1654,7 +1700,6 @@ class MapScreenState extends State<MapScreen> {
         ],
       ),
       floatingActionButton: Column(
-        // ... ( FABs bleiben gleich ) ...
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -1688,7 +1733,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
   IconData _getIconForFeatureType(String type) {
-    // ... ( bleibt gleich wie vorher ) ...
     switch (type.toLowerCase()) {
       case 'parking':
         return Icons.local_parking;
@@ -1724,4 +1768,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit angepasster UI-Position und fitBounds-Logik]
+// [Ende lib/main.dart mit Fortschrittsverfolgung Phase 1, Schritt 1 & 2]
