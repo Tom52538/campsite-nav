@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit automatischer Kartenanpassung an Route]
+// [Start lib/main.dart mit automatischer Kartenanpassung an Route UND Aufruf der Turn-Analyse]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
-import 'package:camping_osm_navi/services/routing_service.dart';
+import 'package:camping_osm_navi/services/routing_service.dart'; // Sicherstellen, dass Maneuver und TurnType hier bekannt sind
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 
@@ -84,6 +84,9 @@ class MapScreenState extends State<MapScreen> {
 
   double? _routeDistance;
   int? _routeTimeMinutes;
+
+  // NEU: Liste für erkannte Manöver
+  List<Maneuver> _currentManeuvers = [];
 
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
@@ -276,6 +279,7 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
       _routeDistance = null;
       _routeTimeMinutes = null;
+      _currentManeuvers = []; // NEU: Manöver zurücksetzen
     });
     if (_isMapReady && mounted) {
       _mapController.move(newLocation.initialCenter, 17.0);
@@ -311,6 +315,7 @@ class MapScreenState extends State<MapScreen> {
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
+        _currentManeuvers = []; // NEU: Manöver zurücksetzen
       }
       if (currentLocation != null) {
         _initializeGpsOrMock(currentLocation);
@@ -591,6 +596,7 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() {
       _routeDistance = null;
       _routeTimeMinutes = null;
+      _currentManeuvers = []; // NEU: Manöver vor Berechnung zurücksetzen
     });
 
     if (!isDataReadyForRouting) {
@@ -628,8 +634,6 @@ class MapScreenState extends State<MapScreen> {
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
-        // Bei identischen Punkten nicht versuchen, Bounds anzupassen,
-        // da es nur ein Punkt wäre. Karte bleibt wie sie ist oder zentriert auf den Punkt.
         if (_isMapReady && mounted && _startLatLng != null) {
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
         }
@@ -650,16 +654,25 @@ class MapScreenState extends State<MapScreen> {
             _routeTimeMinutes =
                 RoutingService.estimateWalkingTimeMinutes(_routeDistance!);
 
+            // NEU: Routenanalyse für Abbiegehinweise aufrufen
+            _currentManeuvers =
+                RoutingService.analyzeRouteForTurns(routePoints);
+            if (kDebugMode) {
+              print("Berechnete Manöver für die aktuelle Route:");
+              for (var maneuver in _currentManeuvers) {
+                print(maneuver.toString());
+              }
+            }
+            // ENDE NEU
+
             _showSnackbar("Route berechnet.", durationSeconds: 3);
 
-            // Karte an die Route anpassen
             if (_isMapReady && mounted) {
               try {
                 LatLngBounds bounds = LatLngBounds.fromPoints(routePoints);
                 _mapController.fitBounds(
                   bounds,
                   options: const FitBoundsOptions(
-                    // Padding anpassen: oben mehr Platz für Such-UI, sonst moderat
                     padding: EdgeInsets.only(
                         top: 180.0, bottom: 50.0, left: 30.0, right: 30.0),
                   ),
@@ -669,7 +682,6 @@ class MapScreenState extends State<MapScreen> {
                   print(
                       "Fehler beim Anpassen der Kartenansicht an die Route: $e");
                   if (_endLatLng != null) {
-                    // Fallback: Auf Zielpunkt zentrieren
                     _mapController.move(
                         _endLatLng!, _mapController.camera.zoom);
                   }
@@ -773,6 +785,7 @@ class MapScreenState extends State<MapScreen> {
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
+        _currentManeuvers = []; // NEU: Manöver zurücksetzen
       });
 
       if (_startLatLng != null && _endLatLng != null) {
@@ -803,6 +816,7 @@ class MapScreenState extends State<MapScreen> {
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
+        _currentManeuvers = []; // NEU: Manöver zurücksetzen
         if (clearMarkers) {
           _startMarker = null;
           _startLatLng = null;
@@ -965,6 +979,7 @@ class MapScreenState extends State<MapScreen> {
 
       _routeDistance = null;
       _routeTimeMinutes = null;
+      _currentManeuvers = []; // NEU: Manöver zurücksetzen
 
       if (_startLatLng != null && _endLatLng != null) {
         _calculateAndDisplayRoute();
@@ -1162,6 +1177,7 @@ class MapScreenState extends State<MapScreen> {
                                                 _routePolyline = null;
                                                 _routeDistance = null;
                                                 _routeTimeMinutes = null;
+                                                _currentManeuvers = []; // NEU
                                               });
                                             },
                                           )
@@ -1301,6 +1317,7 @@ class MapScreenState extends State<MapScreen> {
                                           _routePolyline = null;
                                           _routeDistance = null;
                                           _routeTimeMinutes = null;
+                                          _currentManeuvers = []; // NEU
                                         });
                                       },
                                     )
@@ -1489,4 +1506,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit automatischer Kartenanpassung an Route]
+// [Ende lib/main.dart mit automatischer Kartenanpassung an Route UND Aufruf der Turn-Analyse]
