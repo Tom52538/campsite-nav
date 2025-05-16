@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit Korrekturen für Fehler, Turn-Analyse Aufruf und Linter-Anpassungen]
+// [Start lib/main.dart mit Import von maneuver.dart und Linter-Fixes]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -16,35 +16,7 @@ import 'package:camping_osm_navi/models/graph_node.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
-
-// NEUE Definitionen für Turn-Analyse HIER in main.dart
-enum TurnType {
-  straight,
-  slightLeft,
-  slightRight,
-  turnLeft,
-  turnRight,
-  sharpLeft,
-  sharpRight,
-  uTurnLeft,
-  uTurnRight,
-  arrive,
-  depart,
-}
-
-class Maneuver {
-  final LatLng point;
-  final TurnType turnType;
-  final String? instructionText;
-
-  Maneuver({required this.point, required this.turnType, this.instructionText});
-
-  @override
-  String toString() {
-    return 'Maneuver{point: $point, turnType: $turnType, instruction: "$instructionText"}';
-  }
-}
-// ENDE NEUE Definitionen in main.dart
+import 'package:camping_osm_navi/models/maneuver.dart'; // NEUER IMPORT
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -425,8 +397,7 @@ class MapScreenState extends State<MapScreen> {
         const distance = Distance();
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
-          targetToMoveToNullSafe =
-              _currentGpsPosition; // Korrigiert: _currentGpsPosition! entfernt, da schon null-geprüft
+          targetToMoveToNullSafe = _currentGpsPosition;
         } else {
           targetToMoveToNullSafe = location.initialCenter;
         }
@@ -499,7 +470,7 @@ class MapScreenState extends State<MapScreen> {
       _searchResults = [];
     });
 
-    focusToUnset?.unfocus(); // Sicherer Aufruf mit ?.
+    focusToUnset?.unfocus();
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
@@ -562,27 +533,24 @@ class MapScreenState extends State<MapScreen> {
 
       setStateIfMounted(() {
         _currentGpsPosition = newGpsPos;
-        _currentLocationMarker = _createMarker(
-            _currentGpsPosition!, // Hier ist ! OK, da _currentGpsPosition gerade gesetzt wurde
-            Colors.blueAccent,
-            Icons.circle,
-            "Meine Position");
-        if (_startSearchController.text == "Aktueller Standort") {
-          _startLatLng = _currentGpsPosition;
-          _startMarker = _createMarker(
-              _startLatLng!,
-              Colors.green, // Hier ist ! OK
-              Icons.flag_circle,
-              "Start: Aktueller Standort");
+        if (_currentGpsPosition != null) {
+          // Null check
+          _currentLocationMarker = _createMarker(_currentGpsPosition!,
+              Colors.blueAccent, Icons.circle, "Meine Position");
+          if (_startSearchController.text == "Aktueller Standort") {
+            _startLatLng = _currentGpsPosition;
+            _startMarker = _createMarker(_startLatLng!, Colors.green,
+                Icons.flag_circle, "Start: Aktueller Standort");
+          }
         }
       });
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
         const distance = Distance();
-        final double meters = distance(
-            _currentGpsPosition!, centerForDistanceCheck); // Hier ist ! OK
+        final double meters =
+            distance(_currentGpsPosition!, centerForDistanceCheck);
         if (meters <= centerOnGpsMaxDistanceMeters) {
-          _mapController.move(_currentGpsPosition!, 17.0); // Hier ist ! OK
+          _mapController.move(_currentGpsPosition!, 17.0);
         } else {
           _showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
@@ -604,7 +572,7 @@ class MapScreenState extends State<MapScreen> {
       width: markerWidth,
       height: markerHeight,
       point: position,
-      alignment: Alignment.center, // flutter_map v6 سازگار
+      alignment: Alignment.center,
       child: Tooltip(
         message: tooltip,
         child: Icon(icon, color: color, size: size),
@@ -641,8 +609,8 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (currentGraph!.nodes.isEmpty) {
-      // currentGraph ist hier wegen isDataReadyForRouting nicht null
+    // currentGraph ist hier wegen isDataReadyForRouting nicht null
+    if (currentGraph.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() => _isCalculatingRoute = false);
@@ -660,11 +628,9 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() => _isCalculatingRoute = true);
 
     try {
-      currentGraph.resetAllNodeCosts(); // currentGraph ist hier nicht null
-      final GraphNode? startNode = currentGraph
-          .findNearestNode(_startLatLng!); // _startLatLng ist hier nicht null
-      final GraphNode? endNode = currentGraph
-          .findNearestNode(_endLatLng!); // _endLatLng ist hier nicht null
+      currentGraph.resetAllNodeCosts();
+      final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
+      final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
 
       if (startNode == null || endNode == null) {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
@@ -673,14 +639,11 @@ class MapScreenState extends State<MapScreen> {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
         if (_isMapReady && mounted && _startLatLng != null) {
-          _mapController.move(_startLatLng!,
-              _mapController.camera.zoom); // _startLatLng ist hier nicht null
+          _mapController.move(_startLatLng!, _mapController.camera.zoom);
         }
       } else {
-        final List<LatLng>? routePoints = await RoutingService.findPath(
-            currentGraph,
-            startNode,
-            endNode); // currentGraph ist hier nicht null
+        final List<LatLng>? routePoints =
+            await RoutingService.findPath(currentGraph, startNode, endNode);
         if (!mounted) {
           return;
         }
@@ -692,8 +655,8 @@ class MapScreenState extends State<MapScreen> {
                 color: Colors.deepPurpleAccent);
 
             _routeDistance = RoutingService.calculateTotalDistance(routePoints);
-            _routeTimeMinutes = RoutingService.estimateWalkingTimeMinutes(
-                _routeDistance!); // _routeDistance ist hier nicht null
+            _routeTimeMinutes =
+                RoutingService.estimateWalkingTimeMinutes(_routeDistance!);
 
             _currentManeuvers =
                 RoutingService.analyzeRouteForTurns(routePoints);
@@ -708,9 +671,10 @@ class MapScreenState extends State<MapScreen> {
 
             if (_isMapReady && mounted) {
               try {
-                // NEU: Anpassung für flutter_map v6+
                 _mapController.fitCamera(
+                  // Korrigiert: fitCamera statt fitBounds
                   CameraFit.bounds(
+                    // Korrigiert: CameraFit.bounds
                     bounds: LatLngBounds.fromPoints(routePoints),
                     padding: const EdgeInsets.only(
                         top: 180.0, bottom: 50.0, left: 30.0, right: 30.0),
@@ -722,9 +686,7 @@ class MapScreenState extends State<MapScreen> {
                       "Fehler beim Anpassen der Kartenansicht an die Route: $e");
                   if (_endLatLng != null) {
                     _mapController.move(
-                        _endLatLng!,
-                        _mapController
-                            .camera.zoom); // _endLatLng ist hier nicht null
+                        _endLatLng!, _mapController.camera.zoom);
                   }
                 }
               }
@@ -998,7 +960,7 @@ class MapScreenState extends State<MapScreen> {
 
       if (_startLatLng != null) {
         _startMarker = _createMarker(
-          _startLatLng!, // Hier ! OK
+          _startLatLng!,
           Colors.green,
           Icons.flag_circle,
           "Start: ${_startSearchController.text.isNotEmpty ? _startSearchController.text : 'Gesetzter Punkt'}",
@@ -1009,7 +971,7 @@ class MapScreenState extends State<MapScreen> {
 
       if (_endLatLng != null) {
         _endMarker = _createMarker(
-          _endLatLng!, // Hier ! OK
+          _endLatLng!,
           Colors.red,
           Icons.flag_circle,
           "Ziel: ${_endSearchController.text.isNotEmpty ? _endSearchController.text : 'Gesetzter Punkt'}",
@@ -1057,10 +1019,10 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(localCurrentLocationMarker);
     }
     if (_startMarker != null) {
-      activeMarkers.add(_startMarker!); // Hier ! OK, da vorher geprüft
+      activeMarkers.add(_startMarker!);
     }
     if (_endMarker != null) {
-      activeMarkers.add(_endMarker!); // Hier ! OK, da vorher geprüft
+      activeMarkers.add(_endMarker!);
     }
 
     double searchUICardCalculatedHeight = (searchInputRowHeight * 2) +
@@ -1158,7 +1120,7 @@ class MapScreenState extends State<MapScreen> {
                 tileProvider: CancellableNetworkTileProvider(),
               ),
               if (isUiReady && _routePolyline != null)
-                PolylineLayer(polylines: [_routePolyline!]), // Hier ! OK
+                PolylineLayer(polylines: [_routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
@@ -1250,11 +1212,13 @@ class MapScreenState extends State<MapScreen> {
                                             setStateIfMounted(() {
                                               _startLatLng =
                                                   _currentGpsPosition;
-                                              _startMarker = _createMarker(
-                                                  _startLatLng!, // ! OK
-                                                  Colors.green,
-                                                  Icons.flag_circle,
-                                                  "Start: $locationName");
+                                              if (_startLatLng != null) {
+                                                _startMarker = _createMarker(
+                                                    _startLatLng!,
+                                                    Colors.green,
+                                                    Icons.flag_circle,
+                                                    "Start: $locationName");
+                                              }
                                               WidgetsBinding.instance
                                                   .addPostFrameCallback((_) {
                                                 if (mounted) {
@@ -1400,7 +1364,7 @@ class MapScreenState extends State<MapScreen> {
                                       ),
                                       TextSpan(
                                         text:
-                                            " / ${_formatDistance(_routeDistance)}",
+                                            " / ${_formatDistance(_routeDistance)}", // Korrigiert: keine {} unnötig
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -1469,7 +1433,7 @@ class MapScreenState extends State<MapScreen> {
                   const CircularProgressIndicator(color: Colors.white),
                   const SizedBox(height: 16),
                   Text(
-                      "Lade Kartendaten für ${selectedLocationFromUI?.name ?? '...'}...", // Sicherer Zugriff mit ?.
+                      "Lade Kartendaten für ${selectedLocationFromUI?.name ?? '...'}...",
                       textAlign: TextAlign.center,
                       style:
                           const TextStyle(color: Colors.white, fontSize: 16)),
@@ -1547,4 +1511,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit Korrekturen für Fehler, Turn-Analyse Aufruf und Linter-Anpassungen]
+// [Ende lib/main.dart mit Import von maneuver.dart und Linter-Fixes]
