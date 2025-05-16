@@ -1,5 +1,5 @@
 // lib/main.dart
-// [Start lib/main.dart mit automatischer Kartenanpassung an Route UND Aufruf der Turn-Analyse]
+// [Start lib/main.dart mit Korrekturen für Fehler, Turn-Analyse Aufruf und Linter-Anpassungen]
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,9 +13,38 @@ import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
-import 'package:camping_osm_navi/services/routing_service.dart'; // Sicherstellen, dass Maneuver und TurnType hier bekannt sind
+import 'package:camping_osm_navi/services/routing_service.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
+
+// NEUE Definitionen für Turn-Analyse HIER in main.dart
+enum TurnType {
+  straight,
+  slightLeft,
+  slightRight,
+  turnLeft,
+  turnRight,
+  sharpLeft,
+  sharpRight,
+  uTurnLeft,
+  uTurnRight,
+  arrive,
+  depart,
+}
+
+class Maneuver {
+  final LatLng point;
+  final TurnType turnType;
+  final String? instructionText;
+
+  Maneuver({required this.point, required this.turnType, this.instructionText});
+
+  @override
+  String toString() {
+    return 'Maneuver{point: $point, turnType: $turnType, instruction: "$instructionText"}';
+  }
+}
+// ENDE NEUE Definitionen in main.dart
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -85,7 +114,6 @@ class MapScreenState extends State<MapScreen> {
   double? _routeDistance;
   int? _routeTimeMinutes;
 
-  // NEU: Liste für erkannte Manöver
   List<Maneuver> _currentManeuvers = [];
 
   static const LatLng fallbackInitialCenter =
@@ -279,7 +307,7 @@ class MapScreenState extends State<MapScreen> {
       _activeSearchField = ActiveSearchField.none;
       _routeDistance = null;
       _routeTimeMinutes = null;
-      _currentManeuvers = []; // NEU: Manöver zurücksetzen
+      _currentManeuvers = [];
     });
     if (_isMapReady && mounted) {
       _mapController.move(newLocation.initialCenter, 17.0);
@@ -315,7 +343,7 @@ class MapScreenState extends State<MapScreen> {
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
-        _currentManeuvers = []; // NEU: Manöver zurücksetzen
+        _currentManeuvers = [];
       }
       if (currentLocation != null) {
         _initializeGpsOrMock(currentLocation);
@@ -397,7 +425,8 @@ class MapScreenState extends State<MapScreen> {
         const distance = Distance();
         if (distance(_currentGpsPosition!, location.initialCenter) <=
             centerOnGpsMaxDistanceMeters) {
-          targetToMoveToNullSafe = _currentGpsPosition!;
+          targetToMoveToNullSafe =
+              _currentGpsPosition; // Korrigiert: _currentGpsPosition! entfernt, da schon null-geprüft
         } else {
           targetToMoveToNullSafe = location.initialCenter;
         }
@@ -470,7 +499,7 @@ class MapScreenState extends State<MapScreen> {
       _searchResults = [];
     });
 
-    focusToUnset?.unfocus();
+    focusToUnset?.unfocus(); // Sicherer Aufruf mit ?.
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
@@ -533,21 +562,27 @@ class MapScreenState extends State<MapScreen> {
 
       setStateIfMounted(() {
         _currentGpsPosition = newGpsPos;
-        _currentLocationMarker = _createMarker(_currentGpsPosition!,
-            Colors.blueAccent, Icons.circle, "Meine Position");
+        _currentLocationMarker = _createMarker(
+            _currentGpsPosition!, // Hier ist ! OK, da _currentGpsPosition gerade gesetzt wurde
+            Colors.blueAccent,
+            Icons.circle,
+            "Meine Position");
         if (_startSearchController.text == "Aktueller Standort") {
           _startLatLng = _currentGpsPosition;
-          _startMarker = _createMarker(_startLatLng!, Colors.green,
-              Icons.flag_circle, "Start: Aktueller Standort");
+          _startMarker = _createMarker(
+              _startLatLng!,
+              Colors.green, // Hier ist ! OK
+              Icons.flag_circle,
+              "Start: Aktueller Standort");
         }
       });
 
       if (isFirstFix && _currentGpsPosition != null && _isMapReady && mounted) {
         const distance = Distance();
-        final double meters =
-            distance(_currentGpsPosition!, centerForDistanceCheck);
+        final double meters = distance(
+            _currentGpsPosition!, centerForDistanceCheck); // Hier ist ! OK
         if (meters <= centerOnGpsMaxDistanceMeters) {
-          _mapController.move(_currentGpsPosition!, 17.0);
+          _mapController.move(_currentGpsPosition!, 17.0); // Hier ist ! OK
         } else {
           _showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
@@ -569,11 +604,11 @@ class MapScreenState extends State<MapScreen> {
       width: markerWidth,
       height: markerHeight,
       point: position,
+      alignment: Alignment.center, // flutter_map v6 سازگار
       child: Tooltip(
         message: tooltip,
         child: Icon(icon, color: color, size: size),
       ),
-      alignment: Alignment.center,
     );
   }
 
@@ -596,7 +631,7 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() {
       _routeDistance = null;
       _routeTimeMinutes = null;
-      _currentManeuvers = []; // NEU: Manöver vor Berechnung zurücksetzen
+      _currentManeuvers = [];
     });
 
     if (!isDataReadyForRouting) {
@@ -607,6 +642,7 @@ class MapScreenState extends State<MapScreen> {
     }
 
     if (currentGraph!.nodes.isEmpty) {
+      // currentGraph ist hier wegen isDataReadyForRouting nicht null
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() => _isCalculatingRoute = false);
@@ -624,9 +660,11 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() => _isCalculatingRoute = true);
 
     try {
-      currentGraph.resetAllNodeCosts();
-      final GraphNode? startNode = currentGraph.findNearestNode(_startLatLng!);
-      final GraphNode? endNode = currentGraph.findNearestNode(_endLatLng!);
+      currentGraph.resetAllNodeCosts(); // currentGraph ist hier nicht null
+      final GraphNode? startNode = currentGraph
+          .findNearestNode(_startLatLng!); // _startLatLng ist hier nicht null
+      final GraphNode? endNode = currentGraph
+          .findNearestNode(_endLatLng!); // _endLatLng ist hier nicht null
 
       if (startNode == null || endNode == null) {
         _showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
@@ -635,11 +673,14 @@ class MapScreenState extends State<MapScreen> {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
         if (_isMapReady && mounted && _startLatLng != null) {
-          _mapController.move(_startLatLng!, _mapController.camera.zoom);
+          _mapController.move(_startLatLng!,
+              _mapController.camera.zoom); // _startLatLng ist hier nicht null
         }
       } else {
-        final List<LatLng>? routePoints =
-            await RoutingService.findPath(currentGraph, startNode, endNode);
+        final List<LatLng>? routePoints = await RoutingService.findPath(
+            currentGraph,
+            startNode,
+            endNode); // currentGraph ist hier nicht null
         if (!mounted) {
           return;
         }
@@ -651,10 +692,9 @@ class MapScreenState extends State<MapScreen> {
                 color: Colors.deepPurpleAccent);
 
             _routeDistance = RoutingService.calculateTotalDistance(routePoints);
-            _routeTimeMinutes =
-                RoutingService.estimateWalkingTimeMinutes(_routeDistance!);
+            _routeTimeMinutes = RoutingService.estimateWalkingTimeMinutes(
+                _routeDistance!); // _routeDistance ist hier nicht null
 
-            // NEU: Routenanalyse für Abbiegehinweise aufrufen
             _currentManeuvers =
                 RoutingService.analyzeRouteForTurns(routePoints);
             if (kDebugMode) {
@@ -663,17 +703,16 @@ class MapScreenState extends State<MapScreen> {
                 print(maneuver.toString());
               }
             }
-            // ENDE NEU
 
             _showSnackbar("Route berechnet.", durationSeconds: 3);
 
             if (_isMapReady && mounted) {
               try {
-                LatLngBounds bounds = LatLngBounds.fromPoints(routePoints);
-                _mapController.fitBounds(
-                  bounds,
-                  options: const FitBoundsOptions(
-                    padding: EdgeInsets.only(
+                // NEU: Anpassung für flutter_map v6+
+                _mapController.fitCamera(
+                  CameraFit.bounds(
+                    bounds: LatLngBounds.fromPoints(routePoints),
+                    padding: const EdgeInsets.only(
                         top: 180.0, bottom: 50.0, left: 30.0, right: 30.0),
                   ),
                 );
@@ -683,7 +722,9 @@ class MapScreenState extends State<MapScreen> {
                       "Fehler beim Anpassen der Kartenansicht an die Route: $e");
                   if (_endLatLng != null) {
                     _mapController.move(
-                        _endLatLng!, _mapController.camera.zoom);
+                        _endLatLng!,
+                        _mapController
+                            .camera.zoom); // _endLatLng ist hier nicht null
                   }
                 }
               }
@@ -785,7 +826,7 @@ class MapScreenState extends State<MapScreen> {
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
-        _currentManeuvers = []; // NEU: Manöver zurücksetzen
+        _currentManeuvers = [];
       });
 
       if (_startLatLng != null && _endLatLng != null) {
@@ -816,7 +857,7 @@ class MapScreenState extends State<MapScreen> {
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
-        _currentManeuvers = []; // NEU: Manöver zurücksetzen
+        _currentManeuvers = [];
         if (clearMarkers) {
           _startMarker = null;
           _startLatLng = null;
@@ -957,7 +998,7 @@ class MapScreenState extends State<MapScreen> {
 
       if (_startLatLng != null) {
         _startMarker = _createMarker(
-          _startLatLng!,
+          _startLatLng!, // Hier ! OK
           Colors.green,
           Icons.flag_circle,
           "Start: ${_startSearchController.text.isNotEmpty ? _startSearchController.text : 'Gesetzter Punkt'}",
@@ -968,7 +1009,7 @@ class MapScreenState extends State<MapScreen> {
 
       if (_endLatLng != null) {
         _endMarker = _createMarker(
-          _endLatLng!,
+          _endLatLng!, // Hier ! OK
           Colors.red,
           Icons.flag_circle,
           "Ziel: ${_endSearchController.text.isNotEmpty ? _endSearchController.text : 'Gesetzter Punkt'}",
@@ -979,7 +1020,7 @@ class MapScreenState extends State<MapScreen> {
 
       _routeDistance = null;
       _routeTimeMinutes = null;
-      _currentManeuvers = []; // NEU: Manöver zurücksetzen
+      _currentManeuvers = [];
 
       if (_startLatLng != null && _endLatLng != null) {
         _calculateAndDisplayRoute();
@@ -1016,10 +1057,10 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(localCurrentLocationMarker);
     }
     if (_startMarker != null) {
-      activeMarkers.add(_startMarker!);
+      activeMarkers.add(_startMarker!); // Hier ! OK, da vorher geprüft
     }
     if (_endMarker != null) {
-      activeMarkers.add(_endMarker!);
+      activeMarkers.add(_endMarker!); // Hier ! OK, da vorher geprüft
     }
 
     double searchUICardCalculatedHeight = (searchInputRowHeight * 2) +
@@ -1117,7 +1158,7 @@ class MapScreenState extends State<MapScreen> {
                 tileProvider: CancellableNetworkTileProvider(),
               ),
               if (isUiReady && _routePolyline != null)
-                PolylineLayer(polylines: [_routePolyline!]),
+                PolylineLayer(polylines: [_routePolyline!]), // Hier ! OK
               if (isUiReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
@@ -1177,7 +1218,7 @@ class MapScreenState extends State<MapScreen> {
                                                 _routePolyline = null;
                                                 _routeDistance = null;
                                                 _routeTimeMinutes = null;
-                                                _currentManeuvers = []; // NEU
+                                                _currentManeuvers = [];
                                               });
                                             },
                                           )
@@ -1210,7 +1251,7 @@ class MapScreenState extends State<MapScreen> {
                                               _startLatLng =
                                                   _currentGpsPosition;
                                               _startMarker = _createMarker(
-                                                  _startLatLng!,
+                                                  _startLatLng!, // ! OK
                                                   Colors.green,
                                                   Icons.flag_circle,
                                                   "Start: $locationName");
@@ -1317,7 +1358,7 @@ class MapScreenState extends State<MapScreen> {
                                           _routePolyline = null;
                                           _routeDistance = null;
                                           _routeTimeMinutes = null;
-                                          _currentManeuvers = []; // NEU
+                                          _currentManeuvers = [];
                                         });
                                       },
                                     )
@@ -1348,7 +1389,7 @@ class MapScreenState extends State<MapScreen> {
                                   TextSpan(
                                     children: [
                                       TextSpan(
-                                        text: "~ ${_routeTimeMinutes} min",
+                                        text: "~ $_routeTimeMinutes min",
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -1428,7 +1469,7 @@ class MapScreenState extends State<MapScreen> {
                   const CircularProgressIndicator(color: Colors.white),
                   const SizedBox(height: 16),
                   Text(
-                      "Lade Kartendaten für ${selectedLocationFromUI?.name ?? '...'}...",
+                      "Lade Kartendaten für ${selectedLocationFromUI?.name ?? '...'}...", // Sicherer Zugriff mit ?.
                       textAlign: TextAlign.center,
                       style:
                           const TextStyle(color: Colors.white, fontSize: 16)),
@@ -1506,4 +1547,4 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 }
-// [Ende lib/main.dart mit automatischer Kartenanpassung an Route UND Aufruf der Turn-Analyse]
+// [Ende lib/main.dart mit Korrekturen für Fehler, Turn-Analyse Aufruf und Linter-Anpassungen]
