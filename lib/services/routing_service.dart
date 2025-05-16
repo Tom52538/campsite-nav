@@ -1,11 +1,13 @@
 // lib/services/routing_service.dart
-// [Start lib/services/routing_service.dart Überarbeitet für Linter und mit Distanz/Zeit Methoden]
+// [Start lib/services/routing_service.dart mit Import von maneuver.dart]
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
-import 'package:flutter/foundation.dart'; // Import für kDebugMode
-// import 'dart:math'; // Entfernt: ungenutzt, da round() auf double direkt verfügbar ist
+import 'package:flutter/foundation.dart';
+import 'package:camping_osm_navi/models/maneuver.dart'; // NEUER IMPORT
 
 class RoutingService {
   static const double averageWalkingSpeedKmh = 4.5;
@@ -103,10 +105,6 @@ class RoutingService {
     }
   }
 
-  /// Calculates the total distance of a route.
-  ///
-  /// Takes a list of [LatLng] points representing the route
-  /// and returns the total distance in meters.
   static double calculateTotalDistance(List<LatLng> routePoints) {
     double totalDistance = 0.0;
     if (routePoints.length < 2) {
@@ -118,10 +116,6 @@ class RoutingService {
     return totalDistance;
   }
 
-  /// Estimates the walking time for a given distance.
-  ///
-  /// Takes the total distance in meters and an optional average walking speed in km/h.
-  /// Returns the estimated time in minutes (rounded).
   static int estimateWalkingTimeMinutes(double totalDistanceMeters,
       {double speedKmh = averageWalkingSpeedKmh}) {
     if (totalDistanceMeters <= 0 || speedKmh <= 0) {
@@ -132,5 +126,78 @@ class RoutingService {
     final double timeMinutes = timeHours * 60;
     return timeMinutes.round();
   }
+
+  static List<Maneuver> analyzeRouteForTurns(List<LatLng> routePoints) {
+    if (routePoints.length < 2) {
+      return [];
+    }
+
+    final List<Maneuver> maneuvers = [];
+    maneuvers
+        .add(Maneuver(point: routePoints.first, turnType: TurnType.depart));
+
+    if (routePoints.length < 3) {
+      if (routePoints.length == 2) {
+        maneuvers
+            .add(Maneuver(point: routePoints.last, turnType: TurnType.arrive));
+      }
+      return maneuvers;
+    }
+
+    for (int i = 0; i < routePoints.length - 2; i++) {
+      final LatLng p1 = routePoints[i];
+      final LatLng p2 = routePoints[i + 1];
+      final LatLng p3 = routePoints[i + 2];
+
+      double dx1 = p2.longitude - p1.longitude;
+      double dy1 = p2.latitude - p1.latitude;
+      double angle1 = atan2(dy1, dx1);
+
+      double dx2 = p3.longitude - p2.longitude;
+      double dy2 = p3.latitude - p2.latitude;
+      double angle2 = atan2(dy2, dx2);
+
+      double angleDiff = angle2 - angle1;
+      while (angleDiff <= -pi) angleDiff += 2 * pi;
+      while (angleDiff > pi) angleDiff -= 2 * pi;
+      double angleDegrees = angleDiff * 180 / pi;
+
+      TurnType turnType = TurnType.straight;
+
+      if (angleDegrees > 15 && angleDegrees <= 60) {
+        turnType = TurnType.slightRight;
+      } else if (angleDegrees > 60 && angleDegrees <= 120) {
+        turnType = TurnType.turnRight;
+      } else if (angleDegrees > 120 && angleDegrees <= 160) {
+        turnType = TurnType.sharpRight;
+      } else if (angleDegrees > 160 || angleDegrees < -160) {
+        if (angleDegrees > 0)
+          turnType = TurnType.uTurnRight;
+        else
+          turnType = TurnType.uTurnLeft;
+      } else if (angleDegrees < -15 && angleDegrees >= -60) {
+        turnType = TurnType.slightLeft;
+      } else if (angleDegrees < -60 && angleDegrees >= -120) {
+        turnType = TurnType.turnLeft;
+      } else if (angleDegrees < -120 && angleDegrees >= -160) {
+        turnType = TurnType.sharpLeft;
+      }
+
+      if (turnType != TurnType.straight) {
+        maneuvers.add(Maneuver(point: p2, turnType: turnType));
+      }
+    }
+
+    maneuvers.add(Maneuver(point: routePoints.last, turnType: TurnType.arrive));
+
+    if (kDebugMode) {
+      print(
+          "[RoutingService] Analyzed route for turns: ${maneuvers.length} maneuvers found.");
+      for (var maneuver in maneuvers) {
+        print(maneuver);
+      }
+    }
+    return maneuvers;
+  }
 }
-// [Ende lib/services/routing_service.dart Überarbeitet für Linter und mit Distanz/Zeit Methoden]
+// [Ende lib/services/routing_service.dart mit Import von maneuver.dart]
