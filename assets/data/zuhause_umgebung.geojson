@@ -1,0 +1,5305 @@
+{
+  "type": "FeatureCollection",
+  "generator": "overpass-turbo",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL.",
+  "timestamp": "2025-05-17T17:48:02Z",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/111981923",
+        "addr:city": "Gangelt",
+        "addr:housenumber": "9",
+        "addr:postcode": "52538",
+        "addr:street": "Bahnhofstraße",
+        "addr:suburb": "Birgden",
+        "amenity": "restaurant",
+        "building": "yes",
+        "cuisine": "mediterranean",
+        "email": "info@restaurant-dalmacija-birgden.de",
+        "fax": "+49 2454 9694143",
+        "name": "Restaurant DALMACIJA",
+        "opening_hours:restaurant": "Tu-Su 11:30-14:00,17:00-22:00",
+        "operator": "Marija Sitar",
+        "phone": "+49 2454 9694141",
+        "tourism": "hotel",
+        "website": "https://www.restaurant-dalmacija-birgden.de/"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.0497334,
+              51.0058553
+            ],
+            [
+              6.0496439,
+              51.0058001
+            ],
+            [
+              6.0498018,
+              51.0057121
+            ],
+            [
+              6.0498745,
+              51.0057602
+            ],
+            [
+              6.0499175,
+              51.0057346
+            ],
+            [
+              6.0499599,
+              51.0057128
+            ],
+            [
+              6.0500511,
+              51.0057818
+            ],
+            [
+              6.0499903,
+              51.0058152
+            ],
+            [
+              6.0499222,
+              51.0058465
+            ],
+            [
+              6.0498139,
+              51.0059066
+            ],
+            [
+              6.0497334,
+              51.0058553
+            ]
+          ]
+        ]
+      },
+      "id": "way/111981923"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/111982177",
+        "addr:city": "Gangelt",
+        "addr:postcode": "52538",
+        "addr:street": "Paulssträßchen",
+        "addr:suburb": "Birgden",
+        "amenity": "school",
+        "email": "info@grundschule-birgden.de",
+        "fax": "+49 2454 937449",
+        "name": "Schule der Begegnung",
+        "phone": "+49 2454 6276",
+        "website": "https://www.grundschule-birgden.de/"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.0508526,
+              51.0046577
+            ],
+            [
+              6.051751,
+              51.0044393
+            ],
+            [
+              6.0521182,
+              51.0043789
+            ],
+            [
+              6.0523072,
+              51.004415
+            ],
+            [
+              6.0523716,
+              51.0044664
+            ],
+            [
+              6.0524874,
+              51.0044994
+            ],
+            [
+              6.0526698,
+              51.0044922
+            ],
+            [
+              6.0535391,
+              51.0048496
+            ],
+            [
+              6.0533341,
+              51.0049828
+            ],
+            [
+              6.0531603,
+              51.0050557
+            ],
+            [
+              6.0529449,
+              51.0051461
+            ],
+            [
+              6.0528235,
+              51.0051922
+            ],
+            [
+              6.052922,
+              51.0052932
+            ],
+            [
+              6.0523054,
+              51.0054814
+            ],
+            [
+              6.0521339,
+              51.0053254
+            ],
+            [
+              6.0516473,
+              51.0054931
+            ],
+            [
+              6.0512094,
+              51.0051213
+            ],
+            [
+              6.0509522,
+              51.0049001
+            ],
+            [
+              6.0508526,
+              51.0046577
+            ]
+          ]
+        ]
+      },
+      "id": "way/111982177"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/263807035",
+        "amenity": "parking",
+        "parking": "surface",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.0504407,
+              51.0052871
+            ],
+            [
+              6.0507706,
+              51.0057131
+            ],
+            [
+              6.0504266,
+              51.005821
+            ],
+            [
+              6.0503957,
+              51.0057815
+            ],
+            [
+              6.0503635,
+              51.0057917
+            ],
+            [
+              6.0502924,
+              51.0056988
+            ],
+            [
+              6.0502629,
+              51.0057081
+            ],
+            [
+              6.0501442,
+              51.0055642
+            ],
+            [
+              6.0498143,
+              51.0056617
+            ],
+            [
+              6.0496178,
+              51.005768
+            ],
+            [
+              6.0495255,
+              51.005695
+            ],
+            [
+              6.0494301,
+              51.0056195
+            ],
+            [
+              6.0495705,
+              51.0055497
+            ],
+            [
+              6.0504407,
+              51.0052871
+            ]
+          ]
+        ]
+      },
+      "id": "way/263807035"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/23924878",
+        "highway": "residential",
+        "lit": "yes",
+        "maxspeed:type": "DE:urban",
+        "name": "Gaterstraße",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0457454,
+            50.9983123
+          ],
+          [
+            6.0458088,
+            50.9983958
+          ],
+          [
+            6.0459722,
+            50.9986193
+          ],
+          [
+            6.0460668,
+            50.9988109
+          ],
+          [
+            6.0461658,
+            50.9992011
+          ],
+          [
+            6.0462164,
+            50.9997725
+          ],
+          [
+            6.0462568,
+            50.9999338
+          ]
+        ]
+      },
+      "id": "way/23924878"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/30660785",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Neustraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0472318,
+            51.0032983
+          ],
+          [
+            6.0456476,
+            51.003569
+          ],
+          [
+            6.043384,
+            51.0039975
+          ],
+          [
+            6.0431164,
+            51.0045073
+          ]
+        ]
+      },
+      "id": "way/30660785"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/33708048",
+        "highway": "track",
+        "motor_vehicle": "agricultural",
+        "surface": "concrete",
+        "tracktype": "grade1"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0587298,
+            50.9978916
+          ],
+          [
+            6.0586817,
+            50.9979146
+          ],
+          [
+            6.0585617,
+            50.9979591
+          ],
+          [
+            6.0584089,
+            50.9980101
+          ],
+          [
+            6.0581968,
+            50.9980689
+          ],
+          [
+            6.0577285,
+            50.9981666
+          ],
+          [
+            6.0558791,
+            50.9985214
+          ],
+          [
+            6.0541365,
+            50.9988611
+          ],
+          [
+            6.0536709,
+            50.9989531
+          ],
+          [
+            6.0532195,
+            50.9990423
+          ]
+        ]
+      },
+      "id": "way/33708048"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/33708061",
+        "highway": "track",
+        "source": "GPS trace",
+        "tracktype": "grade1"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0462568,
+            50.9999338
+          ],
+          [
+            6.0461424,
+            50.9999313
+          ],
+          [
+            6.0448768,
+            50.999844
+          ],
+          [
+            6.0439342,
+            50.9997681
+          ]
+        ]
+      },
+      "id": "way/33708061"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/33708075",
+        "highway": "residential",
+        "name": "Hanstraße",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0505299,
+            50.9995614
+          ],
+          [
+            6.0504671,
+            50.9995736
+          ],
+          [
+            6.0502072,
+            50.999618
+          ],
+          [
+            6.0498682,
+            50.9996885
+          ],
+          [
+            6.0494326,
+            50.9997619
+          ],
+          [
+            6.0491382,
+            50.9998188
+          ],
+          [
+            6.0490172,
+            50.9998447
+          ],
+          [
+            6.048925,
+            50.9998593
+          ],
+          [
+            6.0486673,
+            50.9999018
+          ],
+          [
+            6.0484679,
+            50.9999414
+          ],
+          [
+            6.0481382,
+            50.9999964
+          ],
+          [
+            6.0479188,
+            51.000036
+          ],
+          [
+            6.047655,
+            51.0000755
+          ],
+          [
+            6.0474558,
+            51.0001049
+          ],
+          [
+            6.0466057,
+            51.0002148
+          ]
+        ]
+      },
+      "id": "way/33708075"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/35363832",
+        "highway": "track",
+        "motor_vehicle": "agricultural;forestry",
+        "surface": "asphalt",
+        "tracktype": "grade1",
+        "traffic_sign": "DE:260,DE:1026-38",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0457454,
+            50.9983123
+          ],
+          [
+            6.0457996,
+            50.9983006
+          ],
+          [
+            6.0461472,
+            50.9982258
+          ],
+          [
+            6.0470271,
+            50.9980439
+          ],
+          [
+            6.0479343,
+            50.9978541
+          ],
+          [
+            6.0481132,
+            50.9978178
+          ],
+          [
+            6.0484004,
+            50.9977519
+          ],
+          [
+            6.0497622,
+            50.9974557
+          ],
+          [
+            6.0498769,
+            50.9974356
+          ],
+          [
+            6.050187,
+            50.997363
+          ],
+          [
+            6.0512368,
+            50.9971308
+          ],
+          [
+            6.0521046,
+            50.9969346
+          ],
+          [
+            6.0524857,
+            50.9968497
+          ],
+          [
+            6.0525361,
+            50.996839
+          ],
+          [
+            6.0527003,
+            50.9968018
+          ],
+          [
+            6.0530844,
+            50.996716
+          ],
+          [
+            6.0551941,
+            50.9962466
+          ],
+          [
+            6.057438,
+            50.9957413
+          ],
+          [
+            6.0577161,
+            50.9956813
+          ],
+          [
+            6.0578907,
+            50.9956261
+          ],
+          [
+            6.0579235,
+            50.9956161
+          ]
+        ]
+      },
+      "id": "way/35363832"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37227367",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paved"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0470252,
+            51.0008621
+          ],
+          [
+            6.0478559,
+            51.000736
+          ],
+          [
+            6.04895,
+            51.000569
+          ],
+          [
+            6.0490204,
+            51.0005587
+          ],
+          [
+            6.0490689,
+            51.0005586
+          ],
+          [
+            6.0491249,
+            51.0005665
+          ],
+          [
+            6.0491738,
+            51.0005821
+          ]
+        ]
+      },
+      "id": "way/37227367"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37227371",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0486244,
+            51.0013244
+          ],
+          [
+            6.0495087,
+            51.001171
+          ]
+        ]
+      },
+      "id": "way/37227371"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37227372",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0492416,
+            51.0006187
+          ],
+          [
+            6.0493464,
+            51.0005522
+          ],
+          [
+            6.049483,
+            51.0005011
+          ],
+          [
+            6.0498115,
+            51.0004449
+          ],
+          [
+            6.050119,
+            51.0003969
+          ],
+          [
+            6.0502597,
+            51.0003983
+          ],
+          [
+            6.0503771,
+            51.000378
+          ],
+          [
+            6.0504627,
+            51.0003533
+          ],
+          [
+            6.0507677,
+            51.0003017
+          ],
+          [
+            6.0508386,
+            51.000295
+          ]
+        ]
+      },
+      "id": "way/37227372"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37227688",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0497869,
+            51.0017685
+          ],
+          [
+            6.0492838,
+            51.0018648
+          ],
+          [
+            6.0488855,
+            51.0019369
+          ]
+        ]
+      },
+      "id": "way/37227688"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37228006",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0498029,
+            51.0018017
+          ],
+          [
+            6.0512839,
+            51.0015501
+          ]
+        ]
+      },
+      "id": "way/37228006"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37228866",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0492838,
+            51.0018648
+          ],
+          [
+            6.0496262,
+            51.0026543
+          ]
+        ]
+      },
+      "id": "way/37228866"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37228867",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paved"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0497869,
+            51.0017685
+          ],
+          [
+            6.0498029,
+            51.0018017
+          ],
+          [
+            6.0501159,
+            51.0025232
+          ]
+        ]
+      },
+      "id": "way/37228867"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280907",
+        "highway": "service",
+        "motor_vehicle": "no",
+        "service": "alley",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0505299,
+            50.9995614
+          ],
+          [
+            6.0508386,
+            51.000295
+          ],
+          [
+            6.0508538,
+            51.0003358
+          ],
+          [
+            6.0510657,
+            51.000882
+          ],
+          [
+            6.0510787,
+            51.0009154
+          ],
+          [
+            6.0513216,
+            51.0015434
+          ],
+          [
+            6.0514925,
+            51.0019849
+          ],
+          [
+            6.0515308,
+            51.002084
+          ]
+        ]
+      },
+      "id": "way/37280907"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280908",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Unkelsfeld",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.049351,
+            51.0035428
+          ],
+          [
+            6.0494146,
+            51.003572
+          ],
+          [
+            6.0494534,
+            51.0036162
+          ],
+          [
+            6.0495736,
+            51.0038291
+          ],
+          [
+            6.04971,
+            51.0040795
+          ],
+          [
+            6.0497871,
+            51.0042217
+          ],
+          [
+            6.0498905,
+            51.0043826
+          ],
+          [
+            6.0500247,
+            51.0045446
+          ],
+          [
+            6.0501319,
+            51.0046556
+          ],
+          [
+            6.0501871,
+            51.004694
+          ],
+          [
+            6.0502493,
+            51.0047192
+          ],
+          [
+            6.0503071,
+            51.0047331
+          ],
+          [
+            6.0503721,
+            51.0047436
+          ]
+        ]
+      },
+      "id": "way/37280908"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280909",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Lerchenring",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0532338,
+            51.0017262
+          ],
+          [
+            6.0533663,
+            51.0021429
+          ],
+          [
+            6.0533502,
+            51.0024353
+          ],
+          [
+            6.053551,
+            51.0030087
+          ],
+          [
+            6.053554,
+            51.0030625
+          ],
+          [
+            6.0537363,
+            51.0034916
+          ],
+          [
+            6.0538036,
+            51.0035768
+          ],
+          [
+            6.0538349,
+            51.003732
+          ],
+          [
+            6.0537919,
+            51.0038016
+          ],
+          [
+            6.053661,
+            51.0038462
+          ],
+          [
+            6.0533901,
+            51.0038847
+          ],
+          [
+            6.0530129,
+            51.003941
+          ],
+          [
+            6.0528686,
+            51.0039351
+          ],
+          [
+            6.0528115,
+            51.0038891
+          ],
+          [
+            6.052545,
+            51.0032179
+          ],
+          [
+            6.052384,
+            51.0028471
+          ],
+          [
+            6.052382,
+            51.0025831
+          ],
+          [
+            6.0521255,
+            51.001983
+          ]
+        ]
+      },
+      "id": "way/37280909"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280910",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Amselstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.052382,
+            51.0025831
+          ],
+          [
+            6.0533502,
+            51.0024353
+          ]
+        ]
+      },
+      "id": "way/37280910"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280911",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Finkenstraße",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.052545,
+            51.0032179
+          ],
+          [
+            6.053554,
+            51.0030625
+          ]
+        ]
+      },
+      "id": "way/37280911"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280912",
+        "highway": "residential",
+        "name": "Drosselweg",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0538036,
+            51.0035768
+          ],
+          [
+            6.0545293,
+            51.0034561
+          ]
+        ]
+      },
+      "id": "way/37280912"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280913",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Finkenstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.053551,
+            51.0030087
+          ],
+          [
+            6.0540622,
+            51.002927
+          ]
+        ]
+      },
+      "id": "way/37280913"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280914",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Amselstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0533502,
+            51.0024353
+          ],
+          [
+            6.0540658,
+            51.0023189
+          ]
+        ]
+      },
+      "id": "way/37280914"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280918",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Schniewind-Straße",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0560244,
+            51.0053538
+          ],
+          [
+            6.0557841,
+            51.0049611
+          ],
+          [
+            6.0562072,
+            51.0048586
+          ],
+          [
+            6.0560861,
+            51.0046607
+          ]
+        ]
+      },
+      "id": "way/37280918"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280919",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Schniewind-Straße",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0560861,
+            51.0046607
+          ],
+          [
+            6.0557306,
+            51.0040625
+          ]
+        ]
+      },
+      "id": "way/37280919"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280922",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Seidenstraße",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0552145,
+            51.0048701
+          ],
+          [
+            6.0544312,
+            51.0050518
+          ],
+          [
+            6.0542575,
+            51.0051255
+          ]
+        ]
+      },
+      "id": "way/37280922"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280923",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Rebhuhnstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0508538,
+            51.0003358
+          ],
+          [
+            6.0514316,
+            51.0002343
+          ],
+          [
+            6.0512284,
+            50.9997412
+          ],
+          [
+            6.0510883,
+            50.9994793
+          ]
+        ]
+      },
+      "id": "way/37280923"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280924",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Elsternweg",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0512284,
+            50.9997412
+          ],
+          [
+            6.0523482,
+            50.9995539
+          ],
+          [
+            6.052847,
+            50.9994695
+          ],
+          [
+            6.0528937,
+            50.9994643
+          ],
+          [
+            6.0532615,
+            50.9994137
+          ]
+        ]
+      },
+      "id": "way/37280924"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280925",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Rebhuhnstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0514316,
+            51.0002343
+          ],
+          [
+            6.0522931,
+            51.0001026
+          ],
+          [
+            6.0524949,
+            51.0000681
+          ],
+          [
+            6.0525299,
+            51.0000198
+          ]
+        ]
+      },
+      "id": "way/37280925"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280926",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Rebhuhnstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0522931,
+            51.0001026
+          ],
+          [
+            6.0525318,
+            51.0006684
+          ]
+        ]
+      },
+      "id": "way/37280926"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280927",
+        "highway": "path",
+        "name": "Rebhuhnstraße",
+        "surface": "paving_stones",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0524949,
+            51.0000681
+          ],
+          [
+            6.052512,
+            51.0001069
+          ],
+          [
+            6.0526797,
+            51.0004884
+          ],
+          [
+            6.0527394,
+            51.0006387
+          ]
+        ]
+      },
+      "id": "way/37280927"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280928",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Fliederstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0518355,
+            51.0043773
+          ],
+          [
+            6.0517737,
+            51.0042354
+          ],
+          [
+            6.0516004,
+            51.0037242
+          ],
+          [
+            6.0515823,
+            51.0036407
+          ],
+          [
+            6.0513526,
+            51.0030636
+          ],
+          [
+            6.0504649,
+            51.003246
+          ],
+          [
+            6.0503451,
+            51.0032709
+          ],
+          [
+            6.0502838,
+            51.0033203
+          ],
+          [
+            6.049457,
+            51.0034906
+          ],
+          [
+            6.049351,
+            51.0035428
+          ]
+        ]
+      },
+      "id": "way/37280928"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280930",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Asternstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.04971,
+            51.0040795
+          ],
+          [
+            6.0498217,
+            51.0040594
+          ],
+          [
+            6.0507394,
+            51.0039182
+          ],
+          [
+            6.0508323,
+            51.0038679
+          ],
+          [
+            6.0516004,
+            51.0037242
+          ]
+        ]
+      },
+      "id": "way/37280930"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280932",
+        "highway": "residential",
+        "motor_vehicle": "destination",
+        "name": "Rosenweg",
+        "surface": "compacted"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.049834,
+            51.0049562
+          ],
+          [
+            6.0497107,
+            51.0048717
+          ],
+          [
+            6.0495328,
+            51.0046339
+          ],
+          [
+            6.0493572,
+            51.0043917
+          ],
+          [
+            6.0492275,
+            51.0042182
+          ],
+          [
+            6.0491039,
+            51.0041235
+          ]
+        ]
+      },
+      "id": "way/37280932"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37280933",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Rosenweg",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0495736,
+            51.0038291
+          ],
+          [
+            6.0489392,
+            51.0039628
+          ]
+        ]
+      },
+      "id": "way/37280933"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37320408",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0488302,
+            51.0028559
+          ],
+          [
+            6.0485204,
+            51.0021319
+          ],
+          [
+            6.0485163,
+            51.0020888
+          ],
+          [
+            6.0485229,
+            51.0020439
+          ],
+          [
+            6.0485903,
+            51.0020134
+          ],
+          [
+            6.0488855,
+            51.0019369
+          ],
+          [
+            6.0486244,
+            51.0013244
+          ],
+          [
+            6.0484706,
+            51.0009449
+          ]
+        ]
+      },
+      "id": "way/37320408"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37326070",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Rabenweg",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0525318,
+            51.0006684
+          ],
+          [
+            6.0516432,
+            51.0007935
+          ],
+          [
+            6.0511122,
+            51.0008745
+          ],
+          [
+            6.0510657,
+            51.000882
+          ]
+        ]
+      },
+      "id": "way/37326070"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37333636",
+        "highway": "residential",
+        "lit": "yes",
+        "maxspeed:type": "DE:urban",
+        "name": "Kreuzstraße",
+        "oneway": "yes",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.048958,
+            51.0053147
+          ],
+          [
+            6.0489159,
+            51.0053518
+          ],
+          [
+            6.0487052,
+            51.0054734
+          ],
+          [
+            6.048557,
+            51.0055697
+          ],
+          [
+            6.048478,
+            51.0056424
+          ]
+        ]
+      },
+      "id": "way/37333636"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37334856",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Unkelsfeld",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.049351,
+            51.0035428
+          ],
+          [
+            6.0492806,
+            51.0035083
+          ],
+          [
+            6.0492,
+            51.0034692
+          ],
+          [
+            6.0491479,
+            51.00343
+          ],
+          [
+            6.0491072,
+            51.0033838
+          ],
+          [
+            6.0488302,
+            51.0028559
+          ]
+        ]
+      },
+      "id": "way/37334856"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37356161",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Paulssträßchen",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0503721,
+            51.0047436
+          ],
+          [
+            6.0504578,
+            51.0047443
+          ],
+          [
+            6.0505479,
+            51.0047301
+          ],
+          [
+            6.050882,
+            51.0046333
+          ]
+        ]
+      },
+      "id": "way/37356161"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37356162",
+        "highway": "tertiary",
+        "maxspeed": "50",
+        "name": "Kreuzstraße",
+        "ref": "K 13",
+        "source:maxspeed": "DE:urban",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0492175,
+            51.0058642
+          ],
+          [
+            6.0489322,
+            51.0057571
+          ],
+          [
+            6.048663,
+            51.0056804
+          ]
+        ]
+      },
+      "id": "way/37356162"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/37718520",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Sohland-Straße",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0560861,
+            51.0046607
+          ],
+          [
+            6.0569188,
+            51.0044629
+          ],
+          [
+            6.0569494,
+            51.0045132
+          ],
+          [
+            6.0570488,
+            51.0046879
+          ],
+          [
+            6.0568952,
+            51.0047256
+          ]
+        ]
+      },
+      "id": "way/37718520"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/38478688",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Elsternweg",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0525299,
+            51.0000198
+          ],
+          [
+            6.0523482,
+            50.9995539
+          ]
+        ]
+      },
+      "id": "way/38478688"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/38478780",
+        "highway": "residential",
+        "name": "Am Schützenheim",
+        "oneway": "no"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0526057,
+            51.0044324
+          ],
+          [
+            6.052776,
+            51.0044998
+          ],
+          [
+            6.0531045,
+            51.00462
+          ],
+          [
+            6.0534471,
+            51.0047662
+          ],
+          [
+            6.0536088,
+            51.0048388
+          ],
+          [
+            6.0536854,
+            51.0048741
+          ],
+          [
+            6.05381,
+            51.0049422
+          ],
+          [
+            6.0541966,
+            51.0050986
+          ],
+          [
+            6.0542575,
+            51.0051255
+          ],
+          [
+            6.0546436,
+            51.0052897
+          ],
+          [
+            6.0551041,
+            51.0054856
+          ],
+          [
+            6.0552667,
+            51.0055459
+          ]
+        ]
+      },
+      "id": "way/38478780"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112117617",
+        "highway": "residential",
+        "junction": "roundabout",
+        "maxspeed": "30",
+        "name": "Fasanenstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0515751,
+            51.00217
+          ],
+          [
+            6.0515551,
+            51.0021764
+          ],
+          [
+            6.0515331,
+            51.0021788
+          ],
+          [
+            6.0515109,
+            51.0021769
+          ],
+          [
+            6.0514906,
+            51.002171
+          ],
+          [
+            6.051474,
+            51.0021615
+          ],
+          [
+            6.0514626,
+            51.0021494
+          ],
+          [
+            6.0514573,
+            51.0021331
+          ],
+          [
+            6.0514614,
+            51.0021166
+          ],
+          [
+            6.0514743,
+            51.0021021
+          ],
+          [
+            6.0514946,
+            51.0020913
+          ],
+          [
+            6.0515308,
+            51.002084
+          ],
+          [
+            6.0515523,
+            51.0020869
+          ],
+          [
+            6.051581,
+            51.0020968
+          ],
+          [
+            6.0516002,
+            51.0021136
+          ],
+          [
+            6.0516055,
+            51.0021258
+          ],
+          [
+            6.0516055,
+            51.0021384
+          ],
+          [
+            6.0516,
+            51.0021505
+          ],
+          [
+            6.0515897,
+            51.0021613
+          ],
+          [
+            6.0515751,
+            51.00217
+          ]
+        ]
+      },
+      "id": "way/112117617"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112117618",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Fasanenstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0514626,
+            51.0021494
+          ],
+          [
+            6.0501159,
+            51.0025232
+          ],
+          [
+            6.0496262,
+            51.0026543
+          ],
+          [
+            6.0488302,
+            51.0028559
+          ]
+        ]
+      },
+      "id": "way/112117618"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112290954",
+        "highway": "track",
+        "surface": "fine_gravel",
+        "tracktype": "grade2",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0530098,
+            51.0053347
+          ],
+          [
+            6.0525681,
+            51.0054732
+          ],
+          [
+            6.0520446,
+            51.0056146
+          ],
+          [
+            6.0518064,
+            51.0056589
+          ],
+          [
+            6.0515412,
+            51.0056998
+          ],
+          [
+            6.0513599,
+            51.0057559
+          ]
+        ]
+      },
+      "id": "way/112290954"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112290955",
+        "highway": "tertiary",
+        "name": "Paulssträßchen",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0526395,
+            51.0043633
+          ],
+          [
+            6.0528079,
+            51.0043279
+          ],
+          [
+            6.0535111,
+            51.004161
+          ]
+        ]
+      },
+      "id": "way/112290955"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112290957",
+        "highway": "service",
+        "maxspeed": "30",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.051739,
+            51.004558
+          ],
+          [
+            6.0516757,
+            51.0045706
+          ],
+          [
+            6.0516553,
+            51.0045733
+          ],
+          [
+            6.0515885,
+            51.0045823
+          ],
+          [
+            6.0514107,
+            51.0046113
+          ],
+          [
+            6.0512638,
+            51.0046325
+          ]
+        ]
+      },
+      "id": "way/112290957"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112290960",
+        "highway": "service",
+        "motor_vehicle": "agricultural",
+        "surface": "asphalt",
+        "traffic_sign": "DE:260,DE:1026-36",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0536088,
+            51.0048388
+          ],
+          [
+            6.0535601,
+            51.0048926
+          ],
+          [
+            6.0534248,
+            51.0049658
+          ],
+          [
+            6.0532732,
+            51.0050373
+          ],
+          [
+            6.0529462,
+            51.0051649
+          ],
+          [
+            6.0528993,
+            51.0052009
+          ],
+          [
+            6.0529084,
+            51.0052396
+          ],
+          [
+            6.0529769,
+            51.0053039
+          ],
+          [
+            6.0530098,
+            51.0053347
+          ]
+        ]
+      },
+      "id": "way/112290960"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112290961",
+        "highway": "service",
+        "maxspeed": "30",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0518679,
+            51.0043712
+          ],
+          [
+            6.0518859,
+            51.0044036
+          ],
+          [
+            6.0518964,
+            51.0044422
+          ],
+          [
+            6.0518984,
+            51.0044709
+          ],
+          [
+            6.051894,
+            51.0044971
+          ],
+          [
+            6.0518642,
+            51.0045221
+          ],
+          [
+            6.0518306,
+            51.0045371
+          ],
+          [
+            6.0518036,
+            51.0045445
+          ],
+          [
+            6.0517728,
+            51.0045505
+          ],
+          [
+            6.051739,
+            51.004558
+          ]
+        ]
+      },
+      "id": "way/112290961"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307259",
+        "highway": "service",
+        "surface": "fine_gravel",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0485229,
+            51.0020439
+          ],
+          [
+            6.0484049,
+            51.0020622
+          ],
+          [
+            6.0481303,
+            51.002111
+          ],
+          [
+            6.0480911,
+            51.002125
+          ],
+          [
+            6.0480597,
+            51.0021464
+          ],
+          [
+            6.0480453,
+            51.0021793
+          ],
+          [
+            6.0480453,
+            51.0022188
+          ],
+          [
+            6.0480545,
+            51.0022509
+          ],
+          [
+            6.0483451,
+            51.002957
+          ]
+        ]
+      },
+      "id": "way/112307259"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307260",
+        "highway": "service",
+        "service": "parking_aisle",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0513526,
+            51.0030636
+          ],
+          [
+            6.0513779,
+            51.0030306
+          ],
+          [
+            6.0516051,
+            51.0029901
+          ],
+          [
+            6.0516216,
+            51.0029338
+          ],
+          [
+            6.0518939,
+            51.002895
+          ]
+        ]
+      },
+      "id": "way/112307260"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307261",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0495086,
+            51.001156
+          ],
+          [
+            6.0510108,
+            51.000925
+          ]
+        ]
+      },
+      "id": "way/112307261"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307262",
+        "highway": "track",
+        "motor_vehicle": "agricultural;forestry",
+        "smoothness": "good",
+        "surface": "asphalt",
+        "tracktype": "grade1",
+        "traffic_sign": "DE:260,DE:1026-38"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0505299,
+            50.9995614
+          ],
+          [
+            6.0504052,
+            50.9991278
+          ],
+          [
+            6.0502548,
+            50.9986438
+          ],
+          [
+            6.0501409,
+            50.9982706
+          ],
+          [
+            6.0500858,
+            50.9981007
+          ],
+          [
+            6.0500144,
+            50.9978198
+          ],
+          [
+            6.0499083,
+            50.997502
+          ],
+          [
+            6.0498769,
+            50.9974356
+          ],
+          [
+            6.0498621,
+            50.9973238
+          ],
+          [
+            6.0497227,
+            50.9967596
+          ],
+          [
+            6.0496123,
+            50.996309
+          ],
+          [
+            6.0495192,
+            50.9959254
+          ],
+          [
+            6.0493744,
+            50.995358
+          ],
+          [
+            6.049266,
+            50.9948875
+          ],
+          [
+            6.0491273,
+            50.9942948
+          ],
+          [
+            6.0490081,
+            50.9938248
+          ],
+          [
+            6.0489338,
+            50.9935234
+          ],
+          [
+            6.0489223,
+            50.9934716
+          ],
+          [
+            6.0488554,
+            50.9933595
+          ],
+          [
+            6.0486879,
+            50.9930715
+          ],
+          [
+            6.0483349,
+            50.9925113
+          ],
+          [
+            6.0479907,
+            50.9919434
+          ],
+          [
+            6.0475654,
+            50.9912478
+          ],
+          [
+            6.047047,
+            50.9903739
+          ],
+          [
+            6.0469948,
+            50.9902963
+          ],
+          [
+            6.0469251,
+            50.990185
+          ],
+          [
+            6.0464904,
+            50.9894754
+          ],
+          [
+            6.046136,
+            50.9888974
+          ],
+          [
+            6.0456987,
+            50.988187
+          ],
+          [
+            6.0454782,
+            50.9878091
+          ],
+          [
+            6.0452316,
+            50.9873981
+          ]
+        ]
+      },
+      "id": "way/112307262"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307263",
+        "highway": "service",
+        "service": "alley",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0493464,
+            51.0005522
+          ],
+          [
+            6.0492827,
+            51.0004783
+          ],
+          [
+            6.0490172,
+            50.9998447
+          ]
+        ]
+      },
+      "id": "way/112307263"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307264",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Rabenweg",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0521255,
+            51.001983
+          ],
+          [
+            6.0516432,
+            51.0007935
+          ]
+        ]
+      },
+      "id": "way/112307264"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307265",
+        "highway": "service",
+        "service": "alley",
+        "surface": "fine_gravel",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0484049,
+            51.0020622
+          ],
+          [
+            6.0482334,
+            51.0016542
+          ],
+          [
+            6.0478559,
+            51.000736
+          ]
+        ]
+      },
+      "id": "way/112307265"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307267",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Im Hönzel",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paved"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0491738,
+            51.0005821
+          ],
+          [
+            6.0492047,
+            51.0005953
+          ],
+          [
+            6.0492416,
+            51.0006187
+          ],
+          [
+            6.0492788,
+            51.0006539
+          ],
+          [
+            6.0495086,
+            51.001156
+          ],
+          [
+            6.0495087,
+            51.001171
+          ],
+          [
+            6.0497869,
+            51.0017685
+          ]
+        ]
+      },
+      "id": "way/112307267"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307268",
+        "highway": "service",
+        "service": "driveway",
+        "surface": "unpaved"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0482334,
+            51.0016542
+          ],
+          [
+            6.0473936,
+            51.0017882
+          ],
+          [
+            6.0472726,
+            51.0017539
+          ]
+        ]
+      },
+      "id": "way/112307268"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112307269",
+        "highway": "residential",
+        "name": "Am Schützenheim",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0515751,
+            51.00217
+          ],
+          [
+            6.0518939,
+            51.002895
+          ],
+          [
+            6.0520047,
+            51.0031874
+          ],
+          [
+            6.0520579,
+            51.003303
+          ],
+          [
+            6.0524117,
+            51.0041771
+          ],
+          [
+            6.0524577,
+            51.0043082
+          ]
+        ]
+      },
+      "id": "way/112307269"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112308088",
+        "highway": "path",
+        "smoothness": "good",
+        "surface": "paving_stones",
+        "width": "1.5"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0504649,
+            51.003246
+          ],
+          [
+            6.0501737,
+            51.0025909
+          ],
+          [
+            6.0501159,
+            51.0025232
+          ]
+        ]
+      },
+      "id": "way/112308088"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112310181",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Rebhuhnstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0532338,
+            51.0017262
+          ],
+          [
+            6.0528054,
+            51.000684
+          ],
+          [
+            6.0527394,
+            51.0006387
+          ],
+          [
+            6.0525318,
+            51.0006684
+          ]
+        ]
+      },
+      "id": "way/112310181"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112310914",
+        "highway": "path",
+        "mtb:scale": "0",
+        "smoothness": "horrible",
+        "surface": "earth",
+        "trail_visibility": "good",
+        "width": "0.5"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0491382,
+            50.9998188
+          ],
+          [
+            6.0490936,
+            50.9996704
+          ],
+          [
+            6.0490248,
+            50.9994555
+          ],
+          [
+            6.0489146,
+            50.9991513
+          ],
+          [
+            6.0484913,
+            50.9984553
+          ]
+        ]
+      },
+      "id": "way/112310914"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112310916",
+        "highway": "track",
+        "surface": "sand",
+        "tracktype": "grade3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0500858,
+            50.9981007
+          ],
+          [
+            6.0496087,
+            50.9982036
+          ],
+          [
+            6.048969,
+            50.9983544
+          ],
+          [
+            6.0485257,
+            50.998448
+          ],
+          [
+            6.0484913,
+            50.9984553
+          ]
+        ]
+      },
+      "id": "way/112310916"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/112312037",
+        "highway": "service",
+        "service": "driveway",
+        "surface": "paved"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0463152,
+            51.005194
+          ],
+          [
+            6.0464,
+            51.00503
+          ],
+          [
+            6.0464322,
+            51.0049931
+          ],
+          [
+            6.0464771,
+            51.0049586
+          ],
+          [
+            6.0465351,
+            51.0049353
+          ],
+          [
+            6.0466168,
+            51.0049194
+          ],
+          [
+            6.0467111,
+            51.0049126
+          ],
+          [
+            6.0476374,
+            51.0048383
+          ],
+          [
+            6.0478368,
+            51.0048887
+          ],
+          [
+            6.04803,
+            51.0049056
+          ],
+          [
+            6.0481869,
+            51.0048887
+          ]
+        ]
+      },
+      "id": "way/112312037"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/116029715",
+        "highway": "path",
+        "smoothness": "good",
+        "surface": "asphalt",
+        "width": "1.5"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.048663,
+            51.0056804
+          ],
+          [
+            6.0486034,
+            51.0057206
+          ],
+          [
+            6.0484029,
+            51.0056751
+          ],
+          [
+            6.0465111,
+            51.0052857
+          ]
+        ]
+      },
+      "id": "way/116029715"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/116223180",
+        "highway": "track",
+        "tracktype": "grade3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0438454,
+            51.0016934
+          ],
+          [
+            6.0439834,
+            51.001681
+          ],
+          [
+            6.0453904,
+            51.001639
+          ],
+          [
+            6.0456595,
+            51.0016152
+          ],
+          [
+            6.0461952,
+            51.0014934
+          ]
+        ]
+      },
+      "id": "way/116223180"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/116223205",
+        "highway": "track",
+        "tracktype": "grade3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0438374,
+            51.0019526
+          ],
+          [
+            6.0439612,
+            51.0019506
+          ],
+          [
+            6.0453539,
+            51.0019046
+          ],
+          [
+            6.0461518,
+            51.0017677
+          ]
+        ]
+      },
+      "id": "way/116223205"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/116339630",
+        "highway": "track",
+        "surface": "grass",
+        "tracktype": "grade4"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0441738,
+            50.991543
+          ],
+          [
+            6.0443171,
+            50.9917766
+          ],
+          [
+            6.0447011,
+            50.9923809
+          ],
+          [
+            6.0450243,
+            50.9929053
+          ],
+          [
+            6.0453624,
+            50.9934796
+          ],
+          [
+            6.045661,
+            50.9939751
+          ],
+          [
+            6.0457958,
+            50.9941779
+          ],
+          [
+            6.0459343,
+            50.994399
+          ],
+          [
+            6.0463054,
+            50.9949953
+          ],
+          [
+            6.0466228,
+            50.9954799
+          ],
+          [
+            6.0470295,
+            50.9961141
+          ],
+          [
+            6.047517,
+            50.9968434
+          ],
+          [
+            6.0479017,
+            50.9974875
+          ],
+          [
+            6.0481132,
+            50.9978178
+          ]
+        ]
+      },
+      "id": "way/116339630"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/116339632",
+        "highway": "track",
+        "surface": "grass",
+        "tracktype": "grade5",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0551359,
+            50.9921019
+          ],
+          [
+            6.0551482,
+            50.9922151
+          ],
+          [
+            6.0551678,
+            50.9930208
+          ],
+          [
+            6.0551793,
+            50.9936944
+          ],
+          [
+            6.0551924,
+            50.9943774
+          ],
+          [
+            6.0552121,
+            50.9951129
+          ],
+          [
+            6.0551736,
+            50.9955938
+          ],
+          [
+            6.0551941,
+            50.9962466
+          ],
+          [
+            6.0552645,
+            50.9963621
+          ],
+          [
+            6.0553989,
+            50.9968078
+          ],
+          [
+            6.0555776,
+            50.9973834
+          ],
+          [
+            6.0558791,
+            50.9985214
+          ]
+        ]
+      },
+      "id": "way/116339632"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/116339653",
+        "highway": "track",
+        "motor_vehicle": "agricultural",
+        "surface": "grass",
+        "tracktype": "grade5"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0532195,
+            50.9990423
+          ],
+          [
+            6.0529289,
+            50.9979518
+          ],
+          [
+            6.0527732,
+            50.9974226
+          ],
+          [
+            6.0525923,
+            50.9969331
+          ],
+          [
+            6.0525361,
+            50.996839
+          ]
+        ]
+      },
+      "id": "way/116339653"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/156873934",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Lerchenring",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0535111,
+            51.004161
+          ],
+          [
+            6.0533901,
+            51.0038847
+          ]
+        ]
+      },
+      "id": "way/156873934"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/168506679",
+        "highway": "tertiary",
+        "maxspeed": "50",
+        "name": "Kreuzstraße",
+        "ref": "K 13",
+        "source:maxspeed": "DE:urban",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.048663,
+            51.0056804
+          ],
+          [
+            6.048478,
+            51.0056424
+          ]
+        ]
+      },
+      "id": "way/168506679"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/198801132",
+        "highway": "track",
+        "motor_vehicle": "agricultural",
+        "surface": "asphalt",
+        "tracktype": "grade1",
+        "traffic_sign": "DE:260,DE:1026-36",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0532195,
+            50.9990423
+          ],
+          [
+            6.0530954,
+            50.9990667
+          ],
+          [
+            6.0510789,
+            50.9994553
+          ],
+          [
+            6.0505299,
+            50.9995614
+          ]
+        ]
+      },
+      "id": "way/198801132"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/204968394",
+        "highway": "residential",
+        "lit": "yes",
+        "maxspeed:type": "DE:urban",
+        "name": "Gaterstraße",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0462568,
+            50.9999338
+          ],
+          [
+            6.0466057,
+            51.0002148
+          ]
+        ]
+      },
+      "id": "way/204968394"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/204968395",
+        "highway": "residential",
+        "lit": "yes",
+        "maxspeed:type": "DE:urban",
+        "name": "Gaterstraße",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0466057,
+            51.0002148
+          ],
+          [
+            6.046718,
+            51.0003254
+          ],
+          [
+            6.0467328,
+            51.0003497
+          ],
+          [
+            6.0468932,
+            51.0006127
+          ],
+          [
+            6.0469366,
+            51.0006924
+          ],
+          [
+            6.0470252,
+            51.0008621
+          ],
+          [
+            6.0470709,
+            51.0011775
+          ],
+          [
+            6.0469353,
+            51.0018025
+          ],
+          [
+            6.046914,
+            51.002295
+          ],
+          [
+            6.0470367,
+            51.0028341
+          ],
+          [
+            6.0471838,
+            51.0031973
+          ]
+        ]
+      },
+      "id": "way/204968395"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/209435657",
+        "highway": "residential",
+        "lit": "yes",
+        "maxspeed:type": "DE:urban",
+        "name": "Bahnhofstraße",
+        "oneway": "yes",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0493625,
+            51.0057822
+          ],
+          [
+            6.0493013,
+            51.0057018
+          ],
+          [
+            6.0490889,
+            51.0055044
+          ],
+          [
+            6.0490407,
+            51.0054437
+          ],
+          [
+            6.0489947,
+            51.0053768
+          ],
+          [
+            6.048958,
+            51.0053147
+          ]
+        ]
+      },
+      "id": "way/209435657"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/209558351",
+        "highway": "tertiary",
+        "maxspeed": "50",
+        "name": "Kreuzstraße",
+        "ref": "K 13",
+        "source:maxspeed": "DE:urban",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.048478,
+            51.0056424
+          ],
+          [
+            6.0465323,
+            51.0052423
+          ],
+          [
+            6.0463152,
+            51.005194
+          ],
+          [
+            6.0444708,
+            51.0048016
+          ],
+          [
+            6.0431164,
+            51.0045073
+          ],
+          [
+            6.0429235,
+            51.0044557
+          ],
+          [
+            6.0426014,
+            51.0043794
+          ],
+          [
+            6.0425662,
+            51.0043686
+          ],
+          [
+            6.0420021,
+            51.004178
+          ],
+          [
+            6.0417963,
+            51.0041062
+          ]
+        ]
+      },
+      "id": "way/209558351"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/232600676",
+        "highway": "tertiary",
+        "maxspeed": "50",
+        "name": "Paulssträßchen",
+        "surface": "paved"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0535111,
+            51.004161
+          ],
+          [
+            6.0546551,
+            51.0038843
+          ],
+          [
+            6.0560506,
+            51.0035554
+          ],
+          [
+            6.056726,
+            51.003398
+          ],
+          [
+            6.0587571,
+            51.0029235
+          ],
+          [
+            6.0596781,
+            51.0027083
+          ]
+        ]
+      },
+      "id": "way/232600676"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/232601870",
+        "highway": "tertiary",
+        "junction": "roundabout",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0526395,
+            51.0043633
+          ],
+          [
+            6.0526403,
+            51.0043882
+          ],
+          [
+            6.0526286,
+            51.0044121
+          ],
+          [
+            6.0526057,
+            51.0044324
+          ],
+          [
+            6.0525717,
+            51.0044478
+          ],
+          [
+            6.0525316,
+            51.0044553
+          ],
+          [
+            6.0524898,
+            51.004454
+          ],
+          [
+            6.0524511,
+            51.0044441
+          ],
+          [
+            6.0524197,
+            51.0044267
+          ],
+          [
+            6.0523992,
+            51.0044037
+          ],
+          [
+            6.052392,
+            51.0043778
+          ],
+          [
+            6.0523998,
+            51.00435
+          ],
+          [
+            6.0524226,
+            51.0043258
+          ],
+          [
+            6.0524577,
+            51.0043082
+          ],
+          [
+            6.052514,
+            51.0042988
+          ],
+          [
+            6.0525709,
+            51.0043066
+          ],
+          [
+            6.052616,
+            51.0043297
+          ],
+          [
+            6.0526395,
+            51.0043633
+          ]
+        ]
+      },
+      "id": "way/232601870"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/263806567",
+        "highway": "residential",
+        "name": "Bahnhofstraße",
+        "oneway": "yes",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0492175,
+            51.0058642
+          ],
+          [
+            6.0493401,
+            51.0057908
+          ],
+          [
+            6.0493625,
+            51.0057822
+          ]
+        ]
+      },
+      "id": "way/263806567"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/263807034",
+        "highway": "service"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0493625,
+            51.0057822
+          ],
+          [
+            6.0495255,
+            51.005695
+          ],
+          [
+            6.049666,
+            51.0056198
+          ],
+          [
+            6.0501981,
+            51.0054565
+          ]
+        ]
+      },
+      "id": "way/263807034"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/292899627",
+        "highway": "service",
+        "service": "parking_aisle"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0501981,
+            51.0054565
+          ],
+          [
+            6.050433,
+            51.005386
+          ],
+          [
+            6.0506478,
+            51.0056576
+          ],
+          [
+            6.0506344,
+            51.0056617
+          ],
+          [
+            6.0504017,
+            51.0057322
+          ],
+          [
+            6.0501981,
+            51.0054565
+          ]
+        ]
+      },
+      "id": "way/292899627"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/293002953",
+        "highway": "residential",
+        "name": "Bahnhofstraße",
+        "oneway": "yes",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0493625,
+            51.0057822
+          ],
+          [
+            6.0493701,
+            51.0058003
+          ],
+          [
+            6.0493191,
+            51.0059054
+          ]
+        ]
+      },
+      "id": "way/293002953"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/293101213",
+        "highway": "service",
+        "service": "driveway"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0474558,
+            51.0001049
+          ],
+          [
+            6.0476041,
+            51.0004849
+          ]
+        ]
+      },
+      "id": "way/293101213"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/293101214",
+        "highway": "path",
+        "surface": "paving_stones",
+        "width": "2"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0520579,
+            51.003303
+          ],
+          [
+            6.0524281,
+            51.0032428
+          ],
+          [
+            6.052545,
+            51.0032179
+          ]
+        ]
+      },
+      "id": "way/293101214"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/293140732",
+        "highway": "residential",
+        "maxspeed": "30",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0553365,
+            51.0050695
+          ],
+          [
+            6.0553875,
+            51.0051528
+          ]
+        ]
+      },
+      "id": "way/293140732"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/367403288",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Heinrich-Aretz-Straße",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0574167,
+            51.0037105
+          ],
+          [
+            6.0577812,
+            51.0043205
+          ],
+          [
+            6.0578458,
+            51.0044323
+          ],
+          [
+            6.0581983,
+            51.0043528
+          ],
+          [
+            6.0587285,
+            51.0042261
+          ],
+          [
+            6.0583125,
+            51.0035025
+          ],
+          [
+            6.0574167,
+            51.0037105
+          ],
+          [
+            6.0570379,
+            51.0037996
+          ],
+          [
+            6.0569532,
+            51.0037901
+          ],
+          [
+            6.0569177,
+            51.0037861
+          ],
+          [
+            6.0557306,
+            51.0040625
+          ],
+          [
+            6.0548465,
+            51.0042685
+          ],
+          [
+            6.0547177,
+            51.0042748
+          ],
+          [
+            6.0538741,
+            51.0044695
+          ],
+          [
+            6.0537709,
+            51.0044734
+          ],
+          [
+            6.053695,
+            51.0044485
+          ],
+          [
+            6.0536404,
+            51.0043741
+          ],
+          [
+            6.0535111,
+            51.004161
+          ]
+        ]
+      },
+      "id": "way/367403288"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/367403290",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Schniewind-Straße",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0548465,
+            51.0042685
+          ],
+          [
+            6.0550458,
+            51.0045944
+          ],
+          [
+            6.0552145,
+            51.0048701
+          ],
+          [
+            6.0553365,
+            51.0050695
+          ],
+          [
+            6.0555016,
+            51.0050295
+          ]
+        ]
+      },
+      "id": "way/367403290"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/613888490",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Paulssträßchen",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.050882,
+            51.0046333
+          ],
+          [
+            6.0514515,
+            51.0044653
+          ],
+          [
+            6.0515612,
+            51.0044402
+          ],
+          [
+            6.0518355,
+            51.0043773
+          ],
+          [
+            6.0518679,
+            51.0043712
+          ]
+        ]
+      },
+      "id": "way/613888490"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/613888491",
+        "highway": "service",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0512638,
+            51.0046325
+          ],
+          [
+            6.0511396,
+            51.0046476
+          ],
+          [
+            6.051029,
+            51.0046585
+          ],
+          [
+            6.0509507,
+            51.0046575
+          ],
+          [
+            6.050882,
+            51.0046333
+          ]
+        ]
+      },
+      "id": "way/613888491"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/613888493",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Paulssträßchen",
+        "source:maxspeed": "DE:zone30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0518679,
+            51.0043712
+          ],
+          [
+            6.0520049,
+            51.0043449
+          ],
+          [
+            6.0521057,
+            51.0043476
+          ],
+          [
+            6.0521739,
+            51.0043524
+          ],
+          [
+            6.0522713,
+            51.0043593
+          ],
+          [
+            6.052392,
+            51.0043778
+          ]
+        ]
+      },
+      "id": "way/613888493"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/613888494",
+        "highway": "residential",
+        "motor_vehicle": "agricultural",
+        "name": "Paulssträßchen"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0489523,
+            51.0052632
+          ],
+          [
+            6.0493938,
+            51.0050829
+          ],
+          [
+            6.0497058,
+            51.0049931
+          ],
+          [
+            6.049834,
+            51.0049562
+          ]
+        ]
+      },
+      "id": "way/613888494"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/613888495",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Fasanenstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0488302,
+            51.0028559
+          ],
+          [
+            6.0483451,
+            51.002957
+          ],
+          [
+            6.0471838,
+            51.0031973
+          ]
+        ]
+      },
+      "id": "way/613888495"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/613888496",
+        "highway": "residential",
+        "lit": "yes",
+        "maxspeed:type": "DE:urban",
+        "name": "Gaterstraße",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0471838,
+            51.0031973
+          ],
+          [
+            6.0472318,
+            51.0032983
+          ],
+          [
+            6.0473406,
+            51.0035634
+          ],
+          [
+            6.0474784,
+            51.0037786
+          ],
+          [
+            6.0477551,
+            51.0040669
+          ],
+          [
+            6.0479767,
+            51.0042786
+          ],
+          [
+            6.048458,
+            51.0046509
+          ],
+          [
+            6.048661,
+            51.004841
+          ],
+          [
+            6.0487816,
+            51.0049861
+          ],
+          [
+            6.0489523,
+            51.0052632
+          ],
+          [
+            6.048958,
+            51.0053147
+          ]
+        ]
+      },
+      "id": "way/613888496"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/736905169",
+        "highway": "service",
+        "service": "parking_aisle"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0495293,
+            51.0054575
+          ],
+          [
+            6.049666,
+            51.0056198
+          ]
+        ]
+      },
+      "id": "way/736905169"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/736905171",
+        "highway": "service",
+        "service": "driveway"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.04838,
+            51.0050195
+          ],
+          [
+            6.0487052,
+            51.0054734
+          ]
+        ]
+      },
+      "id": "way/736905171"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/808918543",
+        "highway": "service"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0521739,
+            51.0043524
+          ],
+          [
+            6.0521923,
+            51.0044852
+          ],
+          [
+            6.0524316,
+            51.0047144
+          ]
+        ]
+      },
+      "id": "way/808918543"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/834766539",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Josef-Sodermanns-Straße",
+        "zone:maxspeed": "DE:30"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0549953,
+            51.0058791
+          ],
+          [
+            6.0548847,
+            51.0057953
+          ],
+          [
+            6.0544693,
+            51.0059954
+          ],
+          [
+            6.0544294,
+            51.0059602
+          ],
+          [
+            6.0540134,
+            51.0055934
+          ],
+          [
+            6.0540314,
+            51.0055334
+          ],
+          [
+            6.0546436,
+            51.0052897
+          ]
+        ]
+      },
+      "id": "way/834766539"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/834768704",
+        "highway": "residential",
+        "name": "Rosenweg",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0491039,
+            51.0041235
+          ],
+          [
+            6.0490514,
+            51.004084
+          ],
+          [
+            6.0489724,
+            51.0039998
+          ],
+          [
+            6.0489392,
+            51.0039628
+          ],
+          [
+            6.0488257,
+            51.0038561
+          ],
+          [
+            6.0487533,
+            51.0037634
+          ]
+        ]
+      },
+      "id": "way/834768704"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/834768705",
+        "highway": "residential",
+        "motor_vehicle": "agricultural;destination",
+        "name": "Paulssträßchen"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.049834,
+            51.0049562
+          ],
+          [
+            6.0502614,
+            51.0048373
+          ],
+          [
+            6.0503721,
+            51.0047436
+          ]
+        ]
+      },
+      "id": "way/834768705"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/834768706",
+        "highway": "path"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0516553,
+            51.0045733
+          ],
+          [
+            6.0516348,
+            51.0045461
+          ],
+          [
+            6.0515742,
+            51.0044585
+          ],
+          [
+            6.0515612,
+            51.0044402
+          ]
+        ]
+      },
+      "id": "way/834768706"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/931352606",
+        "highway": "path"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0541966,
+            51.0050986
+          ],
+          [
+            6.0532109,
+            51.0055081
+          ]
+        ]
+      },
+      "id": "way/931352606"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/941063253",
+        "highway": "path",
+        "smoothness": "good",
+        "surface": "paving_stones",
+        "width": "2"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0506344,
+            51.0056617
+          ],
+          [
+            6.0506887,
+            51.0057237
+          ],
+          [
+            6.0510267,
+            51.0056216
+          ],
+          [
+            6.051032,
+            51.0056275
+          ],
+          [
+            6.051311,
+            51.0055389
+          ],
+          [
+            6.0516771,
+            51.0054621
+          ],
+          [
+            6.0518977,
+            51.0055039
+          ],
+          [
+            6.0521183,
+            51.0055347
+          ],
+          [
+            6.0522544,
+            51.005517
+          ],
+          [
+            6.0529769,
+            51.0053039
+          ]
+        ]
+      },
+      "id": "way/941063253"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589490",
+        "highway": "residential",
+        "name": "Wilhelm-Frings-Straße"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.054186,
+            51.001505
+          ],
+          [
+            6.0543269,
+            51.0017539
+          ],
+          [
+            6.05452,
+            51.0022536
+          ],
+          [
+            6.0546917,
+            51.0024831
+          ],
+          [
+            6.0548634,
+            51.0029017
+          ],
+          [
+            6.0548741,
+            51.0031312
+          ],
+          [
+            6.0549707,
+            51.0033743
+          ],
+          [
+            6.0558933,
+            51.0032125
+          ]
+        ]
+      },
+      "id": "way/942589490"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589491",
+        "highway": "path"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0540658,
+            51.0023189
+          ],
+          [
+            6.0540854,
+            51.0023154
+          ],
+          [
+            6.05452,
+            51.0022536
+          ]
+        ]
+      },
+      "id": "way/942589491"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589495",
+        "highway": "residential",
+        "lane_markings": "no",
+        "name": "Sperberstraße",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.054186,
+            51.001505
+          ],
+          [
+            6.0540463,
+            51.0012544
+          ],
+          [
+            6.053852,
+            51.0007261
+          ],
+          [
+            6.0537191,
+            51.0005482
+          ],
+          [
+            6.0532615,
+            50.9994137
+          ],
+          [
+            6.0538238,
+            50.9993103
+          ],
+          [
+            6.0539128,
+            50.9992939
+          ],
+          [
+            6.054343,
+            51.0004174
+          ],
+          [
+            6.0544395,
+            51.000539
+          ],
+          [
+            6.0547558,
+            51.0013694
+          ]
+        ]
+      },
+      "id": "way/942589495"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589497",
+        "highway": "residential",
+        "name": "Waldkauzstraße"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0552528,
+            51.0015873
+          ],
+          [
+            6.0552957,
+            51.0017291
+          ],
+          [
+            6.0554245,
+            51.0019046
+          ],
+          [
+            6.0557728,
+            51.0027647
+          ],
+          [
+            6.0557839,
+            51.0029443
+          ],
+          [
+            6.0558933,
+            51.0032125
+          ],
+          [
+            6.0560208,
+            51.0034923
+          ],
+          [
+            6.0560506,
+            51.0035554
+          ]
+        ]
+      },
+      "id": "way/942589497"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589499",
+        "highway": "residential",
+        "name": "Christian-Küppers-Straße"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0558933,
+            51.0032125
+          ],
+          [
+            6.0568519,
+            51.0029991
+          ],
+          [
+            6.0578294,
+            51.0027615
+          ],
+          [
+            6.0580547,
+            51.0027038
+          ],
+          [
+            6.0585689,
+            51.0025722
+          ],
+          [
+            6.0584859,
+            51.0023204
+          ],
+          [
+            6.0584859,
+            51.0021178
+          ],
+          [
+            6.058282,
+            51.0016452
+          ],
+          [
+            6.0581425,
+            51.0014764
+          ],
+          [
+            6.057928,
+            51.0009565
+          ],
+          [
+            6.0578958,
+            51.0008282
+          ]
+        ]
+      },
+      "id": "way/942589499"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589500",
+        "highway": "residential",
+        "name": "Wilhelm-Frings-Straße"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0543269,
+            51.0017539
+          ],
+          [
+            6.0552528,
+            51.0015873
+          ],
+          [
+            6.0562094,
+            51.0013762
+          ],
+          [
+            6.0563455,
+            51.0016929
+          ],
+          [
+            6.05635,
+            51.0019758
+          ],
+          [
+            6.0565357,
+            51.0024242
+          ],
+          [
+            6.0566967,
+            51.00262
+          ],
+          [
+            6.0568519,
+            51.0029991
+          ]
+        ]
+      },
+      "id": "way/942589500"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589501",
+        "highway": "residential",
+        "name": "Christian-Küppers-Straße"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0578294,
+            51.0027615
+          ],
+          [
+            6.0576168,
+            51.0024933
+          ],
+          [
+            6.0572306,
+            51.0015481
+          ],
+          [
+            6.0572306,
+            51.0013118
+          ],
+          [
+            6.0571555,
+            51.0011295
+          ],
+          [
+            6.057928,
+            51.0009565
+          ]
+        ]
+      },
+      "id": "way/942589501"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589503",
+        "highway": "residential",
+        "name": "Wilhelm-Frings-Straße"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0563455,
+            51.0016929
+          ],
+          [
+            6.0572306,
+            51.0015481
+          ]
+        ]
+      },
+      "id": "way/942589503"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942589505",
+        "highway": "track",
+        "motor_vehicle": "agricultural",
+        "surface": "asphalt",
+        "tracktype": "grade1",
+        "traffic_sign": "DE:260,DE:1026-36",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0598294,
+            51.0001803
+          ],
+          [
+            6.0597532,
+            51.0002036
+          ],
+          [
+            6.0594738,
+            51.0002658
+          ],
+          [
+            6.0587154,
+            51.0004433
+          ],
+          [
+            6.0583614,
+            51.0005252
+          ],
+          [
+            6.0578071,
+            51.0006534
+          ],
+          [
+            6.0570261,
+            51.000838
+          ],
+          [
+            6.0560877,
+            51.0010576
+          ],
+          [
+            6.055101,
+            51.0012886
+          ],
+          [
+            6.0550897,
+            51.0012912
+          ]
+        ]
+      },
+      "id": "way/942589505"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/942594260",
+        "highway": "path",
+        "smoothness": "bad",
+        "surface": "paving_stones",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0532615,
+            50.9994137
+          ],
+          [
+            6.0532207,
+            50.9993889
+          ],
+          [
+            6.0530954,
+            50.9990667
+          ]
+        ]
+      },
+      "id": "way/942594260"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1009088552",
+        "highway": "path",
+        "surface": "paving_stones",
+        "width": "1"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.056726,
+            51.003398
+          ],
+          [
+            6.0567519,
+            51.0034427
+          ],
+          [
+            6.0569532,
+            51.0037901
+          ]
+        ]
+      },
+      "id": "way/1009088552"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1125129225",
+        "highway": "track",
+        "surface": "sand",
+        "tracktype": "grade3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0484913,
+            50.9984553
+          ],
+          [
+            6.0483063,
+            50.9980833
+          ],
+          [
+            6.0481132,
+            50.9978178
+          ]
+        ]
+      },
+      "id": "way/1125129225"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1126238262",
+        "highway": "path",
+        "surface": "paving_stones",
+        "width": "1"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0567519,
+            51.0034427
+          ],
+          [
+            6.054674,
+            51.0039216
+          ],
+          [
+            6.0546551,
+            51.0038843
+          ],
+          [
+            6.0546158,
+            51.0038256
+          ],
+          [
+            6.0560208,
+            51.0034923
+          ],
+          [
+            6.0566837,
+            51.0033354
+          ],
+          [
+            6.056726,
+            51.003398
+          ]
+        ]
+      },
+      "id": "way/1126238262"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1126238263",
+        "highway": "residential",
+        "maxspeed": "30",
+        "name": "Fasanenstraße",
+        "source:maxspeed": "DE:zone30",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0550897,
+            51.0012912
+          ],
+          [
+            6.0547558,
+            51.0013694
+          ],
+          [
+            6.054186,
+            51.001505
+          ],
+          [
+            6.0541229,
+            51.0015192
+          ],
+          [
+            6.053805,
+            51.0015908
+          ],
+          [
+            6.0532338,
+            51.0017262
+          ],
+          [
+            6.0521255,
+            51.001983
+          ],
+          [
+            6.0516002,
+            51.0021136
+          ]
+        ]
+      },
+      "id": "way/1126238263"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1126976340",
+        "highway": "track",
+        "motor_vehicle": "agricultural;forestry",
+        "surface": "asphalt",
+        "tracktype": "grade1",
+        "traffic_sign": "DE:260,DE:1026-38",
+        "width": "3"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0530098,
+            51.0053347
+          ],
+          [
+            6.0530389,
+            51.0053598
+          ],
+          [
+            6.0532109,
+            51.0055081
+          ],
+          [
+            6.0539748,
+            51.0061668
+          ],
+          [
+            6.0541303,
+            51.0063039
+          ],
+          [
+            6.0544468,
+            51.0065763
+          ],
+          [
+            6.0545205,
+            51.0066441
+          ],
+          [
+            6.0548962,
+            51.00699
+          ],
+          [
+            6.0551076,
+            51.0071705
+          ],
+          [
+            6.0551243,
+            51.0071848
+          ]
+        ]
+      },
+      "id": "way/1126976340"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1161664576",
+        "highway": "residential",
+        "name": "Christian-Küppers-Straße",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0571555,
+            51.0011295
+          ],
+          [
+            6.0570363,
+            51.000861
+          ],
+          [
+            6.0570261,
+            51.000838
+          ]
+        ]
+      },
+      "id": "way/1161664576"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1161664583",
+        "highway": "path"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0545293,
+            51.0034561
+          ],
+          [
+            6.0545552,
+            51.0034519
+          ],
+          [
+            6.0549707,
+            51.0033743
+          ]
+        ]
+      },
+      "id": "way/1161664583"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1161683783",
+        "highway": "path",
+        "name": "Rebhuhnstraße",
+        "surface": "paving_stones"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0510883,
+            50.9994793
+          ],
+          [
+            6.0510789,
+            50.9994553
+          ]
+        ]
+      },
+      "id": "way/1161683783"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1161683784",
+        "highway": "path",
+        "name": "Im Hönzel",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0512839,
+            51.0015501
+          ],
+          [
+            6.0513216,
+            51.0015434
+          ]
+        ]
+      },
+      "id": "way/1161683784"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1161683786",
+        "highway": "path",
+        "name": "Im Hönzel",
+        "surface": "cobblestone"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0510108,
+            51.000925
+          ],
+          [
+            6.0509975,
+            51.0008921
+          ],
+          [
+            6.0510657,
+            51.000882
+          ]
+        ]
+      },
+      "id": "way/1161683786"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1161696318",
+        "highway": "residential",
+        "surface": "asphalt"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0562094,
+            51.0013762
+          ],
+          [
+            6.0561041,
+            51.0011006
+          ],
+          [
+            6.0560877,
+            51.0010576
+          ]
+        ]
+      },
+      "id": "way/1161696318"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "way/1162005995",
+        "highway": "residential"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.0539128,
+            50.9992939
+          ],
+          [
+            6.0542872,
+            50.9992328
+          ]
+        ]
+      },
+      "id": "way/1162005995"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/2742461894",
+        "addr:city": "Gangelt",
+        "addr:country": "DE",
+        "addr:housenumber": "7b",
+        "addr:postcode": "52538",
+        "addr:street": "Bahnhofstraße",
+        "addr:suburb": "Birgden",
+        "name": "REWE Schmitz",
+        "opening_hours": "Mo-Sa 07:00-22:00",
+        "phone": "+49 2454 9695323",
+        "shop": "supermarket",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.0507996,
+          51.0054629
+        ]
+      },
+      "id": "node/2742461894"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/2967333622",
+        "addr:city": "Gangelt",
+        "addr:country": "DE",
+        "addr:housenumber": "7b",
+        "addr:postcode": "52538",
+        "addr:street": "Bahnhofstraße",
+        "addr:suburb": "Birgden",
+        "name": "Stinges",
+        "outdoor_seating": "yes",
+        "shop": "bakery",
+        "wheelchair": "yes"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.050742,
+          51.0053744
+        ]
+      },
+      "id": "node/2967333622"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/6855702869",
+        "addr:city": "Gangelt",
+        "addr:housenumber": "7",
+        "addr:postcode": "52538",
+        "addr:street": "Bahnhofstraße",
+        "addr:suburb": "Birgden",
+        "amenity": "doctors",
+        "healthcare": "doctor",
+        "name": "Praxis - Dr.Christa Schirdewahn",
+        "opening_hours": "Mo-Tu,Th 08:00-18:00, We 07:30-12:00, Fr 08:00-12:00",
+        "phone": "+49 2454 937317",
+        "website": "https://www.sonnenscheinpraxis.de/"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.049342,
+          51.0055813
+        ]
+      },
+      "id": "node/6855702869"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/10804491418",
+        "amenity": "waste_basket"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.0524978,
+          51.000357
+        ]
+      },
+      "id": "node/10804491418"
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "@id": "node/11926018049",
+        "addr:city": "Gangelt",
+        "addr:housenumber": "2",
+        "addr:postcode": "52538",
+        "addr:street": "Kreuzstraße",
+        "addr:suburb": "Birgden",
+        "contact:website": "https://www.malerbetrieb-pelzer.de",
+        "craft": "painter",
+        "name": "Malerbetrieb Pelzer",
+        "opening_hours": "Mo-Fr 09:00-12:30,14:30-18:30; Sa 09:00-13:00; PH,Su off",
+        "shop": "stationery"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.048449,
+          51.0053735
+        ]
+      },
+      "id": "node/11926018049"
+    }
+  ]
+}
