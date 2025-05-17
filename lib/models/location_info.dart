@@ -1,6 +1,5 @@
 // lib/models/location_info.dart
 
-// Entfernt: import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
 /// Speichert alle relevanten Informationen für einen einzelnen Standort (Campingplatz).
@@ -41,5 +40,15 @@ final List<LocationInfo> appLocations = [
     initialLatitude: 51.590186,
     initialLongitude: 3.722494,
     radiusInMeters: 1500.0,
+  ),
+  // NEUER EINTRAG HINZUGEFÜGT:
+  const LocationInfo(
+    id: "zuhause_gangelt", // Deine gewählte ID
+    name: "Umgebung Zuhause (Gangelt)", // Dein gewählter Anzeigename
+    geojsonAssetPath:
+        "assets/data/zuhause_umgebung.geojson", // Pfad zu deiner neuen GeoJSON
+    initialLatitude: 51.001466, // Deine Latitude
+    initialLongitude: 6.051130, // Deine Longitude
+    radiusInMeters: 500.0, // Dein gewählter Radius
   ),
 ];
