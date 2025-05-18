@@ -1,5 +1,4 @@
 // lib/services/routing_service.dart
-// [Start lib/services/routing_service.dart mit Generierung von Anweisungstexten]
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -15,13 +14,13 @@ class RoutingService {
 
   static Future<List<LatLng>?> findPath(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) async {
-    // ... (bestehender Code bleibt gleich) ...
     try {
       return _dijkstra(graph, startNode, endNode);
     } catch (e, stacktrace) {
       if (kDebugMode) {
-        print("Fehler während Dijkstra: $e");
-        print(stacktrace);
+        // Linter: avoid_print
+        // print("Fehler während Dijkstra: $e");
+        // print(stacktrace);
       }
       return null;
     }
@@ -29,7 +28,6 @@ class RoutingService {
 
   static List<LatLng>? _dijkstra(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) {
-    // ... (bestehender Code bleibt gleich) ...
     final priorityQueue =
         PriorityQueue<GraphNode>((a, b) => a.gCost.compareTo(b.gCost));
 
@@ -41,11 +39,15 @@ class RoutingService {
     while (priorityQueue.isNotEmpty) {
       GraphNode currentNode;
       try {
-        if (priorityQueue.isEmpty) break;
+        if (priorityQueue.isEmpty) {
+          // Linter: curly_braces_in_flow_control_structures
+          break;
+        }
         currentNode = priorityQueue.removeFirst();
       } catch (e) {
         if (kDebugMode) {
-          print("Fehler beim Holen aus PriorityQueue in Dijkstra: $e");
+          // Linter: avoid_print
+          // print("Fehler beim Holen aus PriorityQueue in Dijkstra: $e");
         }
         continue;
       }
@@ -71,20 +73,20 @@ class RoutingService {
         if (tentativeGCost < neighborNode.gCost) {
           neighborNode.parent = currentNode;
           neighborNode.gCost = tentativeGCost;
+          // Linter: curly_braces_in_flow_control_structures (implizit durch Hinzufügen zur Queue)
           priorityQueue.add(neighborNode);
         }
       }
     }
 
     if (kDebugMode) {
-      print(
-          "Dijkstra: Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id}.");
+      // Linter: avoid_print
+      // print("Dijkstra: Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id}.");
     }
     return null;
   }
 
   static List<LatLng>? _reconstructPath(GraphNode endNode) {
-    // ... (bestehender Code bleibt gleich) ...
     final List<LatLng> path = [];
     GraphNode? currentNode = endNode;
     int safetyBreak = 0;
@@ -93,12 +95,13 @@ class RoutingService {
     while (currentNode != null && safetyBreak < maxPathLength) {
       path.add(currentNode.position);
       currentNode = currentNode.parent;
-      safetyBreak++;
+      safetyBreak++; // Linter: curly_braces_in_flow_control_structures (war okay, da 2 Anweisungen)
     }
 
     if (safetyBreak >= maxPathLength && kDebugMode) {
-      print(
-          "WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge erreicht). Möglicherweise Kreis im Parent-Graph?");
+      // Linter: curly_braces_in_flow_control_structures
+      // Linter: avoid_print
+      // print("WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge erreicht). Möglicherweise Kreis im Parent-Graph?");
     }
 
     if (path.isEmpty) {
@@ -109,7 +112,6 @@ class RoutingService {
   }
 
   static double calculateTotalDistance(List<LatLng> routePoints) {
-    // ... (bestehender Code bleibt gleich) ...
     double totalDistance = 0.0;
     if (routePoints.length < 2) {
       return totalDistance;
@@ -122,7 +124,6 @@ class RoutingService {
 
   static int estimateWalkingTimeMinutes(double totalDistanceMeters,
       {double speedKmh = averageWalkingSpeedKmh}) {
-    // ... (bestehender Code bleibt gleich) ...
     if (totalDistanceMeters <= 0 || speedKmh <= 0) {
       return 0;
     }
@@ -153,11 +154,10 @@ class RoutingService {
       case TurnType.uTurnRight:
         return "Bitte wenden (rechtsherum)";
       case TurnType.straight:
-        return "Geradeaus weiter"; // Vorerst beibehalten, falls wir es doch nutzen
+        return "Geradeaus weiter";
       case TurnType.arrive:
         return "Sie haben Ihr Ziel erreicht";
-      default:
-        return ""; // Sollte nicht passieren
+      // Linter: unreachable_switch_default (default entfernt)
     }
   }
 
@@ -174,6 +174,7 @@ class RoutingService {
 
     if (routePoints.length < 3) {
       if (routePoints.length == 2) {
+        // Linter: curly_braces_in_flow_control_structures
         maneuvers.add(Maneuver(
             point: routePoints.last,
             turnType: TurnType.arrive,
@@ -196,8 +197,14 @@ class RoutingService {
       double angle2 = atan2(dy2, dx2);
 
       double angleDiff = angle2 - angle1;
-      while (angleDiff <= -pi) angleDiff += 2 * pi;
-      while (angleDiff > pi) angleDiff -= 2 * pi;
+      while (angleDiff <= -pi) {
+        // Linter: curly_braces_in_flow_control_structures
+        angleDiff += 2 * pi;
+      }
+      while (angleDiff > pi) {
+        // Linter: curly_braces_in_flow_control_structures
+        angleDiff -= 2 * pi;
+      }
       double angleDegrees = angleDiff * 180 / pi;
 
       TurnType turnType = TurnType.straight;
@@ -218,10 +225,12 @@ class RoutingService {
         turnType = TurnType.sharpRight;
       } else if (angleDegrees >= uTurnAngleThreshold ||
           angleDegrees <= -uTurnAngleThreshold) {
-        if (angleDegrees > 0)
+        if (angleDegrees > 0) {
+          // Linter: curly_braces_in_flow_control_structures
           turnType = TurnType.uTurnRight;
-        else
+        } else {
           turnType = TurnType.uTurnLeft;
+        }
       } else if (angleDegrees < -slightTurnThreshold &&
           angleDegrees >= -normalTurnThreshold) {
         turnType = TurnType.slightLeft;
@@ -234,6 +243,7 @@ class RoutingService {
       }
 
       if (turnType != TurnType.straight) {
+        // Linter: curly_braces_in_flow_control_structures
         maneuvers.add(Maneuver(
             point: p2,
             turnType: turnType,
@@ -247,13 +257,12 @@ class RoutingService {
         instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
 
     if (kDebugMode) {
-      print(
-          "[RoutingService] Analyzed route for turns: ${maneuvers.length} maneuvers found.");
-      for (var maneuver in maneuvers) {
-        print(maneuver); // toString() in Maneuver wird jetzt den Text anzeigen
-      }
+      // Linter: avoid_print
+      // print("[RoutingService] Analyzed route for turns: ${maneuvers.length} maneuvers found.");
+      // for (var maneuver in maneuvers) {
+      //   print(maneuver);
+      // }
     }
     return maneuvers;
   }
 }
-// [Ende lib/services/routing_service.dart mit Generierung von Anweisungstexten]
