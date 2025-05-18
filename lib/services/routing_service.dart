@@ -16,11 +16,10 @@ class RoutingService {
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) async {
     try {
       return _dijkstra(graph, startNode, endNode);
-    } catch (e, stacktrace) {
+    } catch (e) {
+      // Linter: unused_catch_stack (stacktrace entfernt)
       if (kDebugMode) {
-        // Linter: avoid_print
         // print("Fehler während Dijkstra: $e");
-        // print(stacktrace);
       }
       return null;
     }
@@ -40,13 +39,11 @@ class RoutingService {
       GraphNode currentNode;
       try {
         if (priorityQueue.isEmpty) {
-          // Linter: curly_braces_in_flow_control_structures
           break;
         }
         currentNode = priorityQueue.removeFirst();
       } catch (e) {
         if (kDebugMode) {
-          // Linter: avoid_print
           // print("Fehler beim Holen aus PriorityQueue in Dijkstra: $e");
         }
         continue;
@@ -73,14 +70,12 @@ class RoutingService {
         if (tentativeGCost < neighborNode.gCost) {
           neighborNode.parent = currentNode;
           neighborNode.gCost = tentativeGCost;
-          // Linter: curly_braces_in_flow_control_structures (implizit durch Hinzufügen zur Queue)
           priorityQueue.add(neighborNode);
         }
       }
     }
 
     if (kDebugMode) {
-      // Linter: avoid_print
       // print("Dijkstra: Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id}.");
     }
     return null;
@@ -95,12 +90,10 @@ class RoutingService {
     while (currentNode != null && safetyBreak < maxPathLength) {
       path.add(currentNode.position);
       currentNode = currentNode.parent;
-      safetyBreak++; // Linter: curly_braces_in_flow_control_structures (war okay, da 2 Anweisungen)
+      safetyBreak++;
     }
 
     if (safetyBreak >= maxPathLength && kDebugMode) {
-      // Linter: curly_braces_in_flow_control_structures
-      // Linter: avoid_print
       // print("WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge erreicht). Möglicherweise Kreis im Parent-Graph?");
     }
 
@@ -157,7 +150,6 @@ class RoutingService {
         return "Geradeaus weiter";
       case TurnType.arrive:
         return "Sie haben Ihr Ziel erreicht";
-      // Linter: unreachable_switch_default (default entfernt)
     }
   }
 
@@ -174,7 +166,6 @@ class RoutingService {
 
     if (routePoints.length < 3) {
       if (routePoints.length == 2) {
-        // Linter: curly_braces_in_flow_control_structures
         maneuvers.add(Maneuver(
             point: routePoints.last,
             turnType: TurnType.arrive,
@@ -198,11 +189,9 @@ class RoutingService {
 
       double angleDiff = angle2 - angle1;
       while (angleDiff <= -pi) {
-        // Linter: curly_braces_in_flow_control_structures
         angleDiff += 2 * pi;
       }
       while (angleDiff > pi) {
-        // Linter: curly_braces_in_flow_control_structures
         angleDiff -= 2 * pi;
       }
       double angleDegrees = angleDiff * 180 / pi;
@@ -226,7 +215,6 @@ class RoutingService {
       } else if (angleDegrees >= uTurnAngleThreshold ||
           angleDegrees <= -uTurnAngleThreshold) {
         if (angleDegrees > 0) {
-          // Linter: curly_braces_in_flow_control_structures
           turnType = TurnType.uTurnRight;
         } else {
           turnType = TurnType.uTurnLeft;
@@ -243,7 +231,6 @@ class RoutingService {
       }
 
       if (turnType != TurnType.straight) {
-        // Linter: curly_braces_in_flow_control_structures
         maneuvers.add(Maneuver(
             point: p2,
             turnType: turnType,
@@ -257,7 +244,6 @@ class RoutingService {
         instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
 
     if (kDebugMode) {
-      // Linter: avoid_print
       // print("[RoutingService] Analyzed route for turns: ${maneuvers.length} maneuvers found.");
       // for (var maneuver in maneuvers) {
       //   print(maneuver);
