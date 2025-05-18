@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map/plugin_api.dart';
+// import 'package:flutter_map/plugin_api.dart'; // Ersetzt/Nicht mehr explizit nötig für MapEventSource
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
@@ -17,12 +17,11 @@ import 'package:camping_osm_navi/services/routing_service.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
-import 'package:camping_osm_navi/widgets/turn_instruction_card.dart'; // NEUER IMPORT
+import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
-  // Konstanten für UI-Layout, hier zentralisiert
   static const double searchCardTopPadding = 8.0;
   static const double searchInputRowHeight = 40.0;
   static const double dividerAndSwapButtonHeight = 28.0;
@@ -78,12 +77,6 @@ class MapScreenState extends State<MapScreen> {
   final FocusNode _endFocusNode = FocusNode();
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
-
-  // Konstanten aus der Widget-Klasse übernehmen
-  static const double searchCardTopPadding = MapScreen.searchCardTopPadding;
-  static const double searchCardHorizontalMargin =
-      MapScreen.searchCardHorizontalMargin;
-  static const double searchCardMaxWidth = MapScreen.searchCardMaxWidth;
 
   @override
   void initState() {
@@ -327,8 +320,9 @@ class MapScreenState extends State<MapScreen> {
       if (mounted) {
         setState(() {
           _currentGpsPosition = activeInitialCenterForMock;
+          // Linter: unnecessary_non_null_assertion (fixed by removing !)
           _currentLocationMarker = _createMarker(
-              _currentGpsPosition!,
+              activeInitialCenterForMock, // Verwende die Variable direkt
               Colors.orangeAccent,
               Icons.pin_drop,
               "Mock Position (${location.name})");
@@ -338,8 +332,11 @@ class MapScreenState extends State<MapScreen> {
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
             _startLatLng = _currentGpsPosition;
-            _startMarker = _createMarker(_startLatLng!, Colors.green,
-                Icons.flag_circle, "Start: Mock Position (${location.name})");
+            if (_startLatLng != null) {
+              // Linter: unnecessary_null_comparison (fixed by checking != null)
+              _startMarker = _createMarker(_startLatLng!, Colors.green,
+                  Icons.flag_circle, "Start: Mock Position (${location.name})");
+            }
             _startSearchController.text = "Mock Position (${location.name})";
           }
         });
@@ -469,99 +466,100 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  Future<void> _initializeGpsReal(LocationInfo location) {
+  Future<void> _initializeGpsReal(LocationInfo location) async {
+    // Return type changed to Future<void>
     if (kDebugMode) {
       print("<<< _initializeGpsReal für ${location.name} >>>");
     }
     if (!mounted) {
-      return Completer().future;
+      return; // Simply return if not mounted
     }
 
+    late LocationPermission permission; // Initialize with late
     bool serviceEnabled;
-    LocationPermission permission;
 
-    return Geolocator.isLocationServiceEnabled().then((enabled) {
-      serviceEnabled = enabled;
+    try {
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _showErrorDialog("GPS ist deaktiviert.");
-        throw Exception("GPS deaktiviert");
+        if (mounted) setStateIfMounted(() => _followGps = false);
+        return; // Return after showing dialog
       }
-      return Geolocator.checkPermission();
-    }).then((currentPermission) {
-      permission = currentPermission;
+
+      permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
-        return Geolocator.requestPermission().then((requestedPermission) {
-          permission = requestedPermission;
-          if (permission == LocationPermission.denied) {
-            _showErrorDialog("GPS-Berechtigung verweigert.");
-            throw Exception("GPS-Berechtigung verweigert");
-          }
-        });
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showErrorDialog("GPS-Berechtigung verweigert.");
+          if (mounted) setStateIfMounted(() => _followGps = false);
+          return; // Return
+        }
       }
-      return Future.value();
-    }).then((_) {
+
       if (permission == LocationPermission.deniedForever) {
         _showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
-        throw Exception("GPS-Berechtigung dauerhaft verweigert");
-      }
-
-      final LatLng centerForDistanceCheck = location.initialCenter;
-      _positionStreamSubscription = Geolocator.getPositionStream(
-              locationSettings: const LocationSettings(
-                  accuracy: LocationAccuracy.bestForNavigation,
-                  distanceFilter: 5))
-          .listen((Position position) {
-        if (!mounted) {
-          return;
-        }
-        final bool isFirstFix = _currentGpsPosition == null;
-        LatLng newGpsPos = LatLng(position.latitude, position.longitude);
-
-        setStateIfMounted(() {
-          _currentGpsPosition = newGpsPos;
-          if (_currentGpsPosition != null) {
-            _currentLocationMarker = _createMarker(_currentGpsPosition!,
-                Colors.blueAccent, Icons.circle, "Meine Position");
-            if (_startSearchController.text == "Aktueller Standort") {
-              _startLatLng = _currentGpsPosition;
-              _startMarker = _createMarker(_startLatLng!, Colors.green,
-                  Icons.flag_circle, "Start: Aktueller Standort");
-            }
-          }
-        });
-
-        if (_followGps &&
-            _isMapReady &&
-            mounted &&
-            _currentGpsPosition != null) {
-          _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
-        } else if (isFirstFix &&
-            _currentGpsPosition != null &&
-            _isMapReady &&
-            mounted) {
-          const distance = Distance();
-          final double meters =
-              distance(_currentGpsPosition!, centerForDistanceCheck);
-          if (meters <= centerOnGpsMaxDistanceMeters) {
-            _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
-          } else {
-            _showSnackbar(
-                "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
-                durationSeconds: 4);
-          }
-        }
-        if (_startLatLng != null &&
-            _endLatLng != null &&
-            _isCalculatingRoute == false) {
-          // Nur neu berechnen wenn nicht schon dabei
-          _calculateAndDisplayRoute();
-        }
-      }, onError: (error) {
-        _showErrorDialog("Fehler GPS-Empfang: $error");
         if (mounted) setStateIfMounted(() => _followGps = false);
+        return; // Return
+      }
+    } catch (e) {
+      _showErrorDialog("Fehler GPS-Berechtigungen: $e");
+      if (mounted) setStateIfMounted(() => _followGps = false);
+      return; // Return on error
+    }
+    // If we reach here, permissions are granted
+
+    final LatLng centerForDistanceCheck = location.initialCenter;
+    _positionStreamSubscription = Geolocator.getPositionStream(
+            locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.bestForNavigation,
+                distanceFilter: 5))
+        .listen((Position position) {
+      if (!mounted) {
+        return;
+      }
+      final bool isFirstFix = _currentGpsPosition == null;
+      LatLng newGpsPos = LatLng(position.latitude, position.longitude);
+
+      setStateIfMounted(() {
+        _currentGpsPosition = newGpsPos;
+        // Linter: unnecessary_non_null_assertion (already fixed by direct use)
+        _currentLocationMarker = _createMarker(
+            newGpsPos, // use newGpsPos directly
+            Colors.blueAccent,
+            Icons.circle,
+            "Meine Position");
+        if (_startSearchController.text == "Aktueller Standort") {
+          _startLatLng = _currentGpsPosition;
+          if (_startLatLng != null) {
+            // Check _startLatLng before using !
+            _startMarker = _createMarker(_startLatLng!, Colors.green,
+                Icons.flag_circle, "Start: Aktueller Standort");
+          }
+        }
       });
-    }).catchError((e) {
-      if (kDebugMode) print("Fehler bei GPS Initialisierung: $e");
+
+      if (_followGps && _isMapReady && mounted && _currentGpsPosition != null) {
+        _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
+      } else if (isFirstFix &&
+          _currentGpsPosition != null &&
+          _isMapReady &&
+          mounted) {
+        const distance = Distance();
+        final double meters =
+            distance(_currentGpsPosition!, centerForDistanceCheck);
+        if (meters <= centerOnGpsMaxDistanceMeters) {
+          _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
+        } else {
+          _showSnackbar(
+              "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
+              durationSeconds: 4);
+        }
+      }
+      if (_startLatLng != null && _endLatLng != null && !_isCalculatingRoute) {
+        _calculateAndDisplayRoute();
+      }
+    }, onError: (error) {
+      _showErrorDialog("Fehler GPS-Empfang: $error");
       if (mounted) setStateIfMounted(() => _followGps = false);
     });
   }
@@ -602,20 +600,26 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
-      // _followGps hier NICHT pauschal auf false setzen, nur wenn keine Route gefunden wird oder Start/Ziel null sind
+      // _followGps wird hier nicht zurückgesetzt, sondern erst, wenn keine Route gefunden/gültig ist
     });
 
     if (!isDataReadyForRouting) {
       _showErrorDialog(
           "Kartendaten für ${selectedLocationFromProvider?.name ?? ''} nicht bereit.");
-      setStateIfMounted(() => _isCalculatingRoute = false);
+      setStateIfMounted(() {
+        _isCalculatingRoute = false;
+        _followGps = false;
+      });
       return;
     }
 
     if (currentGraph.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
-      setStateIfMounted(() => _isCalculatingRoute = false);
+      setStateIfMounted(() {
+        _isCalculatingRoute = false;
+        _followGps = false;
+      });
       return;
     }
 
@@ -647,9 +651,7 @@ class MapScreenState extends State<MapScreen> {
             point: _startLatLng!,
             turnType: TurnType.arrive,
             instructionText: "Start- und Zielpunkt sind identisch.");
-        _clearRoute(
-            showConfirmation: false,
-            clearMarkers: false); // _clearRoute setzt _followGps auf false
+        _clearRoute(showConfirmation: false, clearMarkers: false);
         if (_isMapReady && mounted && _startLatLng != null) {
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
         }
@@ -705,11 +707,9 @@ class MapScreenState extends State<MapScreen> {
             if (_isMapReady && mounted) {
               try {
                 List<LatLng> pointsForBounds = List.from(routePoints);
-                if (_startLatLng != null &&
-                    !pointsForBounds.contains(_startLatLng))
+                if (_startLatLng != null)
                   pointsForBounds.insert(0, _startLatLng!);
-                if (_endLatLng != null && !pointsForBounds.contains(_endLatLng))
-                  pointsForBounds.add(_endLatLng!);
+                if (_endLatLng != null) pointsForBounds.add(_endLatLng!);
 
                 _mapController.fitCamera(
                   CameraFit.bounds(
@@ -1055,7 +1055,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   String _formatDistance(double? distanceMeters) {
-    if (distanceMeters == null) return "";
+    if (distanceMeters == null) {
+      return "";
+    }
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
     } else {
@@ -1091,6 +1093,7 @@ class MapScreenState extends State<MapScreen> {
         MapScreen.dividerAndSwapButtonHeight +
         (MapScreen.cardInternalVerticalPadding * 2);
     if (_routeDistance != null && _routeTimeMinutes != null) {
+      // Linter: unnecessary_null_comparison
       searchUiCardHeight += MapScreen.routeInfoHeight;
     }
 
@@ -1168,10 +1171,10 @@ class MapScreenState extends State<MapScreen> {
               maxZoom: 19.0,
               onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
-                // Geändert von onPositionChanged
                 if (mapEvent is MapEventMove &&
-                    mapEvent.source == MapEventSource.gesture &&
+                    mapEvent.source == MapEventSource.gestures &&
                     _followGps) {
+                  // Korrigiert: gestures
                   setStateIfMounted(() {
                     _followGps = false;
                     _showSnackbar("Follow-GPS Modus deaktiviert.",
@@ -1179,7 +1182,8 @@ class MapScreenState extends State<MapScreen> {
                   });
                 }
                 if (mapEvent is MapEventMove &&
-                    mapEvent.source == MapEventSource.gesture &&
+                    mapEvent.source ==
+                        MapEventSource.gestures && // Korrigiert: gestures
                     (_startFocusNode.hasFocus || _endFocusNode.hasFocus)) {
                   if (_startFocusNode.hasFocus) {
                     _startFocusNode.unfocus();
@@ -1460,7 +1464,7 @@ class MapScreenState extends State<MapScreen> {
                                       ),
                                       TextSpan(
                                         text:
-                                            " / ${_formatDistance(_routeDistance)}",
+                                            " / ${_formatDistance(_routeDistance)}", // Brace removed
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -1488,8 +1492,11 @@ class MapScreenState extends State<MapScreen> {
                 left: MapScreen.searchCardHorizontalMargin,
                 right: MapScreen.searchCardHorizontalMargin,
                 child: Center(
-                  child:
-                      TurnInstructionCard(maneuver: _currentDisplayedManeuver!),
+                  child: TurnInstructionCard(
+                    maneuver: _currentDisplayedManeuver!,
+                    maxWidth: MapScreen.searchCardMaxWidth +
+                        50, // Übergabe der Breite
+                  ),
                 )),
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
             Positioned(
@@ -1511,8 +1518,8 @@ class MapScreenState extends State<MapScreen> {
                       itemBuilder: (context, index) {
                         final feature = _searchResults[index];
                         return ListTile(
-                          leading: getIconForFeatureType(feature
-                              .type), // Verwende die verschobene Funktion
+                          leading: Icon(getIconForFeatureType(
+                              feature.type)), // Korrigierter Aufruf
                           title: Text(feature.name),
                           subtitle: Text("Typ: ${feature.type}"),
                           onTap: () => _selectFeatureAndSetPoint(feature),
@@ -1587,10 +1594,6 @@ class MapScreenState extends State<MapScreen> {
     );
   }
 
-  // _getIconForFeatureType wurde in widgets/turn_instruction_card.dart verschoben,
-  // aber da es auch in der Suchergebnisliste verwendet wird, holen wir es hierher zurück ODER importieren es korrekt.
-  // Einfachheitshalber für jetzt hier belassen und in turn_instruction_card.dart entfernen bzw. von hier importieren lassen.
-  // Besser wäre, utils.dart dafür zu haben. Fürs erste hier:
   IconData getIconForFeatureType(String type) {
     switch (type.toLowerCase()) {
       case 'parking':

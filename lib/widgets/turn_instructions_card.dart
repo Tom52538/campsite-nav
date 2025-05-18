@@ -1,11 +1,12 @@
 // lib/widgets/turn_instruction_card.dart
 import 'package:flutter/material.dart';
-import 'package:camping_osm_navi/models/maneuver.dart'; // Import für Maneuver und TurnType
-import 'package:camping_osm_navi/screens/map_screen.dart'; // Import für MapScreen Konstanten
+import 'package:camping_osm_navi/models/maneuver.dart';
+// Import für MapScreen Konstanten, falls sie hier direkt gebraucht würden.
+// Aktuell wird MapScreen.searchCardMaxWidth in map_screen.dart verwendet und an das Widget übergeben.
+// Wenn du hier direkt auf MapScreen zugreifen müsstest:
+// import 'package:camping_osm_navi/screens/map_screen.dart';
 
-// Helper-Funktion für Icons, hierher verschoben
 IconData getIconForTurnType(TurnType turnType) {
-  // public gemacht
   switch (turnType) {
     case TurnType.depart:
       return Icons.navigation;
@@ -28,22 +29,25 @@ IconData getIconForTurnType(TurnType turnType) {
       return Icons.straight;
     case TurnType.arrive:
       return Icons.flag_circle_outlined;
-    default:
-      return Icons.help_outline;
+    // Kein default mehr nötig, da alle Enum-Werte abgedeckt sind.
+    // Flutter/Dart wird warnen, wenn ein neuer Enum-Wert hinzugefügt wird und hier fehlt.
   }
 }
 
 class TurnInstructionCard extends StatelessWidget {
   final Maneuver maneuver;
+  final double maxWidth; // Hinzugefügt, um von außen zu steuern
 
-  const TurnInstructionCard({super.key, required this.maneuver});
+  const TurnInstructionCard({
+    super.key,
+    required this.maneuver,
+    this.maxWidth = 410, // Standardwert (MapScreen.searchCardMaxWidth + 50)
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(
-          maxWidth: MapScreen.searchCardMaxWidth +
-              50), // Verwendet Konstante aus MapScreen
+      constraints: BoxConstraints(maxWidth: maxWidth),
       child: Card(
         elevation: 4.0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
@@ -54,8 +58,7 @@ class TurnInstructionCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                getIconForTurnType(
-                    maneuver.turnType), // Aufruf der public Funktion
+                getIconForTurnType(maneuver.turnType),
                 size: 36.0,
                 color: Theme.of(context).colorScheme.primary,
               ),
