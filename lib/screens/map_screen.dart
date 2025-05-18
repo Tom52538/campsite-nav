@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-// import 'package:flutter_map/plugin_api.dart'; // Ersetzt/Nicht mehr explizit nötig für MapEventSource
+// MapEventSource kommt aus flutter_map.dart, kein separater Import nötig
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
@@ -320,9 +320,8 @@ class MapScreenState extends State<MapScreen> {
       if (mounted) {
         setState(() {
           _currentGpsPosition = activeInitialCenterForMock;
-          // Linter: unnecessary_non_null_assertion (fixed by removing !)
           _currentLocationMarker = _createMarker(
-              activeInitialCenterForMock, // Verwende die Variable direkt
+              activeInitialCenterForMock,
               Colors.orangeAccent,
               Icons.pin_drop,
               "Mock Position (${location.name})");
@@ -333,9 +332,11 @@ class MapScreenState extends State<MapScreen> {
                   oldGpsPosition != _currentGpsPosition)) {
             _startLatLng = _currentGpsPosition;
             if (_startLatLng != null) {
-              // Linter: unnecessary_null_comparison (fixed by checking != null)
-              _startMarker = _createMarker(_startLatLng!, Colors.green,
-                  Icons.flag_circle, "Start: Mock Position (${location.name})");
+              _startMarker = _createMarker(
+                  _startLatLng!,
+                  Colors.green, // Use _startLatLng! as it's checked
+                  Icons.flag_circle,
+                  "Start: Mock Position (${location.name})");
             }
             _startSearchController.text = "Mock Position (${location.name})";
           }
@@ -467,46 +468,52 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _initializeGpsReal(LocationInfo location) async {
-    // Return type changed to Future<void>
     if (kDebugMode) {
       print("<<< _initializeGpsReal für ${location.name} >>>");
     }
     if (!mounted) {
-      return; // Simply return if not mounted
+      return;
     }
 
-    late LocationPermission permission; // Initialize with late
+    late LocationPermission permission;
     bool serviceEnabled;
 
     try {
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        _showErrorDialog("GPS ist deaktiviert.");
-        if (mounted) setStateIfMounted(() => _followGps = false);
-        return; // Return after showing dialog
+        if (mounted) {
+          _showErrorDialog("GPS ist deaktiviert.");
+          setStateIfMounted(() => _followGps = false);
+        }
+        return;
       }
 
       permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          _showErrorDialog("GPS-Berechtigung verweigert.");
-          if (mounted) setStateIfMounted(() => _followGps = false);
-          return; // Return
+          if (mounted) {
+            _showErrorDialog("GPS-Berechtigung verweigert.");
+            setStateIfMounted(() => _followGps = false);
+          }
+          return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        _showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
-        if (mounted) setStateIfMounted(() => _followGps = false);
-        return; // Return
+        if (mounted) {
+          _showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
+          setStateIfMounted(() => _followGps = false);
+        }
+        return;
       }
     } catch (e) {
-      _showErrorDialog("Fehler GPS-Berechtigungen: $e");
-      if (mounted) setStateIfMounted(() => _followGps = false);
-      return; // Return on error
+      if (mounted) {
+        _showErrorDialog("Fehler GPS-Berechtigungen: $e");
+        setStateIfMounted(() => _followGps = false);
+      }
+      return;
     }
-    // If we reach here, permissions are granted
 
     final LatLng centerForDistanceCheck = location.initialCenter;
     _positionStreamSubscription = Geolocator.getPositionStream(
@@ -522,18 +529,16 @@ class MapScreenState extends State<MapScreen> {
 
       setStateIfMounted(() {
         _currentGpsPosition = newGpsPos;
-        // Linter: unnecessary_non_null_assertion (already fixed by direct use)
         _currentLocationMarker = _createMarker(
-            newGpsPos, // use newGpsPos directly
-            Colors.blueAccent,
-            Icons.circle,
-            "Meine Position");
+            newGpsPos, Colors.blueAccent, Icons.circle, "Meine Position");
         if (_startSearchController.text == "Aktueller Standort") {
           _startLatLng = _currentGpsPosition;
           if (_startLatLng != null) {
-            // Check _startLatLng before using !
-            _startMarker = _createMarker(_startLatLng!, Colors.green,
-                Icons.flag_circle, "Start: Aktueller Standort");
+            _startMarker = _createMarker(
+                _startLatLng!,
+                Colors.green, // Use ! as _startLatLng is checked
+                Icons.flag_circle,
+                "Start: Aktueller Standort");
           }
         }
       });
@@ -560,7 +565,9 @@ class MapScreenState extends State<MapScreen> {
       }
     }, onError: (error) {
       _showErrorDialog("Fehler GPS-Empfang: $error");
-      if (mounted) setStateIfMounted(() => _followGps = false);
+      if (mounted) {
+        setStateIfMounted(() => _followGps = false);
+      }
     });
   }
 
@@ -600,7 +607,6 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
-      // _followGps wird hier nicht zurückgesetzt, sondern erst, wenn keine Route gefunden/gültig ist
     });
 
     if (!isDataReadyForRouting) {
@@ -707,9 +713,12 @@ class MapScreenState extends State<MapScreen> {
             if (_isMapReady && mounted) {
               try {
                 List<LatLng> pointsForBounds = List.from(routePoints);
-                if (_startLatLng != null)
-                  pointsForBounds.insert(0, _startLatLng!);
-                if (_endLatLng != null) pointsForBounds.add(_endLatLng!);
+                // Start- und End-LatLng sind hier schon durch `findNearestNode` in routePoints enthalten, wenn sie gültig sind.
+                // Die explizite Hinzunahme ist nur nötig, wenn _startLatLng/_endLatLng die exakten Klickpunkte sind
+                // und diese nicht exakt auf einem Routenpunkt liegen.
+                // Für fitCamera ist es aber meist besser, die reinen Routenpunkte zu nehmen.
+                // if (_startLatLng != null && !pointsForBounds.contains(_startLatLng)) pointsForBounds.insert(0, _startLatLng!);
+                // if (_endLatLng != null && !pointsForBounds.contains(_endLatLng)) pointsForBounds.add(_endLatLng!);
 
                 _mapController.fitCamera(
                   CameraFit.bounds(
@@ -1055,9 +1064,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   String _formatDistance(double? distanceMeters) {
-    if (distanceMeters == null) {
-      return "";
-    }
+    if (distanceMeters == null) return "";
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
     } else {
@@ -1092,8 +1099,8 @@ class MapScreenState extends State<MapScreen> {
     double searchUiCardHeight = (MapScreen.searchInputRowHeight * 2) +
         MapScreen.dividerAndSwapButtonHeight +
         (MapScreen.cardInternalVerticalPadding * 2);
-    if (_routeDistance != null && _routeTimeMinutes != null) {
-      // Linter: unnecessary_null_comparison
+    if (_routeDistance != null) {
+      // Linter: unnecessary_null_comparison (routeTimeMinutes wird immer mit routeDistance gesetzt)
       searchUiCardHeight += MapScreen.routeInfoHeight;
     }
 
@@ -1172,9 +1179,9 @@ class MapScreenState extends State<MapScreen> {
               onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
                 if (mapEvent is MapEventMove &&
-                    mapEvent.source == MapEventSource.gestures &&
+                    mapEvent.source == MapEventSource.drag &&
                     _followGps) {
-                  // Korrigiert: gestures
+                  // Korrigiert auf drag
                   setStateIfMounted(() {
                     _followGps = false;
                     _showSnackbar("Follow-GPS Modus deaktiviert.",
@@ -1183,7 +1190,7 @@ class MapScreenState extends State<MapScreen> {
                 }
                 if (mapEvent is MapEventMove &&
                     mapEvent.source ==
-                        MapEventSource.gestures && // Korrigiert: gestures
+                        MapEventSource.drag && // Korrigiert auf drag
                     (_startFocusNode.hasFocus || _endFocusNode.hasFocus)) {
                   if (_startFocusNode.hasFocus) {
                     _startFocusNode.unfocus();
@@ -1464,7 +1471,7 @@ class MapScreenState extends State<MapScreen> {
                                       ),
                                       TextSpan(
                                         text:
-                                            " / ${_formatDistance(_routeDistance)}", // Brace removed
+                                            " / ${_formatDistance(_routeDistance)}",
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -1494,8 +1501,7 @@ class MapScreenState extends State<MapScreen> {
                 child: Center(
                   child: TurnInstructionCard(
                     maneuver: _currentDisplayedManeuver!,
-                    maxWidth: MapScreen.searchCardMaxWidth +
-                        50, // Übergabe der Breite
+                    maxWidth: MapScreen.searchCardMaxWidth + 50,
                   ),
                 )),
           if (_showSearchResults && _searchResults.isNotEmpty && isUiReady)
@@ -1518,8 +1524,7 @@ class MapScreenState extends State<MapScreen> {
                       itemBuilder: (context, index) {
                         final feature = _searchResults[index];
                         return ListTile(
-                          leading: Icon(getIconForFeatureType(
-                              feature.type)), // Korrigierter Aufruf
+                          leading: Icon(getIconForFeatureType(feature.type)),
                           title: Text(feature.name),
                           subtitle: Text("Typ: ${feature.type}"),
                           onTap: () => _selectFeatureAndSetPoint(feature),
