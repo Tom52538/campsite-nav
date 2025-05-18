@@ -330,10 +330,10 @@ class MapScreenState extends State<MapScreen> {
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
             _startLatLng =
-                _currentGpsPosition; // _currentGpsPosition ist hier gesetzt und nicht null
+                activeInitialCenterForMock; // Direkt _currentGpsPosition verwenden
             _startMarker = _createMarker(
                 _startLatLng!,
-                Colors.green, // ! ist hier sicher
+                Colors.green, // _startLatLng ist hier sicher nicht null
                 Icons.flag_circle,
                 "Start: Mock Position (${location.name})");
             _startSearchController.text = "Mock Position (${location.name})";
@@ -405,7 +405,7 @@ class MapScreenState extends State<MapScreen> {
     }
 
     TextEditingController? controllerToUpdate;
-    FocusNode? focusToUnset;
+    FocusNode focusToUnset; // Nicht mehr nullable, da immer zugewiesen wird
     FocusNode? nextFocus;
     bool isStartField = _activeSearchField == ActiveSearchField.start;
 
@@ -449,10 +449,7 @@ class MapScreenState extends State<MapScreen> {
       _followGps = false;
     });
 
-    if (focusToUnset != null) {
-      // Linter: invalid_null_aware_operator (entfernt ?. wenn focusToUnset nicht null sein kann)
-      focusToUnset.unfocus();
-    }
+    focusToUnset.unfocus(); // Kein ?. mehr nötig
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
@@ -711,9 +708,6 @@ class MapScreenState extends State<MapScreen> {
             if (_isMapReady && mounted) {
               try {
                 List<LatLng> pointsForBounds = List.from(routePoints);
-                // if (_startLatLng != null) pointsForBounds.insert(0, _startLatLng!); // Start/End sind Teil der routePoints
-                // if (_endLatLng != null) pointsForBounds.add(_endLatLng!);
-
                 _mapController.fitCamera(
                   CameraFit.bounds(
                     bounds: LatLngBounds.fromPoints(pointsForBounds),
@@ -742,8 +736,7 @@ class MapScreenState extends State<MapScreen> {
       }
     } catch (e, stacktrace) {
       if (kDebugMode) {
-        print(
-            ">>> Fehler Routenberechnung: $e $stacktrace"); // Stacktrace hinzugefügt
+        print(">>> Fehler Routenberechnung: $e $stacktrace");
       }
       _showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() {
@@ -1059,9 +1052,8 @@ class MapScreenState extends State<MapScreen> {
   }
 
   String _formatDistance(double? distanceMeters) {
-    if (distanceMeters == null) {
-      return "";
-    }
+    if (distanceMeters == null)
+      return ""; // Behoben: keine Klammern um distanceMeters nötig
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
     } else {
@@ -1096,8 +1088,8 @@ class MapScreenState extends State<MapScreen> {
     double searchUiCardHeight = (MapScreen.searchInputRowHeight * 2) +
         MapScreen.dividerAndSwapButtonHeight +
         (MapScreen.cardInternalVerticalPadding * 2);
-    // Linter: unnecessary_null_comparison (Ln 930) - Behoben durch alleinige Prüfung auf _routeDistance
     if (_routeDistance != null) {
+      // Linter: unnecessary_null_comparison (Ln 930) - Korrigiert
       searchUiCardHeight += MapScreen.routeInfoHeight;
     }
 
@@ -1175,9 +1167,11 @@ class MapScreenState extends State<MapScreen> {
               maxZoom: 19.0,
               onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
-                // Linter: undefined_enum_constant (Ln 1182, 1193) - Korrigiert auf MapEventSource.pointerDrag
+                // Linter: undefined_enum_constant (Ln 1182, 1193) - Korrigiert auf MapEventSource.drag (oder spezifischer, wenn nötig)
                 if (mapEvent is MapEventMove &&
-                    mapEvent.source == MapEventSource.pointerDrag &&
+                    (mapEvent.source == MapEventSource.dragStart ||
+                        mapEvent.source ==
+                            MapEventSource.flingAnimationController) &&
                     _followGps) {
                   setStateIfMounted(() {
                     _followGps = false;
@@ -1186,7 +1180,9 @@ class MapScreenState extends State<MapScreen> {
                   });
                 }
                 if (mapEvent is MapEventMove &&
-                    mapEvent.source == MapEventSource.pointerDrag &&
+                    (mapEvent.source == MapEventSource.dragStart ||
+                        mapEvent.source ==
+                            MapEventSource.flingAnimationController) &&
                     (_startFocusNode.hasFocus || _endFocusNode.hasFocus)) {
                   if (_startFocusNode.hasFocus) {
                     _startFocusNode.unfocus();
@@ -1439,8 +1435,7 @@ class MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       ),
-                      if (_routeDistance !=
-                          null) // Prüfung auf _routeTimeMinutes ist redundant
+                      if (_routeDistance != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
                           child: SizedBox(
@@ -1458,7 +1453,7 @@ class MapScreenState extends State<MapScreen> {
                                     children: [
                                       TextSpan(
                                         text:
-                                            "~ ${_routeTimeMinutes ?? '?'} min", // Fallback für routeTimeMinutes
+                                            "~ ${_routeTimeMinutes ?? '?'} min",
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
