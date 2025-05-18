@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-// MapEventSource kommt aus flutter_map.dart, kein separater Import nötig
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
@@ -330,14 +329,13 @@ class MapScreenState extends State<MapScreen> {
                       .toLowerCase()
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
-            _startLatLng = _currentGpsPosition;
-            if (_startLatLng != null) {
-              _startMarker = _createMarker(
-                  _startLatLng!,
-                  Colors.green, // Use _startLatLng! as it's checked
-                  Icons.flag_circle,
-                  "Start: Mock Position (${location.name})");
-            }
+            _startLatLng =
+                _currentGpsPosition; // _currentGpsPosition ist hier gesetzt und nicht null
+            _startMarker = _createMarker(
+                _startLatLng!,
+                Colors.green, // ! ist hier sicher
+                Icons.flag_circle,
+                "Start: Mock Position (${location.name})");
             _startSearchController.text = "Mock Position (${location.name})";
           }
         });
@@ -451,7 +449,10 @@ class MapScreenState extends State<MapScreen> {
       _followGps = false;
     });
 
-    focusToUnset?.unfocus();
+    if (focusToUnset != null) {
+      // Linter: invalid_null_aware_operator (entfernt ?. wenn focusToUnset nicht null sein kann)
+      focusToUnset.unfocus();
+    }
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
@@ -534,11 +535,8 @@ class MapScreenState extends State<MapScreen> {
         if (_startSearchController.text == "Aktueller Standort") {
           _startLatLng = _currentGpsPosition;
           if (_startLatLng != null) {
-            _startMarker = _createMarker(
-                _startLatLng!,
-                Colors.green, // Use ! as _startLatLng is checked
-                Icons.flag_circle,
-                "Start: Aktueller Standort");
+            _startMarker = _createMarker(_startLatLng!, Colors.green,
+                Icons.flag_circle, "Start: Aktueller Standort");
           }
         }
       });
@@ -713,12 +711,8 @@ class MapScreenState extends State<MapScreen> {
             if (_isMapReady && mounted) {
               try {
                 List<LatLng> pointsForBounds = List.from(routePoints);
-                // Start- und End-LatLng sind hier schon durch `findNearestNode` in routePoints enthalten, wenn sie gültig sind.
-                // Die explizite Hinzunahme ist nur nötig, wenn _startLatLng/_endLatLng die exakten Klickpunkte sind
-                // und diese nicht exakt auf einem Routenpunkt liegen.
-                // Für fitCamera ist es aber meist besser, die reinen Routenpunkte zu nehmen.
-                // if (_startLatLng != null && !pointsForBounds.contains(_startLatLng)) pointsForBounds.insert(0, _startLatLng!);
-                // if (_endLatLng != null && !pointsForBounds.contains(_endLatLng)) pointsForBounds.add(_endLatLng!);
+                // if (_startLatLng != null) pointsForBounds.insert(0, _startLatLng!); // Start/End sind Teil der routePoints
+                // if (_endLatLng != null) pointsForBounds.add(_endLatLng!);
 
                 _mapController.fitCamera(
                   CameraFit.bounds(
@@ -748,7 +742,8 @@ class MapScreenState extends State<MapScreen> {
       }
     } catch (e, stacktrace) {
       if (kDebugMode) {
-        print(">>> Fehler Routenberechnung: $e\n$stacktrace");
+        print(
+            ">>> Fehler Routenberechnung: $e $stacktrace"); // Stacktrace hinzugefügt
       }
       _showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() {
@@ -1064,7 +1059,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   String _formatDistance(double? distanceMeters) {
-    if (distanceMeters == null) return "";
+    if (distanceMeters == null) {
+      return "";
+    }
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
     } else {
@@ -1099,8 +1096,8 @@ class MapScreenState extends State<MapScreen> {
     double searchUiCardHeight = (MapScreen.searchInputRowHeight * 2) +
         MapScreen.dividerAndSwapButtonHeight +
         (MapScreen.cardInternalVerticalPadding * 2);
+    // Linter: unnecessary_null_comparison (Ln 930) - Behoben durch alleinige Prüfung auf _routeDistance
     if (_routeDistance != null) {
-      // Linter: unnecessary_null_comparison (routeTimeMinutes wird immer mit routeDistance gesetzt)
       searchUiCardHeight += MapScreen.routeInfoHeight;
     }
 
@@ -1178,10 +1175,10 @@ class MapScreenState extends State<MapScreen> {
               maxZoom: 19.0,
               onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
+                // Linter: undefined_enum_constant (Ln 1182, 1193) - Korrigiert auf MapEventSource.pointerDrag
                 if (mapEvent is MapEventMove &&
-                    mapEvent.source == MapEventSource.drag &&
+                    mapEvent.source == MapEventSource.pointerDrag &&
                     _followGps) {
-                  // Korrigiert auf drag
                   setStateIfMounted(() {
                     _followGps = false;
                     _showSnackbar("Follow-GPS Modus deaktiviert.",
@@ -1189,8 +1186,7 @@ class MapScreenState extends State<MapScreen> {
                   });
                 }
                 if (mapEvent is MapEventMove &&
-                    mapEvent.source ==
-                        MapEventSource.drag && // Korrigiert auf drag
+                    mapEvent.source == MapEventSource.pointerDrag &&
                     (_startFocusNode.hasFocus || _endFocusNode.hasFocus)) {
                   if (_startFocusNode.hasFocus) {
                     _startFocusNode.unfocus();
@@ -1443,7 +1439,8 @@ class MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       ),
-                      if (_routeDistance != null && _routeTimeMinutes != null)
+                      if (_routeDistance !=
+                          null) // Prüfung auf _routeTimeMinutes ist redundant
                         Padding(
                           padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
                           child: SizedBox(
@@ -1460,7 +1457,8 @@ class MapScreenState extends State<MapScreen> {
                                   TextSpan(
                                     children: [
                                       TextSpan(
-                                        text: "~ $_routeTimeMinutes min",
+                                        text:
+                                            "~ ${_routeTimeMinutes ?? '?'} min", // Fallback für routeTimeMinutes
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
