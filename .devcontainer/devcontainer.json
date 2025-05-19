@@ -1,27 +1,42 @@
 {
-  "name": "Basic Codespace (Ubuntu)",
-  // Nur das Basis-Image, keine Flutter-spezifischen Dinge
+  "name": "Flutter Codespace",
+  // Das Basis-Image kann beibehalten werden, das Feature installiert Flutter
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
 
-  // Wichtig: Port-Weiterleitung für die Web-App behalten wir bei
+  "features": {
+    // Dieses Feature installiert Flutter, Dart und notwendige Abhängigkeiten
+    "ghcr.io/devcontainers/features/flutter:1": {
+      // Optional: Geben Sie eine bestimmte Flutter-Version oder einen Channel an.
+      // Wenn Sie dies auskommentiert lassen, wird meist die stabile Version genommen.
+      // "version": "stable",
+      // "channel": "stable"
+    }
+  },
+
+  // Behalten Sie Ihre Port-Weiterleitung für die Web-App bei
   "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
       "label": "App Port",
-      "onAutoForward": "notify" // Benachrichtigen, wenn Port offen
+      "onAutoForward": "notify" // Benachrichtigt, wenn der Port automatisch weitergeleitet wird
     }
   },
 
-  // VS Code Standard-Anpassungen (optional, können auch weg)
+  // Empfohlene VS Code-Erweiterungen
   "customizations": {
     "vscode": {
       "extensions": [
-        // Nur grundlegende Erweiterungen, Flutter/Dart fügen wir später hinzu oder lassen sie weg
         "GitHub.codespaces",
-        "GitHub.vscode-pull-request-github"
+        "GitHub.vscode-pull-request-github",
+        "dart-code.dart-code", // Wichtig für Dart
+        "dart-code.flutter"  // Wichtig für Flutter
       ]
     }
   },
 
-  "remoteUser": "vscode"
+  "remoteUser": "vscode", // Standardbenutzer in vielen Dev Containern
+
+  // Dieser Befehl wird ausgeführt, nachdem der Container erstellt und verbunden wurde.
+  // Er hilft zu überprüfen, ob Flutter korrekt eingerichtet ist.
+  "postCreateCommand": "flutter doctor -v && flutter precache --web"
 }
