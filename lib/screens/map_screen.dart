@@ -435,14 +435,12 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (controllerToUpdate != null) {
-      controllerToUpdate.value = TextEditingValue(
-        text: feature.name,
-        selection: TextSelection.fromPosition(
-            TextPosition(offset: feature.name.length)),
-      );
-    }
-
+    controllerToUpdate.value = TextEditingValue(
+      text: feature.name,
+      selection: TextSelection.fromPosition(
+          TextPosition(offset: feature.name.length)),
+    );
+  
     setStateIfMounted(() {
       _showSearchResults = false;
       _searchResults = [];
@@ -915,7 +913,7 @@ class MapScreenState extends State<MapScreen> {
       LatLng? centerTarget = _currentGpsPosition ??
           selectedLocationFromProvider?.initialCenter ??
           fallbackInitialCenter;
-      if (centerTarget != null && _isMapReady) {
+      if (_isMapReady) {
         _mapController.move(centerTarget, _followGpsZoomLevel);
       }
       return;
@@ -1052,8 +1050,9 @@ class MapScreenState extends State<MapScreen> {
   }
 
   String _formatDistance(double? distanceMeters) {
-    if (distanceMeters == null)
+    if (distanceMeters == null) {
       return ""; // Behoben: keine Klammern um distanceMeters nötig
+    }
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
     } else {
