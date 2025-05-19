@@ -1,8 +1,9 @@
 {
   "name": "Flutter Codespace (via Dockerfile)",
   "build": {
-    "dockerfile": "Dockerfile" // Verweis auf Ihr Dockerfile im .devcontainer Ordner
+    "dockerfile": "Dockerfile" // Verweist auf Ihr Dockerfile im .devcontainer Ordner
     // "context": "." // Stellt sicher, dass der Kontext das .devcontainer-Verzeichnis ist
+                     // Normalerweise ist dies der Standard, wenn sich beide Dateien im selben Ordner befinden.
   },
   "forwardPorts": [8080],
   "portsAttributes": {
@@ -22,5 +23,6 @@
     }
   },
   "remoteUser": "vscode",
+  // Dieser Befehl wird nach dem Erstellen und Verbinden des Containers ausgeführt
   "postCreateCommand": "flutter doctor -v"
 }
