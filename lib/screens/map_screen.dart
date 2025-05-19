@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+// Import für CancellableNetworkTileProvider wird nicht mehr benötigt, wenn wir ihn nicht verwenden
+// import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:provider/provider.dart';
 
 // Eigene Imports
@@ -330,10 +331,10 @@ class MapScreenState extends State<MapScreen> {
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
             _startLatLng =
-                activeInitialCenterForMock; // Direkt _currentGpsPosition verwenden
+                activeInitialCenterForMock; 
             _startMarker = _createMarker(
                 _startLatLng!,
-                Colors.green, // _startLatLng ist hier sicher nicht null
+                Colors.green, 
                 Icons.flag_circle,
                 "Start: Mock Position (${location.name})");
             _startSearchController.text = "Mock Position (${location.name})";
@@ -383,7 +384,7 @@ class MapScreenState extends State<MapScreen> {
       }
     }
 
-    if (mounted && targetToMoveToNullSafe != null) { // Sicherstellen, dass targetToMoveToNullSafe nicht null ist
+    if (mounted && targetToMoveToNullSafe != null) { 
       _mapController.move(targetToMoveToNullSafe,
           _followGps && !_useMockLocation ? _followGpsZoomLevel : 17.0);
     }
@@ -436,7 +437,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (controllerToUpdate != null) { // Null-Check hinzugefügt
+    if (controllerToUpdate != null) { 
         controllerToUpdate.value = TextEditingValue(
         text: feature.name,
         selection: TextSelection.fromPosition(
@@ -574,7 +575,7 @@ class MapScreenState extends State<MapScreen> {
       width: markerWidth,
       height: markerHeight,
       point: position,
-      alignment: Alignment.center, // Stellt sicher, dass der Marker zentriert ist
+      alignment: Alignment.center,
       child: Tooltip(
         message: tooltip,
         child: Icon(icon, color: color, size: size),
@@ -615,7 +616,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (currentGraph.nodes.isEmpty) { // Null-Check ist hier nicht nötig, da isDataReadyForRouting dies abdeckt
+    if (currentGraph.nodes.isEmpty) { 
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() {
@@ -624,7 +625,6 @@ class MapScreenState extends State<MapScreen> {
       });
       return;
     }
-
 
     if (_startLatLng == null || _endLatLng == null) {
       setStateIfMounted(() {
@@ -917,12 +917,11 @@ class MapScreenState extends State<MapScreen> {
       LatLng? centerTarget = _currentGpsPosition ??
           selectedLocationFromProvider?.initialCenter ??
           fallbackInitialCenter;
-      if (centerTarget != null && _isMapReady) { // Null-Check für centerTarget
+      if (centerTarget != null && _isMapReady) { 
         _mapController.move(centerTarget, _followGpsZoomLevel);
       }
       return;
     }
-
 
     if (_currentGpsPosition != null && _isMapReady) {
       setStateIfMounted(() {
@@ -1208,10 +1207,8 @@ class MapScreenState extends State<MapScreen> {
             children: [
               TileLayer(
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                // ====== HIER IST DIE ÄNDERUNG ======
                 userAgentPackageName: 'dev.tom52538.campsitenav.app', 
-                // ===================================
-                tileProvider: CancellableNetworkTileProvider(), // Sie verwenden bereits einen Cancellable Provider, das ist gut.
+                // tileProvider: CancellableNetworkTileProvider(), // Auskommentiert für Standard-Web-Verhalten
               ),
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
