@@ -383,11 +383,12 @@ class MapScreenState extends State<MapScreen> {
       }
     }
 
-    if (mounted && targetToMoveToNullSafe != null) {
+    if (mounted && targetToMoveToNullSafe != null) { // Sicherstellen, dass targetToMoveToNullSafe nicht null ist
       _mapController.move(targetToMoveToNullSafe,
           _followGps && !_useMockLocation ? _followGpsZoomLevel : 17.0);
     }
   }
+
 
   void setStateIfMounted(VoidCallback fn) {
     if (mounted) {
@@ -405,7 +406,7 @@ class MapScreenState extends State<MapScreen> {
     }
 
     TextEditingController? controllerToUpdate;
-    FocusNode focusToUnset; // Nicht mehr nullable, da immer zugewiesen wird
+    FocusNode focusToUnset; 
     FocusNode? nextFocus;
     bool isStartField = _activeSearchField == ActiveSearchField.start;
 
@@ -435,11 +436,13 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    controllerToUpdate.value = TextEditingValue(
-      text: feature.name,
-      selection: TextSelection.fromPosition(
-          TextPosition(offset: feature.name.length)),
-    );
+    if (controllerToUpdate != null) { // Null-Check hinzugefügt
+        controllerToUpdate.value = TextEditingValue(
+        text: feature.name,
+        selection: TextSelection.fromPosition(
+            TextPosition(offset: feature.name.length)),
+        );
+    }
   
     setStateIfMounted(() {
       _showSearchResults = false;
@@ -447,7 +450,7 @@ class MapScreenState extends State<MapScreen> {
       _followGps = false;
     });
 
-    focusToUnset.unfocus(); // Kein ?. mehr nötig
+    focusToUnset.unfocus(); 
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
@@ -571,7 +574,7 @@ class MapScreenState extends State<MapScreen> {
       width: markerWidth,
       height: markerHeight,
       point: position,
-      alignment: Alignment.center,
+      alignment: Alignment.center, // Stellt sicher, dass der Marker zentriert ist
       child: Tooltip(
         message: tooltip,
         child: Icon(icon, color: color, size: size),
@@ -612,7 +615,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (currentGraph.nodes.isEmpty) {
+    if (currentGraph.nodes.isEmpty) { // Null-Check ist hier nicht nötig, da isDataReadyForRouting dies abdeckt
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() {
@@ -621,6 +624,7 @@ class MapScreenState extends State<MapScreen> {
       });
       return;
     }
+
 
     if (_startLatLng == null || _endLatLng == null) {
       setStateIfMounted(() {
@@ -913,11 +917,12 @@ class MapScreenState extends State<MapScreen> {
       LatLng? centerTarget = _currentGpsPosition ??
           selectedLocationFromProvider?.initialCenter ??
           fallbackInitialCenter;
-      if (_isMapReady) {
+      if (centerTarget != null && _isMapReady) { // Null-Check für centerTarget
         _mapController.move(centerTarget, _followGpsZoomLevel);
       }
       return;
     }
+
 
     if (_currentGpsPosition != null && _isMapReady) {
       setStateIfMounted(() {
@@ -1051,7 +1056,7 @@ class MapScreenState extends State<MapScreen> {
 
   String _formatDistance(double? distanceMeters) {
     if (distanceMeters == null) {
-      return ""; // Behoben: keine Klammern um distanceMeters nötig
+      return ""; 
     }
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
@@ -1088,7 +1093,6 @@ class MapScreenState extends State<MapScreen> {
         MapScreen.dividerAndSwapButtonHeight +
         (MapScreen.cardInternalVerticalPadding * 2);
     if (_routeDistance != null) {
-      // Linter: unnecessary_null_comparison (Ln 930) - Korrigiert
       searchUiCardHeight += MapScreen.routeInfoHeight;
     }
 
@@ -1166,7 +1170,6 @@ class MapScreenState extends State<MapScreen> {
               maxZoom: 19.0,
               onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
-                // Linter: undefined_enum_constant (Ln 1182, 1193) - Korrigiert auf MapEventSource.drag (oder spezifischer, wenn nötig)
                 if (mapEvent is MapEventMove &&
                     (mapEvent.source == MapEventSource.dragStart ||
                         mapEvent.source ==
@@ -1205,8 +1208,10 @@ class MapScreenState extends State<MapScreen> {
             children: [
               TileLayer(
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                userAgentPackageName: 'de.tomsoft.campsitenav.app',
-                tileProvider: CancellableNetworkTileProvider(),
+                // ====== HIER IST DIE ÄNDERUNG ======
+                userAgentPackageName: 'dev.tom52538.campsitenav.app', 
+                // ===================================
+                tileProvider: CancellableNetworkTileProvider(), // Sie verwenden bereits einen Cancellable Provider, das ist gut.
               ),
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
