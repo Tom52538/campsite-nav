@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-// Import für CancellableNetworkTileProvider wird nicht mehr benötigt, wenn wir ihn nicht verwenden
+// Import für CancellableNetworkTileProvider wird nicht mehr zwingend benötigt,
+// wenn wir den Standard-TileProvider von flutter_map mit einem CORS-Proxy verwenden.
 // import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -1206,9 +1207,11 @@ class MapScreenState extends State<MapScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                // ====== HIER IST DIE ÄNDERUNG für den CORS-Proxy ======
+                urlTemplate: "https://api.allorigins.win/raw?url=https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 userAgentPackageName: 'dev.tom52538.campsitenav.app', 
-                // tileProvider: CancellableNetworkTileProvider(), // Auskommentiert für Standard-Web-Verhalten
+                // tileProvider: CancellableNetworkTileProvider(), // Vorerst auskommentiert für Standard-Web-Verhalten oder CORS-Proxy-Test
+                // ======================================================
               ),
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
