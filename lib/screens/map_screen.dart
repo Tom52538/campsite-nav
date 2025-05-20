@@ -1045,10 +1045,17 @@ class MapScreenState extends State<MapScreen> {
 
     if (_currentGpsPosition != null && _isMapReady) {
       setStateIfMounted(() {
-        _followGps = true;
+        _followGps = !_followGps; // Toggle-Logik
       });
-      _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
-      _showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
+
+      if (_followGps) {
+        _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
+        _showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
+      } else {
+        _showSnackbar("Follow-GPS Modus deaktiviert.", durationSeconds: 2);
+        // Optional: Hier könnte man den Zoom etwas herausnehmen, wenn Follow deaktiviert wird,
+        // oder die Karte so belassen, wie sie ist.
+      }
     } else {
       _showSnackbar(
           "Aktuelle GPS-Position nicht verfügbar oder Karte nicht bereit.",
