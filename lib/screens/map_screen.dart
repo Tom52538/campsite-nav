@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart'; // Import ist korrekt
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:provider/provider.dart';
 
 // Eigene Imports
@@ -76,6 +76,10 @@ class MapScreenState extends State<MapScreen> {
   final FocusNode _endFocusNode = FocusNode();
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
+
+  // NEU: Konstante für Manöver-Annäherung
+  static const double _maneuverReachedThreshold = 20.0; // Meter
+  static const double _significantGpsChangeThreshold = 2.0; // Meter
 
   @override
   void initState() {
@@ -389,7 +393,6 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-
   void setStateIfMounted(VoidCallback fn) {
     if (mounted) {
       setState(fn);
@@ -514,35 +517,48 @@ class MapScreenState extends State<MapScreen> {
 
     final LatLng centerForDistanceCheck = location.initialCenter;
     _positionStreamSubscription = Geolocator.getPositionStream(
-            locationSettings: const LocationSettings(
-                accuracy: LocationAccuracy.bestForNavigation,
-                distanceFilter: 5))
-        .listen((Position position) {
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 2, // Kann auf 2-5 Meter reduziert werden für häufigere Updates
+      ),
+    ).listen((Position position) {
       if (!mounted) {
         return;
       }
       final bool isFirstFix = _currentGpsPosition == null;
       LatLng newGpsPos = LatLng(position.latitude, position.longitude);
 
-      setStateIfMounted(() {
-        _currentGpsPosition = newGpsPos;
-        _currentLocationMarker = _createMarker(
-            newGpsPos, Colors.blueAccent, Icons.circle, "Meine Position");
-        if (_startSearchController.text == "Aktueller Standort") {
-          _startLatLng = _currentGpsPosition;
-          if (_startLatLng != null) {
-            _startMarker = _createMarker(_startLatLng!, Colors.green,
-                Icons.flag_circle, "Start: Aktueller Standort");
-          }
+      bool significantPositionChange = true;
+      if (_currentGpsPosition != null) {
+        const Distance d = Distance();
+        if (d(_currentGpsPosition!, newGpsPos) < _significantGpsChangeThreshold) {
+          significantPositionChange = false;
         }
-      });
+      }
 
-      if (_followGps && _isMapReady && mounted && _currentGpsPosition != null) {
+      _currentGpsPosition = newGpsPos;
+
+      if (significantPositionChange) {
+        setStateIfMounted(() {
+          _currentLocationMarker = _createMarker(
+              newGpsPos, Colors.blueAccent, Icons.circle, "Meine Position");
+          if (_startSearchController.text == "Aktueller Standort") {
+            _startLatLng = _currentGpsPosition;
+            if (_startLatLng != null) {
+              _startMarker = _createMarker(_startLatLng!, Colors.green,
+                  Icons.flag_circle, "Start: Aktueller Standort");
+            }
+          }
+        });
+      }
+
+      if (_followGps && _isMapReady && mounted && _currentGpsPosition != null && significantPositionChange) {
         _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
       } else if (isFirstFix &&
           _currentGpsPosition != null &&
           _isMapReady &&
-          mounted) {
+          mounted &&
+          significantPositionChange) {
         const distance = Distance();
         final double meters =
             distance(_currentGpsPosition!, centerForDistanceCheck);
@@ -554,9 +570,22 @@ class MapScreenState extends State<MapScreen> {
               durationSeconds: 4);
         }
       }
-      if (_startLatLng != null && _endLatLng != null && !_isCalculatingRoute) {
-        _calculateAndDisplayRoute();
+
+      // NEU: Aufruf der Manöver-Aktualisierungslogik
+      if (_routePolyline != null && _currentManeuvers.isNotEmpty && significantPositionChange) {
+        _updateCurrentManeuverOnGpsUpdate(_currentGpsPosition!);
       }
+
+      // Die Neuberechnung der Route bei GPS-Änderung ist hier heikel und
+      // sollte idealerweise nur bei signifikanter Abweichung von der Route erfolgen (Teil von Prio 1.2).
+      // Fürs Erste lassen wir es auskommentiert, um den Fokus auf die Manöveranzeige zu legen.
+      /*
+      if (_startLatLng != null && _endLatLng != null && !_isCalculatingRoute && significantPositionChange) {
+        if (_startSearchController.text == "Aktueller Standort" || _startSearchController.text.toLowerCase().contains("mock position")) {
+           // _calculateAndDisplayRoute(); // Temporär auskommentiert
+        }
+      }
+      */
     }, onError: (error) {
       _showErrorDialog("Fehler GPS-Empfang: $error");
       if (mounted) {
@@ -564,6 +593,75 @@ class MapScreenState extends State<MapScreen> {
       }
     });
   }
+
+
+  // NEUE METHODE zur Aktualisierung des angezeigten Manövers
+  void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
+    if (_currentManeuvers.isEmpty || _currentDisplayedManeuver == null || _routePolyline == null) {
+      return;
+    }
+
+    if (_currentDisplayedManeuver!.turnType == TurnType.arrive) {
+      return;
+    }
+
+    int displayedManeuverIndex = _currentManeuvers.indexOf(_currentDisplayedManeuver!);
+
+    if (displayedManeuverIndex == -1) {
+      if (kDebugMode) {
+        print("[MapScreen] Fehler: _currentDisplayedManeuver nicht in _currentManeuvers gefunden.");
+      }
+      // Fallback: Versuche, das erste sinnvolle Manöver zu finden
+      if (_currentManeuvers.isNotEmpty) {
+          Maneuver initialManeuver = _currentManeuvers.first;
+          if (_currentManeuvers.length > 1 && initialManeuver.turnType == TurnType.depart) {
+              initialManeuver = _currentManeuvers[1];
+          }
+          if (_currentDisplayedManeuver != initialManeuver) {
+            setStateIfMounted(() {
+                _currentDisplayedManeuver = initialManeuver;
+            });
+          }
+      }
+      return;
+    }
+
+    const Distance distanceCalculator = Distance();
+    final double distanceToDisplayedManeuverPoint = distanceCalculator(
+      currentPosition,
+      _currentDisplayedManeuver!.point,
+    );
+
+    if (kDebugMode) {
+      // print("[MapScreen] Distanz zu '${_currentDisplayedManeuver!.instructionText}': ${distanceToDisplayedManeuverPoint.toStringAsFixed(1)}m. Aktueller Index: $displayedManeuverIndex");
+    }
+
+    if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) {
+      final int nextManeuverIndex = displayedManeuverIndex + 1;
+      if (nextManeuverIndex < _currentManeuvers.length) {
+        Maneuver newManeuverToShow = _currentManeuvers[nextManeuverIndex];
+        if (newManeuverToShow != _currentDisplayedManeuver) {
+          setStateIfMounted(() {
+            _currentDisplayedManeuver = newManeuverToShow;
+            if (kDebugMode) {
+              print("[MapScreen] Nächstes Manöver gesetzt: ${_currentDisplayedManeuver!.instructionText}");
+            }
+          });
+        }
+      } else if (displayedManeuverIndex == _currentManeuvers.length - 2 && _currentManeuvers.last.turnType == TurnType.arrive) {
+        // Spezieller Fall: Wenn das vorletzte Manöver erreicht wurde und das letzte "Arrive" ist.
+        if (_currentDisplayedManeuver != _currentManeuvers.last) {
+           setStateIfMounted(() {
+               _currentDisplayedManeuver = _currentManeuvers.last;
+                if (kDebugMode) {
+                   print("[MapScreen] Letztes Manöver (Ankunft) gesetzt: ${_currentDisplayedManeuver!.instructionText}");
+               }
+           });
+        }
+      }
+    }
+  }
+
 
   Marker _createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
@@ -647,11 +745,13 @@ class MapScreenState extends State<MapScreen> {
         });
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
+        setStateIfMounted(() {
         _currentDisplayedManeuver = Maneuver(
             point: _startLatLng!,
             turnType: TurnType.arrive,
             instructionText: "Start- und Zielpunkt sind identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false);
+        });
         if (_isMapReady && mounted && _startLatLng != null) {
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
         }
@@ -681,17 +781,22 @@ class MapScreenState extends State<MapScreen> {
               }
             }
 
-            if (_currentManeuvers.length > 1) {
-              if (_currentManeuvers[1].turnType != TurnType.arrive) {
-                _currentDisplayedManeuver = _currentManeuvers[1];
-              } else {
-                _currentDisplayedManeuver = _currentManeuvers.last;
-              }
-            } else if (_currentManeuvers.isNotEmpty) {
-              _currentDisplayedManeuver = _currentManeuvers.first;
+            if (_currentManeuvers.isNotEmpty) {
+                _currentDisplayedManeuver = _currentManeuvers.first; // Zeige "Depart"
+                // Wenn es mehr als "Depart" und "Arrive" gibt, zeige das erste echte Manöver nach "Depart"
+                if (_currentManeuvers.length > 1 && _currentManeuvers.first.turnType == TurnType.depart) {
+                    if (_currentManeuvers[1].turnType != TurnType.arrive || _currentManeuvers.length == 2) {
+                         _currentDisplayedManeuver = _currentManeuvers[1];
+                    } else if (_currentManeuvers.length > 2) { // Depart, Arrive, Arrive (unwahrscheinlich) -> nimm Arrive
+                         _currentDisplayedManeuver = _currentManeuvers[1]; // Sollte Arrive sein
+                    }
+                } else if (_currentManeuvers.first.turnType != TurnType.depart) {
+                    _currentDisplayedManeuver = _currentManeuvers.first;
+                }
             } else {
-              _currentDisplayedManeuver = null;
+                _currentDisplayedManeuver = null;
             }
+
 
             if (!_useMockLocation) {
               _followGps = true;
@@ -920,7 +1025,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (_currentGpsPosition != null && _isMapReady) { // Die Analyzer-Warnung hier ist bekannt, die Prüfung ist aber wichtig.
+    if (_currentGpsPosition != null && _isMapReady) {
       setStateIfMounted(() {
         _followGps = true;
       });
@@ -1198,16 +1303,22 @@ class MapScreenState extends State<MapScreen> {
                   print("<<< Map bereit, _isMapReady=true >>>");
                 }
                 setState(() => _isMapReady = true);
-                _performInitialMapMove();
+                 // Stelle sicher, dass GPS/Mock initialisiert wird, nachdem Karte bereit ist,
+                 // falls selectedLocation schon vorher gesetzt war.
+                final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+                if (locationProvider.selectedLocation != null && _currentGpsPosition == null) {
+                    _initializeGpsOrMock(locationProvider.selectedLocation!);
+                } else {
+                    _performInitialMapMove();
+                }
               },
             ),
             children: [
               TileLayer(
                 urlTemplate: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-                subdomains: const ['a', 'b', 'c'], // Subdomains für bessere Parallelisierung
+                subdomains: const ['a', 'b', 'c'],
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
-                tileProvider: CancellableNetworkTileProvider(), // Empfohlener Provider für Web
-                // keepAlive: true, // Entfernt, da nicht unterstützt in flutter_map 6.2.1
+                tileProvider: CancellableNetworkTileProvider(),
               ),
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
