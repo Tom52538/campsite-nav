@@ -767,7 +767,7 @@ class MapScreenState extends State<MapScreen> {
             instructionText: "Start- und Zielpunkt sind identisch.");
         _clearRoute(showConfirmation: false, clearMarkers: false); // Nur Route, nicht Marker löschen
         });
-        if (_isMapReady && mounted && _startLatLng != null) {
+        if (_isMapReady && mounted ) { // Entferne && _startLatLng != null, da es oben schon geprüft wurde
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
         }
       } else {
@@ -1186,24 +1186,17 @@ class MapScreenState extends State<MapScreen> {
 
   // Hilfsfunktion zur Berechnung der Distanz von einem Punkt zu einem Liniensegment
   double _distanceToSegment(LatLng p, LatLng a, LatLng b, Distance distanceCalc) {
-    final double l2 = distanceCalc.squaredDistance(a, b); // squared length of the segment
+    // Ersetze squaredDistance durch Quadrieren der normalen Distanz
+    final double l2 = pow(distanceCalc(a, b), 2).toDouble(); 
     if (l2 == 0.0) return distanceCalc(p, a); // segment is a point
 
-    // Betrachte die Projektion von P auf die unendliche Linie durch A und B.
-    // t = [(P-A) . (B-A)] / |B-A|^2
-    // Da wir keine direkten Vektoroperationen auf LatLng haben, approximieren wir für kleine Distanzen
-    // oder verwenden eine Methode, die nur Distanzen nutzt (wie Heron für Höhe, was hier aber umständlicher ist).
-    // Eine robustere Methode für die Projektion:
-    final double apLat = p.latitude - a.latitude;
-    final double apLon = p.longitude - a.longitude;
-    final double abLat = b.latitude - a.latitude;
-    final double abLon = b.longitude - a.longitude;
+    // Die Variable 'dot' wurde entfernt, da sie nicht verwendet wurde.
+    // final double apLat = p.latitude - a.latitude;
+    // final double apLon = p.longitude - a.longitude;
+    // final double abLat = b.latitude - a.latitude;
+    // final double abLon = b.longitude - a.longitude;
+    // double dot = apLat * abLat + apLon * abLon;
 
-    double dot = apLat * abLat + apLon * abLon;
-    // Vermeide Division durch Null, wenn l2 (squaredDistance) sehr klein ist,
-    // aber nicht exakt 0.0 (was oben abgefangen wird).
-    // In der Praxis ist l2 hier die quadrierte Distanz in Metern, also nicht direkt für dot/l2 verwendbar.
-    // Die direkte Anwendung von t = dot/l2 mit Lat/Lon-Differenzen ist eine grobe Näherung.
 
     // Alternative: Verwendung der Kosinussatz-Methode zur Bestimmung, ob die Projektion auf dem Segment liegt.
     final double distAP = distanceCalc(p, a);
@@ -1211,46 +1204,32 @@ class MapScreenState extends State<MapScreen> {
     final double distAB = sqrt(l2);
 
     // Winkel PAB (alpha)
-    // cos(alpha) = (AP^2 + AB^2 - BP^2) / (2 * AP * AB)
-    // Wenn cos(alpha) < 0 (alpha > 90°), ist A der nächste Punkt
-    if (distAP == 0 || distAB == 0) { // Schutz vor Division durch Null falls A=P oder A=B
-        // Wenn P = A, ist Distanz 0. Wenn A = B, wurde oben behandelt.
-        // Wenn AP=0, ist P auf A, Distanz 0.
-        // Wenn AB=0, ist A=B, Distanz ist distAP.
+    if (distAP == 0 || distAB == 0) { 
          if (distAP == 0) return 0.0;
-         // if (distAB == 0) return distAP; // Bereits oben abgedeckt durch l2 == 0.0
     } else {
         double cosPAB = (pow(distAP, 2) + pow(distAB, 2) - pow(distBP, 2)) / (2 * distAP * distAB);
-        if (cosPAB < 0) { // Winkel PAB ist stumpf, A ist der nächste Punkt auf dem Segment
+        if (cosPAB < 0) { 
             return distAP;
         }
     }
     
     // Winkel PBA (beta)
-    // cos(beta) = (BP^2 + AB^2 - AP^2) / (2 * BP * AB)
-    // Wenn cos(beta) < 0 (beta > 90°), ist B der nächste Punkt
     if (distBP == 0 || distAB == 0) {
-        if (distBP == 0) return 0.0; // P auf B
-        // if (distAB == 0) return distBP; // Bereits oben abgedeckt
+        if (distBP == 0) return 0.0; 
     } else {
         double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) / (2 * distBP * distAB);
-        if (cosPBA < 0) { // Winkel PBA ist stumpf, B ist der nächste Punkt auf dem Segment
+        if (cosPBA < 0) { 
             return distBP;
         }
     }
     
-    // Andernfalls liegt die Projektion auf dem Segment oder der Punkt P ist kollinear.
-    // Berechne die Höhe des Dreiecks PAB zur Basis AB (senkrechte Distanz).
-    // Heron's formula for area:
     final double s = (distAP + distBP + distAB) / 2;
-    // Schutz vor sqrt von negativen Zahlen durch Fließkomma-Ungenauigkeiten,
-    // besonders wenn P (nahezu) kollinear mit A und B ist.
     final double areaArg = s * (s - distAP) * (s - distBP) * (s - distAB);
-    if (areaArg < 0) return 0.0; // Nahezu kollinear, Distanz ist praktisch 0 zum Segment
+    if (areaArg < 0) return 0.0; 
     
     final double area = sqrt(areaArg);
-    if (distAB == 0) return distAP; // Sollte schon oben abgefangen sein
-    return (2 * area) / distAB; // Höhe = 2 * Fläche / Basis
+    if (distAB == 0) return distAP; 
+    return (2 * area) / distAB; 
   }
 
   // Hilfsfunktion zur Berechnung der Distanz von einem Punkt zur Polyline
