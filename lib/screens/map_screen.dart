@@ -18,6 +18,7 @@ import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
+import 'package:camping_osm_navi/services/tts_service.dart'; // NEUER IMPORT für TTS
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -39,6 +40,7 @@ enum ActiveSearchField { none, start, end }
 
 class MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
+  late TtsService _ttsService; // HINZUGEFÜGT: TTS Service Instanz
 
   Polyline? _routePolyline;
   Marker? _currentLocationMarker;
@@ -78,17 +80,16 @@ class MapScreenState extends State<MapScreen> {
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
 
-  // NEU: Konstante für Manöver-Annäherung (angepasst)
-  static const double _maneuverReachedThreshold = 15.0; // Meter
-  static const double _significantGpsChangeThreshold = 2.0; // Meter
+  static const double _maneuverReachedThreshold = 15.0;
+  static const double _significantGpsChangeThreshold = 2.0;
 
-  // NEU: Konstante für Routenabweichung
-  static const double _offRouteThreshold = 25.0; // Meter
-  final Distance _distanceCalculatorInstance = const Distance(); // Instanz für Distanzberechnungen
+  static const double _offRouteThreshold = 25.0;
+  final Distance _distanceCalculatorInstance = const Distance();
 
   @override
   void initState() {
     super.initState();
+    _ttsService = TtsService(); // HINZUGEFÜGT: TTS Service initialisieren
     _startSearchController.addListener(_onStartSearchChanged);
     _endSearchController.addListener(_onEndSearchChanged);
     _startFocusNode.addListener(_onStartFocusChanged);
@@ -126,6 +127,7 @@ class MapScreenState extends State<MapScreen> {
     }
     _mapController.dispose();
     _positionStreamSubscription?.cancel();
+    _ttsService.stop(); // HINZUGEFÜGT: TTS stoppen beim Dispose
 
     _startSearchController.removeListener(_onStartSearchChanged);
     _startSearchController.dispose();
@@ -338,14 +340,10 @@ class MapScreenState extends State<MapScreen> {
                       .toLowerCase()
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
-            _startLatLng =
-                activeInitialCenterForMock;
-            if(_startLatLng != null) {
-              _startMarker = _createMarker(
-                  _startLatLng!,
-                  Colors.green,
-                  Icons.flag_circle,
-                  "Start: Mock Position (${location.name})");
+            _startLatLng = activeInitialCenterForMock;
+            if (_startLatLng != null) {
+              _startMarker = _createMarker(_startLatLng!, Colors.green,
+                  Icons.flag_circle, "Start: Mock Position (${location.name})");
             }
             _startSearchController.text = "Mock Position (${location.name})";
           }
@@ -448,8 +446,8 @@ class MapScreenState extends State<MapScreen> {
 
     controllerToUpdate.value = TextEditingValue(
       text: feature.name,
-      selection: TextSelection.fromPosition(
-          TextPosition(offset: feature.name.length)),
+      selection:
+          TextSelection.fromPosition(TextPosition(offset: feature.name.length)),
     );
 
     setStateIfMounted(() {
@@ -537,13 +535,14 @@ class MapScreenState extends State<MapScreen> {
 
       bool significantPositionChange = true;
       if (_currentGpsPosition != null) {
-        if (_distanceCalculatorInstance(_currentGpsPosition!, newGpsPos) < _significantGpsChangeThreshold) {
+        if (_distanceCalculatorInstance(_currentGpsPosition!, newGpsPos) <
+            _significantGpsChangeThreshold) {
           significantPositionChange = false;
         }
       }
-      
+
       if (significantPositionChange) {
-        _currentGpsPosition = newGpsPos; // Nur bei signifikanter Änderung aktualisieren
+        _currentGpsPosition = newGpsPos;
         setStateIfMounted(() {
           _currentLocationMarker = _createMarker(
               newGpsPos, Colors.blueAccent, Icons.circle, "Meine Position");
@@ -557,16 +556,19 @@ class MapScreenState extends State<MapScreen> {
         });
       }
 
-
-      if (_followGps && _isMapReady && mounted && _currentGpsPosition != null && significantPositionChange) {
+      if (_followGps &&
+          _isMapReady &&
+          mounted &&
+          _currentGpsPosition != null &&
+          significantPositionChange) {
         _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
       } else if (isFirstFix &&
           _currentGpsPosition != null &&
           _isMapReady &&
           mounted &&
           significantPositionChange) {
-        final double meters =
-            _distanceCalculatorInstance(_currentGpsPosition!, centerForDistanceCheck);
+        final double meters = _distanceCalculatorInstance(
+            _currentGpsPosition!, centerForDistanceCheck);
         if (meters <= centerOnGpsMaxDistanceMeters) {
           _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
         } else {
@@ -576,31 +578,37 @@ class MapScreenState extends State<MapScreen> {
         }
       }
 
-      if (_routePolyline != null && _currentManeuvers.isNotEmpty && significantPositionChange) {
+      if (_routePolyline != null &&
+          _currentManeuvers.isNotEmpty &&
+          significantPositionChange) {
         _updateCurrentManeuverOnGpsUpdate(_currentGpsPosition!);
       }
 
-      // Logik zur Routenabweichung und Neuberechnung
-      if (_routePolyline != null && _routePolyline!.points.isNotEmpty && !_isCalculatingRoute && _currentGpsPosition != null && significantPositionChange) {
-        final double distanceToRoute = _calculateDistanceToPolyline(_currentGpsPosition!, _routePolyline!.points);
+      if (_routePolyline != null &&
+          _routePolyline!.points.isNotEmpty &&
+          !_isCalculatingRoute &&
+          _currentGpsPosition != null &&
+          significantPositionChange) {
+        final double distanceToRoute = _calculateDistanceToPolyline(
+            _currentGpsPosition!, _routePolyline!.points);
         if (distanceToRoute > _offRouteThreshold) {
           if (kDebugMode) {
-            print("[MapScreen] Von Route abgekommen! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
+            print(
+                "[MapScreen] Von Route abgekommen! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
           }
-          _showSnackbar("Von Route abgekommen. Neue Route wird berechnet...", durationSeconds: 3);
-          
-          // Wichtig: _startLatLng für die Neuberechnung auf die aktuelle Position setzen
+          _showSnackbar("Von Route abgekommen. Neue Route wird berechnet...",
+              durationSeconds: 3);
+
           _startLatLng = _currentGpsPosition;
-          // Optional: Textfeld und Marker aktualisieren, wenn der Startpunkt "Aktueller Standort" war oder explizit neu gesetzt werden soll
           _startSearchController.text = "Aktueller Standort (neu)";
-           if(_startLatLng != null) {
-             _startMarker = _createMarker(_startLatLng!, Colors.green, Icons.flag_circle, "Start: ${_startSearchController.text}");
-           }
-          
-          _calculateAndDisplayRoute(); // Neuberechnung auslösen
+          if (_startLatLng != null) {
+            _startMarker = _createMarker(_startLatLng!, Colors.green,
+                Icons.flag_circle, "Start: ${_startSearchController.text}");
+          }
+
+          _calculateAndDisplayRoute();
         }
       }
-
     }, onError: (error) {
       _showErrorDialog("Fehler GPS-Empfang: $error");
       if (mounted) {
@@ -609,9 +617,10 @@ class MapScreenState extends State<MapScreen> {
     });
   }
 
-
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    if (_currentManeuvers.isEmpty || _currentDisplayedManeuver == null || _routePolyline == null) {
+    if (_currentManeuvers.isEmpty ||
+        _currentDisplayedManeuver == null ||
+        _routePolyline == null) {
       return;
     }
 
@@ -619,40 +628,49 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    int displayedManeuverIndex = _currentManeuvers.indexOf(_currentDisplayedManeuver!);
+    int displayedManeuverIndex =
+        _currentManeuvers.indexOf(_currentDisplayedManeuver!);
 
     if (displayedManeuverIndex == -1) {
       if (kDebugMode) {
-        print("[MapScreen] Fehler: _currentDisplayedManeuver nicht in _currentManeuvers gefunden.");
+        print(
+            "[MapScreen] Fehler: _currentDisplayedManeuver nicht in _currentManeuvers gefunden.");
       }
       if (_currentManeuvers.isNotEmpty) {
-          Maneuver initialManeuver = _currentManeuvers.first;
-          if (_currentManeuvers.length > 1 && initialManeuver.turnType == TurnType.depart) {
-              if (_currentManeuvers[1].turnType != TurnType.arrive || _currentManeuvers.length == 2) {
-                 initialManeuver = _currentManeuvers[1];
-              } else if (_currentManeuvers.length > 2 && _currentManeuvers[1].turnType == TurnType.arrive) {
-                 initialManeuver = _currentManeuvers[1];
-              }
+        Maneuver initialManeuver = _currentManeuvers.first;
+        if (_currentManeuvers.length > 1 &&
+            initialManeuver.turnType == TurnType.depart) {
+          if (_currentManeuvers[1].turnType != TurnType.arrive ||
+              _currentManeuvers.length == 2) {
+            initialManeuver = _currentManeuvers[1];
+          } else if (_currentManeuvers.length > 2 &&
+              _currentManeuvers[1].turnType == TurnType.arrive) {
+            initialManeuver = _currentManeuvers[1];
           }
-          if (_currentDisplayedManeuver != initialManeuver) {
-            setStateIfMounted(() {
-                _currentDisplayedManeuver = initialManeuver;
-            });
-          }
+        }
+        if (_currentDisplayedManeuver != initialManeuver) {
+          setStateIfMounted(() {
+            _currentDisplayedManeuver = initialManeuver;
+            // HIER TTS Aufruf für das initial angezeigte Manöver
+            if (_currentDisplayedManeuver?.instructionText != null) {
+              _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
+            }
+          });
+        }
       }
-      return; 
+      return;
     }
 
     final double distanceToDisplayedManeuverPoint = _distanceCalculatorInstance(
       currentPosition,
-      _currentDisplayedManeuver!.point, 
+      _currentDisplayedManeuver!.point,
     );
 
     if (kDebugMode) {
       // print("[MapScreen] Distanz zu '${_currentDisplayedManeuver!.instructionText}': ${distanceToDisplayedManeuverPoint.toStringAsFixed(1)}m. Aktueller Index: $displayedManeuverIndex");
     }
 
-    if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) { 
+    if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) {
       final int nextManeuverIndex = displayedManeuverIndex + 1;
 
       if (nextManeuverIndex < _currentManeuvers.length) {
@@ -661,18 +679,24 @@ class MapScreenState extends State<MapScreen> {
           setStateIfMounted(() {
             _currentDisplayedManeuver = newManeuverToShow;
             if (kDebugMode) {
-              print("[MapScreen] Nächstes Manöver gesetzt: ${_currentDisplayedManeuver!.instructionText}");
+              print(
+                  "[MapScreen] Nächstes Manöver gesetzt: ${_currentDisplayedManeuver!.instructionText}");
+            }
+            // HIER TTS Aufruf für das neu angezeigte Manöver
+            if (_currentDisplayedManeuver?.instructionText != null) {
+              _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
             }
           });
         }
-      } else if (displayedManeuverIndex == _currentManeuvers.length - 1 && _currentDisplayedManeuver!.turnType != TurnType.arrive) {
+      } else if (displayedManeuverIndex == _currentManeuvers.length - 1 &&
+          _currentDisplayedManeuver!.turnType != TurnType.arrive) {
         if (kDebugMode) {
-           print("[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${_currentDisplayedManeuver!.instructionText}");
+          print(
+              "[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${_currentDisplayedManeuver!.instructionText}");
         }
       }
     }
   }
-
 
   Marker _createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
@@ -705,16 +729,13 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    // Wichtig: Vor jeder Neuberechnung (auch Rerouting) alte Routeninfos löschen
     setStateIfMounted(() {
-      _routePolyline = null; // Explizit Polyline löschen
+      _routePolyline = null;
       _routeDistance = null;
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
-      // _followGps hier nicht unbedingt ändern, das hängt vom User-Intent ab
     });
-
 
     if (!isDataReadyForRouting) {
       _showErrorDialog(
@@ -725,7 +746,7 @@ class MapScreenState extends State<MapScreen> {
       });
       return;
     }
-    
+
     if (currentGraph.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
@@ -761,13 +782,17 @@ class MapScreenState extends State<MapScreen> {
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
         setStateIfMounted(() {
-        _currentDisplayedManeuver = Maneuver(
-            point: _startLatLng!,
-            turnType: TurnType.arrive,
-            instructionText: "Start- und Zielpunkt sind identisch.");
-        _clearRoute(showConfirmation: false, clearMarkers: false); // Nur Route, nicht Marker löschen
+          _currentDisplayedManeuver = Maneuver(
+              point: _startLatLng!,
+              turnType: TurnType.arrive,
+              instructionText: "Start- und Zielpunkt sind identisch.");
+          // HIER TTS Aufruf
+          if (_currentDisplayedManeuver?.instructionText != null) {
+            _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
+          }
+          _clearRoute(showConfirmation: false, clearMarkers: false);
         });
-        if (_isMapReady && mounted ) { // Entferne && _startLatLng != null, da es oben schon geprüft wurde
+        if (_isMapReady && mounted) {
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
         }
       } else {
@@ -797,20 +822,25 @@ class MapScreenState extends State<MapScreen> {
             }
 
             if (_currentManeuvers.isNotEmpty) {
-                _currentDisplayedManeuver = _currentManeuvers.first; 
-                if (_currentManeuvers.length > 1 && _currentManeuvers.first.turnType == TurnType.depart) {
-                    if (_currentManeuvers[1].turnType != TurnType.arrive || _currentManeuvers.length == 2) {
-                         _currentDisplayedManeuver = _currentManeuvers[1];
-                    } else if (_currentManeuvers.length > 2) { 
-                         _currentDisplayedManeuver = _currentManeuvers[1]; 
-                    }
-                } else if (_currentManeuvers.first.turnType != TurnType.depart) {
-                    _currentDisplayedManeuver = _currentManeuvers.first;
+              _currentDisplayedManeuver = _currentManeuvers.first;
+              if (_currentManeuvers.length > 1 &&
+                  _currentManeuvers.first.turnType == TurnType.depart) {
+                if (_currentManeuvers[1].turnType != TurnType.arrive ||
+                    _currentManeuvers.length == 2) {
+                  _currentDisplayedManeuver = _currentManeuvers[1];
+                } else if (_currentManeuvers.length > 2) {
+                  _currentDisplayedManeuver = _currentManeuvers[1];
                 }
+              } else if (_currentManeuvers.first.turnType != TurnType.depart) {
+                _currentDisplayedManeuver = _currentManeuvers.first;
+              }
+              // HIER TTS Aufruf für das erste relevante Manöver
+              if (_currentDisplayedManeuver?.instructionText != null) {
+                _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
+              }
             } else {
-                _currentDisplayedManeuver = null;
+              _currentDisplayedManeuver = null;
             }
-
 
             if (!_useMockLocation) {
               _followGps = true;
@@ -826,8 +856,9 @@ class MapScreenState extends State<MapScreen> {
             if (_isMapReady && mounted) {
               try {
                 List<LatLng> pointsForBounds = List.from(routePoints);
-                if(_currentGpsPosition != null && _startLatLng == _currentGpsPosition) { // Bei Rerouting auch GPS-Pos einbeziehen
-                    pointsForBounds.add(_currentGpsPosition!);
+                if (_currentGpsPosition != null &&
+                    _startLatLng == _currentGpsPosition) {
+                  pointsForBounds.add(_currentGpsPosition!);
                 }
                 _mapController.fitCamera(
                   CameraFit.bounds(
@@ -948,7 +979,6 @@ class MapScreenState extends State<MapScreen> {
               _createMarker(latLng, Colors.red, Icons.flag_circle, pointName);
           relevantController.text = pointName;
         }
-        // Alte Route bewusst löschen, wenn ein Punkt neu gesetzt wird
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
@@ -1045,7 +1075,7 @@ class MapScreenState extends State<MapScreen> {
 
     if (_currentGpsPosition != null && _isMapReady) {
       setStateIfMounted(() {
-        _followGps = !_followGps; // Toggle-Logik
+        _followGps = !_followGps;
       });
 
       if (_followGps) {
@@ -1053,8 +1083,6 @@ class MapScreenState extends State<MapScreen> {
         _showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
       } else {
         _showSnackbar("Follow-GPS Modus deaktiviert.", durationSeconds: 2);
-        // Optional: Hier könnte man den Zoom etwas herausnehmen, wenn Follow deaktiviert wird,
-        // oder die Karte so belassen, wie sie ist.
       }
     } else {
       _showSnackbar(
@@ -1191,71 +1219,58 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  // Hilfsfunktion zur Berechnung der Distanz von einem Punkt zu einem Liniensegment
-  double _distanceToSegment(LatLng p, LatLng a, LatLng b, Distance distanceCalc) {
-    // Ersetze squaredDistance durch Quadrieren der normalen Distanz
-    final double l2 = pow(distanceCalc(a, b), 2).toDouble(); 
-    if (l2 == 0.0) return distanceCalc(p, a); // segment is a point
+  double _distanceToSegment(
+      LatLng p, LatLng a, LatLng b, Distance distanceCalc) {
+    final double l2 = pow(distanceCalc(a, b), 2).toDouble();
+    if (l2 == 0.0) return distanceCalc(p, a);
 
-    // Die Variable 'dot' wurde entfernt, da sie nicht verwendet wurde.
-    // final double apLat = p.latitude - a.latitude;
-    // final double apLon = p.longitude - a.longitude;
-    // final double abLat = b.latitude - a.latitude;
-    // final double abLon = b.longitude - a.longitude;
-    // double dot = apLat * abLat + apLon * abLon;
-
-
-    // Alternative: Verwendung der Kosinussatz-Methode zur Bestimmung, ob die Projektion auf dem Segment liegt.
     final double distAP = distanceCalc(p, a);
     final double distBP = distanceCalc(p, b);
     final double distAB = sqrt(l2);
 
-    // Winkel PAB (alpha)
-    if (distAP == 0 || distAB == 0) { 
-         if (distAP == 0) return 0.0;
-    } else {
-        double cosPAB = (pow(distAP, 2) + pow(distAB, 2) - pow(distBP, 2)) / (2 * distAP * distAB);
-        if (cosPAB < 0) { 
-            return distAP;
-        }
+    if (distAP == 0) return 0.0;
+    if (distBP == 0) return 0.0;
+    if (distAB == 0) return distAP;
+
+    double cosPAB = (pow(distAP, 2) + pow(distAB, 2) - pow(distBP, 2)) /
+        (2 * distAP * distAB);
+    if (cosPAB < 0) {
+      return distAP;
     }
-    
-    // Winkel PBA (beta)
-    if (distBP == 0 || distAB == 0) {
-        if (distBP == 0) return 0.0; 
-    } else {
-        double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) / (2 * distBP * distAB);
-        if (cosPBA < 0) { 
-            return distBP;
-        }
+
+    double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) /
+        (2 * distBP * distAB);
+    if (cosPBA < 0) {
+      return distBP;
     }
-    
+
     final double s = (distAP + distBP + distAB) / 2;
-    final double areaArg = s * (s - distAP) * (s - distBP) * (s - distAB);
-    if (areaArg < 0) return 0.0; 
-    
+    // Handle potential floating point inaccuracies leading to negative areaArg
+    final double areaArgCandidate =
+        s * (s - distAP) * (s - distBP) * (s - distAB);
+    final double areaArg = areaArgCandidate < 0 ? 0 : areaArgCandidate;
+
     final double area = sqrt(areaArg);
-    if (distAB == 0) return distAP; 
-    return (2 * area) / distAB; 
+    return (2 * area) / distAB;
   }
 
-  // Hilfsfunktion zur Berechnung der Distanz von einem Punkt zur Polyline
   double _calculateDistanceToPolyline(LatLng p, List<LatLng> polyline) {
     if (polyline.isEmpty) return double.infinity;
-    if (polyline.length == 1) return _distanceCalculatorInstance(p, polyline.first);
+    if (polyline.length == 1)
+      return _distanceCalculatorInstance(p, polyline.first);
 
     double minDistance = double.infinity;
     for (int i = 0; i < polyline.length - 1; i++) {
       final LatLng a = polyline[i];
       final LatLng b = polyline[i + 1];
-      final double distanceToCurrentSegment = _distanceToSegment(p, a, b, _distanceCalculatorInstance);
+      final double distanceToCurrentSegment =
+          _distanceToSegment(p, a, b, _distanceCalculatorInstance);
       if (distanceToCurrentSegment < minDistance) {
         minDistance = distanceToCurrentSegment;
       }
     }
     return minDistance;
   }
-
 
   final GlobalKey _searchUiCardKey = GlobalKey();
 
@@ -1310,6 +1325,16 @@ class MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         title: const Text("Campground Navigator"),
         actions: [
+          // HINZUGEFÜGT: Test-Button für TTS in AppBar (optional)
+          IconButton(
+            icon: const Icon(Icons.volume_up),
+            tooltip: 'Test TTS',
+            onPressed: isUiReady
+                ? () {
+                    _ttsService.testSpeak();
+                  }
+                : null,
+          ),
           if (availableLocationsFromUI.isNotEmpty &&
               selectedLocationFromUI != null)
             Padding(
@@ -1394,17 +1419,20 @@ class MapScreenState extends State<MapScreen> {
                   print("<<< Map bereit, _isMapReady=true >>>");
                 }
                 setState(() => _isMapReady = true);
-                final locationProvider = Provider.of<LocationProvider>(context, listen: false);
-                if (locationProvider.selectedLocation != null && _currentGpsPosition == null) {
-                    _initializeGpsOrMock(locationProvider.selectedLocation!);
+                final locationProvider =
+                    Provider.of<LocationProvider>(context, listen: false);
+                if (locationProvider.selectedLocation != null &&
+                    _currentGpsPosition == null) {
+                  _initializeGpsOrMock(locationProvider.selectedLocation!);
                 } else {
-                    _performInitialMapMove();
+                  _performInitialMapMove();
                 }
               },
             ),
             children: [
               TileLayer(
-                urlTemplate: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+                urlTemplate:
+                    "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
                 subdomains: const ['a', 'b', 'c'],
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
