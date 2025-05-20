@@ -438,7 +438,6 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    // *** HIER WAR DIE ÄNDERUNG: Die Null-Prüfung wurde entfernt ***
     controllerToUpdate.value = TextEditingValue(
       text: feature.name,
       selection: TextSelection.fromPosition(
@@ -923,7 +922,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (_currentGpsPosition != null && _isMapReady) {
+    if (_currentGpsPosition != null && _isMapReady) { // Die Analyzer-Warnung hier ist bekannt, die Prüfung ist aber wichtig.
       setStateIfMounted(() {
         _followGps = true;
       });
@@ -1206,10 +1205,12 @@ class MapScreenState extends State<MapScreen> {
             ),
             children: [
               TileLayer(
-                // ====== HIER IST DIE ÄNDERUNG für den CORS-Proxy ======
-                urlTemplate: "https://api.allorigins.win/raw?url=https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                // ====== HIER IST DIE ÄNDERUNG für den Tile-Server ======
+                urlTemplate: "https://a.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+                // Man könnte auch Subdomains hinzufügen, falls der Server sie unterstützt:
+                // subdomains: ['a', 'b', 'c'], // Beispiel für Subdomains
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
-                // tileProvider: CancellableNetworkTileProvider(), // Vorerst auskommentiert für Standard-Web-Verhalten oder CORS-Proxy-Test
+                // tileProvider: CancellableNetworkTileProvider(), // Für Web oft nicht nötig, Standard-Provider ist meist ok
                 // ======================================================
               ),
               if (isUiReady && _routePolyline != null)
