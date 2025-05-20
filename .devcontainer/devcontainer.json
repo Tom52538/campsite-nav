@@ -3,13 +3,25 @@
   "build": {
     "dockerfile": "Dockerfile" // Verweist auf Ihr Dockerfile im .devcontainer Ordner
     // "context": "." // Stellt sicher, dass der Kontext das .devcontainer-Verzeichnis ist
-                     // Normalerweise ist dies der Standard, wenn sich beide Dateien im selben Ordner befinden.
+                          // Normalerweise ist dies der Standard, wenn sich beide Dateien im selben Ordner befinden.
   },
-  "forwardPorts": [8080],
+  "forwardPorts": [
+    8088, // Neuer, dedizierter Port für den Flutter Webserver
+    9100, // Für Dart Debugging Dienste
+    9101  // Für weitere Dart Debugging Dienste
+  ],
   "portsAttributes": {
-    "8080": {
-      "label": "App Port",
+    "8088": { // Angepasst an den neuen Port
+      "label": "App Port (8088)",
       "onAutoForward": "notify"
+    },
+    "9100": {
+      "label": "Dart Service",
+      "onAutoForward": "silent"
+    },
+    "9101": {
+      "label": "Dart Service Alt",
+      "onAutoForward": "silent"
     }
   },
   "customizations": {
