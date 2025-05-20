@@ -5,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-// Import für CancellableNetworkTileProvider wird nicht mehr zwingend benötigt,
-// wenn wir den Standard-TileProvider von flutter_map mit einem CORS-Proxy verwenden.
-// import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart'; // Import hinzugefügt
 import 'package:provider/provider.dart';
 
 // Eigene Imports
@@ -1205,13 +1203,11 @@ class MapScreenState extends State<MapScreen> {
             ),
             children: [
               TileLayer(
-                // ====== HIER IST DIE ÄNDERUNG für den Tile-Server ======
-                urlTemplate: "https://a.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-                // Man könnte auch Subdomains hinzufügen, falls der Server sie unterstützt:
-                // subdomains: ['a', 'b', 'c'], // Beispiel für Subdomains
+                urlTemplate: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
+                subdomains: const ['a', 'b', 'c'],
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
-                // tileProvider: CancellableNetworkTileProvider(), // Für Web oft nicht nötig, Standard-Provider ist meist ok
-                // ======================================================
+                tileProvider: CancellableNetworkTileProvider(), // Aktiviert
+                keepAlive: true, // Aktiviert
               ),
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
