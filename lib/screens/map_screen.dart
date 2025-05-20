@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart'; // Import hinzugefügt
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart'; // Import ist korrekt
 import 'package:provider/provider.dart';
 
 // Eigene Imports
@@ -1204,10 +1204,10 @@ class MapScreenState extends State<MapScreen> {
             children: [
               TileLayer(
                 urlTemplate: "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-                subdomains: const ['a', 'b', 'c'],
+                subdomains: const ['a', 'b', 'c'], // Subdomains für bessere Parallelisierung
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
-                tileProvider: CancellableNetworkTileProvider(), // Aktiviert
-                keepAlive: true, // Aktiviert
+                tileProvider: CancellableNetworkTileProvider(), // Empfohlener Provider für Web
+                // keepAlive: true, // Entfernt, da nicht unterstützt in flutter_map 6.2.1
               ),
               if (isUiReady && _routePolyline != null)
                 PolylineLayer(polylines: [_routePolyline!]),
