@@ -1,5 +1,6 @@
 // lib/screens/map_screen.dart
 import 'dart:async';
+import 'dart:math'; // Für sqrt, pow, min
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -77,9 +78,13 @@ class MapScreenState extends State<MapScreen> {
   LatLng? _startLatLng;
   ActiveSearchField _activeSearchField = ActiveSearchField.none;
 
-  // NEU: Konstante für Manöver-Annäherung
-  static const double _maneuverReachedThreshold = 20.0; // Meter
+  // NEU: Konstante für Manöver-Annäherung (angepasst)
+  static const double _maneuverReachedThreshold = 15.0; // Meter
   static const double _significantGpsChangeThreshold = 2.0; // Meter
+
+  // NEU: Konstante für Routenabweichung
+  static const double _offRouteThreshold = 25.0; // Meter
+  final Distance _distanceCalculatorInstance = const Distance(); // Instanz für Distanzberechnungen
 
   @override
   void initState() {
@@ -335,11 +340,13 @@ class MapScreenState extends State<MapScreen> {
                   oldGpsPosition != _currentGpsPosition)) {
             _startLatLng =
                 activeInitialCenterForMock;
-            _startMarker = _createMarker(
-                _startLatLng!,
-                Colors.green,
-                Icons.flag_circle,
-                "Start: Mock Position (${location.name})");
+            if(_startLatLng != null) {
+              _startMarker = _createMarker(
+                  _startLatLng!,
+                  Colors.green,
+                  Icons.flag_circle,
+                  "Start: Mock Position (${location.name})");
+            }
             _startSearchController.text = "Mock Position (${location.name})";
           }
         });
@@ -519,7 +526,7 @@ class MapScreenState extends State<MapScreen> {
     _positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 2, // Kann auf 2-5 Meter reduziert werden für häufigere Updates
+        distanceFilter: 2,
       ),
     ).listen((Position position) {
       if (!mounted) {
@@ -530,15 +537,13 @@ class MapScreenState extends State<MapScreen> {
 
       bool significantPositionChange = true;
       if (_currentGpsPosition != null) {
-        const Distance d = Distance();
-        if (d(_currentGpsPosition!, newGpsPos) < _significantGpsChangeThreshold) {
+        if (_distanceCalculatorInstance(_currentGpsPosition!, newGpsPos) < _significantGpsChangeThreshold) {
           significantPositionChange = false;
         }
       }
-
-      _currentGpsPosition = newGpsPos;
-
+      
       if (significantPositionChange) {
+        _currentGpsPosition = newGpsPos; // Nur bei signifikanter Änderung aktualisieren
         setStateIfMounted(() {
           _currentLocationMarker = _createMarker(
               newGpsPos, Colors.blueAccent, Icons.circle, "Meine Position");
@@ -552,6 +557,7 @@ class MapScreenState extends State<MapScreen> {
         });
       }
 
+
       if (_followGps && _isMapReady && mounted && _currentGpsPosition != null && significantPositionChange) {
         _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
       } else if (isFirstFix &&
@@ -559,9 +565,8 @@ class MapScreenState extends State<MapScreen> {
           _isMapReady &&
           mounted &&
           significantPositionChange) {
-        const distance = Distance();
         final double meters =
-            distance(_currentGpsPosition!, centerForDistanceCheck);
+            _distanceCalculatorInstance(_currentGpsPosition!, centerForDistanceCheck);
         if (meters <= centerOnGpsMaxDistanceMeters) {
           _mapController.move(_currentGpsPosition!, _followGpsZoomLevel);
         } else {
@@ -571,21 +576,31 @@ class MapScreenState extends State<MapScreen> {
         }
       }
 
-      // NEU: Aufruf der Manöver-Aktualisierungslogik
       if (_routePolyline != null && _currentManeuvers.isNotEmpty && significantPositionChange) {
         _updateCurrentManeuverOnGpsUpdate(_currentGpsPosition!);
       }
 
-      // Die Neuberechnung der Route bei GPS-Änderung ist hier heikel und
-      // sollte idealerweise nur bei signifikanter Abweichung von der Route erfolgen (Teil von Prio 1.2).
-      // Fürs Erste lassen wir es auskommentiert, um den Fokus auf die Manöveranzeige zu legen.
-      /*
-      if (_startLatLng != null && _endLatLng != null && !_isCalculatingRoute && significantPositionChange) {
-        if (_startSearchController.text == "Aktueller Standort" || _startSearchController.text.toLowerCase().contains("mock position")) {
-           // _calculateAndDisplayRoute(); // Temporär auskommentiert
+      // Logik zur Routenabweichung und Neuberechnung
+      if (_routePolyline != null && _routePolyline!.points.isNotEmpty && !_isCalculatingRoute && _currentGpsPosition != null && significantPositionChange) {
+        final double distanceToRoute = _calculateDistanceToPolyline(_currentGpsPosition!, _routePolyline!.points);
+        if (distanceToRoute > _offRouteThreshold) {
+          if (kDebugMode) {
+            print("[MapScreen] Von Route abgekommen! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
+          }
+          _showSnackbar("Von Route abgekommen. Neue Route wird berechnet...", durationSeconds: 3);
+          
+          // Wichtig: _startLatLng für die Neuberechnung auf die aktuelle Position setzen
+          _startLatLng = _currentGpsPosition;
+          // Optional: Textfeld und Marker aktualisieren, wenn der Startpunkt "Aktueller Standort" war oder explizit neu gesetzt werden soll
+          _startSearchController.text = "Aktueller Standort (neu)";
+           if(_startLatLng != null) {
+             _startMarker = _createMarker(_startLatLng!, Colors.green, Icons.flag_circle, "Start: ${_startSearchController.text}");
+           }
+          
+          _calculateAndDisplayRoute(); // Neuberechnung auslösen
         }
       }
-      */
+
     }, onError: (error) {
       _showErrorDialog("Fehler GPS-Empfang: $error");
       if (mounted) {
@@ -595,7 +610,6 @@ class MapScreenState extends State<MapScreen> {
   }
 
 
-  // NEUE METHODE zur Aktualisierung des angezeigten Manövers
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
     if (_currentManeuvers.isEmpty || _currentDisplayedManeuver == null || _routePolyline == null) {
       return;
@@ -611,11 +625,14 @@ class MapScreenState extends State<MapScreen> {
       if (kDebugMode) {
         print("[MapScreen] Fehler: _currentDisplayedManeuver nicht in _currentManeuvers gefunden.");
       }
-      // Fallback: Versuche, das erste sinnvolle Manöver zu finden
       if (_currentManeuvers.isNotEmpty) {
           Maneuver initialManeuver = _currentManeuvers.first;
           if (_currentManeuvers.length > 1 && initialManeuver.turnType == TurnType.depart) {
-              initialManeuver = _currentManeuvers[1];
+              if (_currentManeuvers[1].turnType != TurnType.arrive || _currentManeuvers.length == 2) {
+                 initialManeuver = _currentManeuvers[1];
+              } else if (_currentManeuvers.length > 2 && _currentManeuvers[1].turnType == TurnType.arrive) {
+                 initialManeuver = _currentManeuvers[1];
+              }
           }
           if (_currentDisplayedManeuver != initialManeuver) {
             setStateIfMounted(() {
@@ -623,21 +640,21 @@ class MapScreenState extends State<MapScreen> {
             });
           }
       }
-      return;
+      return; 
     }
 
-    const Distance distanceCalculator = Distance();
-    final double distanceToDisplayedManeuverPoint = distanceCalculator(
+    final double distanceToDisplayedManeuverPoint = _distanceCalculatorInstance(
       currentPosition,
-      _currentDisplayedManeuver!.point,
+      _currentDisplayedManeuver!.point, 
     );
 
     if (kDebugMode) {
       // print("[MapScreen] Distanz zu '${_currentDisplayedManeuver!.instructionText}': ${distanceToDisplayedManeuverPoint.toStringAsFixed(1)}m. Aktueller Index: $displayedManeuverIndex");
     }
 
-    if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) {
+    if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) { 
       final int nextManeuverIndex = displayedManeuverIndex + 1;
+
       if (nextManeuverIndex < _currentManeuvers.length) {
         Maneuver newManeuverToShow = _currentManeuvers[nextManeuverIndex];
         if (newManeuverToShow != _currentDisplayedManeuver) {
@@ -648,15 +665,9 @@ class MapScreenState extends State<MapScreen> {
             }
           });
         }
-      } else if (displayedManeuverIndex == _currentManeuvers.length - 2 && _currentManeuvers.last.turnType == TurnType.arrive) {
-        // Spezieller Fall: Wenn das vorletzte Manöver erreicht wurde und das letzte "Arrive" ist.
-        if (_currentDisplayedManeuver != _currentManeuvers.last) {
-           setStateIfMounted(() {
-               _currentDisplayedManeuver = _currentManeuvers.last;
-                if (kDebugMode) {
-                   print("[MapScreen] Letztes Manöver (Ankunft) gesetzt: ${_currentDisplayedManeuver!.instructionText}");
-               }
-           });
+      } else if (displayedManeuverIndex == _currentManeuvers.length - 1 && _currentDisplayedManeuver!.turnType != TurnType.arrive) {
+        if (kDebugMode) {
+           print("[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${_currentDisplayedManeuver!.instructionText}");
         }
       }
     }
@@ -694,12 +705,16 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
+    // Wichtig: Vor jeder Neuberechnung (auch Rerouting) alte Routeninfos löschen
     setStateIfMounted(() {
+      _routePolyline = null; // Explizit Polyline löschen
       _routeDistance = null;
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
+      // _followGps hier nicht unbedingt ändern, das hängt vom User-Intent ab
     });
+
 
     if (!isDataReadyForRouting) {
       _showErrorDialog(
@@ -710,7 +725,7 @@ class MapScreenState extends State<MapScreen> {
       });
       return;
     }
-
+    
     if (currentGraph.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
@@ -750,7 +765,7 @@ class MapScreenState extends State<MapScreen> {
             point: _startLatLng!,
             turnType: TurnType.arrive,
             instructionText: "Start- und Zielpunkt sind identisch.");
-        _clearRoute(showConfirmation: false, clearMarkers: false);
+        _clearRoute(showConfirmation: false, clearMarkers: false); // Nur Route, nicht Marker löschen
         });
         if (_isMapReady && mounted && _startLatLng != null) {
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
@@ -782,13 +797,12 @@ class MapScreenState extends State<MapScreen> {
             }
 
             if (_currentManeuvers.isNotEmpty) {
-                _currentDisplayedManeuver = _currentManeuvers.first; // Zeige "Depart"
-                // Wenn es mehr als "Depart" und "Arrive" gibt, zeige das erste echte Manöver nach "Depart"
+                _currentDisplayedManeuver = _currentManeuvers.first; 
                 if (_currentManeuvers.length > 1 && _currentManeuvers.first.turnType == TurnType.depart) {
                     if (_currentManeuvers[1].turnType != TurnType.arrive || _currentManeuvers.length == 2) {
                          _currentDisplayedManeuver = _currentManeuvers[1];
-                    } else if (_currentManeuvers.length > 2) { // Depart, Arrive, Arrive (unwahrscheinlich) -> nimm Arrive
-                         _currentDisplayedManeuver = _currentManeuvers[1]; // Sollte Arrive sein
+                    } else if (_currentManeuvers.length > 2) { 
+                         _currentDisplayedManeuver = _currentManeuvers[1]; 
                     }
                 } else if (_currentManeuvers.first.turnType != TurnType.depart) {
                     _currentDisplayedManeuver = _currentManeuvers.first;
@@ -812,6 +826,9 @@ class MapScreenState extends State<MapScreen> {
             if (_isMapReady && mounted) {
               try {
                 List<LatLng> pointsForBounds = List.from(routePoints);
+                if(_currentGpsPosition != null && _startLatLng == _currentGpsPosition) { // Bei Rerouting auch GPS-Pos einbeziehen
+                    pointsForBounds.add(_currentGpsPosition!);
+                }
                 _mapController.fitCamera(
                   CameraFit.bounds(
                     bounds: LatLngBounds.fromPoints(pointsForBounds),
@@ -931,6 +948,7 @@ class MapScreenState extends State<MapScreen> {
               _createMarker(latLng, Colors.red, Icons.flag_circle, pointName);
           relevantController.text = pointName;
         }
+        // Alte Route bewusst löschen, wenn ein Punkt neu gesetzt wird
         _routePolyline = null;
         _routeDistance = null;
         _routeTimeMinutes = null;
@@ -1166,6 +1184,93 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
+  // Hilfsfunktion zur Berechnung der Distanz von einem Punkt zu einem Liniensegment
+  double _distanceToSegment(LatLng p, LatLng a, LatLng b, Distance distanceCalc) {
+    final double l2 = distanceCalc.squaredDistance(a, b); // squared length of the segment
+    if (l2 == 0.0) return distanceCalc(p, a); // segment is a point
+
+    // Betrachte die Projektion von P auf die unendliche Linie durch A und B.
+    // t = [(P-A) . (B-A)] / |B-A|^2
+    // Da wir keine direkten Vektoroperationen auf LatLng haben, approximieren wir für kleine Distanzen
+    // oder verwenden eine Methode, die nur Distanzen nutzt (wie Heron für Höhe, was hier aber umständlicher ist).
+    // Eine robustere Methode für die Projektion:
+    final double apLat = p.latitude - a.latitude;
+    final double apLon = p.longitude - a.longitude;
+    final double abLat = b.latitude - a.latitude;
+    final double abLon = b.longitude - a.longitude;
+
+    double dot = apLat * abLat + apLon * abLon;
+    // Vermeide Division durch Null, wenn l2 (squaredDistance) sehr klein ist,
+    // aber nicht exakt 0.0 (was oben abgefangen wird).
+    // In der Praxis ist l2 hier die quadrierte Distanz in Metern, also nicht direkt für dot/l2 verwendbar.
+    // Die direkte Anwendung von t = dot/l2 mit Lat/Lon-Differenzen ist eine grobe Näherung.
+
+    // Alternative: Verwendung der Kosinussatz-Methode zur Bestimmung, ob die Projektion auf dem Segment liegt.
+    final double distAP = distanceCalc(p, a);
+    final double distBP = distanceCalc(p, b);
+    final double distAB = sqrt(l2);
+
+    // Winkel PAB (alpha)
+    // cos(alpha) = (AP^2 + AB^2 - BP^2) / (2 * AP * AB)
+    // Wenn cos(alpha) < 0 (alpha > 90°), ist A der nächste Punkt
+    if (distAP == 0 || distAB == 0) { // Schutz vor Division durch Null falls A=P oder A=B
+        // Wenn P = A, ist Distanz 0. Wenn A = B, wurde oben behandelt.
+        // Wenn AP=0, ist P auf A, Distanz 0.
+        // Wenn AB=0, ist A=B, Distanz ist distAP.
+         if (distAP == 0) return 0.0;
+         // if (distAB == 0) return distAP; // Bereits oben abgedeckt durch l2 == 0.0
+    } else {
+        double cosPAB = (pow(distAP, 2) + pow(distAB, 2) - pow(distBP, 2)) / (2 * distAP * distAB);
+        if (cosPAB < 0) { // Winkel PAB ist stumpf, A ist der nächste Punkt auf dem Segment
+            return distAP;
+        }
+    }
+    
+    // Winkel PBA (beta)
+    // cos(beta) = (BP^2 + AB^2 - AP^2) / (2 * BP * AB)
+    // Wenn cos(beta) < 0 (beta > 90°), ist B der nächste Punkt
+    if (distBP == 0 || distAB == 0) {
+        if (distBP == 0) return 0.0; // P auf B
+        // if (distAB == 0) return distBP; // Bereits oben abgedeckt
+    } else {
+        double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) / (2 * distBP * distAB);
+        if (cosPBA < 0) { // Winkel PBA ist stumpf, B ist der nächste Punkt auf dem Segment
+            return distBP;
+        }
+    }
+    
+    // Andernfalls liegt die Projektion auf dem Segment oder der Punkt P ist kollinear.
+    // Berechne die Höhe des Dreiecks PAB zur Basis AB (senkrechte Distanz).
+    // Heron's formula for area:
+    final double s = (distAP + distBP + distAB) / 2;
+    // Schutz vor sqrt von negativen Zahlen durch Fließkomma-Ungenauigkeiten,
+    // besonders wenn P (nahezu) kollinear mit A und B ist.
+    final double areaArg = s * (s - distAP) * (s - distBP) * (s - distAB);
+    if (areaArg < 0) return 0.0; // Nahezu kollinear, Distanz ist praktisch 0 zum Segment
+    
+    final double area = sqrt(areaArg);
+    if (distAB == 0) return distAP; // Sollte schon oben abgefangen sein
+    return (2 * area) / distAB; // Höhe = 2 * Fläche / Basis
+  }
+
+  // Hilfsfunktion zur Berechnung der Distanz von einem Punkt zur Polyline
+  double _calculateDistanceToPolyline(LatLng p, List<LatLng> polyline) {
+    if (polyline.isEmpty) return double.infinity;
+    if (polyline.length == 1) return _distanceCalculatorInstance(p, polyline.first);
+
+    double minDistance = double.infinity;
+    for (int i = 0; i < polyline.length - 1; i++) {
+      final LatLng a = polyline[i];
+      final LatLng b = polyline[i + 1];
+      final double distanceToCurrentSegment = _distanceToSegment(p, a, b, _distanceCalculatorInstance);
+      if (distanceToCurrentSegment < minDistance) {
+        minDistance = distanceToCurrentSegment;
+      }
+    }
+    return minDistance;
+  }
+
+
   final GlobalKey _searchUiCardKey = GlobalKey();
 
   @override
@@ -1303,8 +1408,6 @@ class MapScreenState extends State<MapScreen> {
                   print("<<< Map bereit, _isMapReady=true >>>");
                 }
                 setState(() => _isMapReady = true);
-                 // Stelle sicher, dass GPS/Mock initialisiert wird, nachdem Karte bereit ist,
-                 // falls selectedLocation schon vorher gesetzt war.
                 final locationProvider = Provider.of<LocationProvider>(context, listen: false);
                 if (locationProvider.selectedLocation != null && _currentGpsPosition == null) {
                     _initializeGpsOrMock(locationProvider.selectedLocation!);
