@@ -332,10 +332,10 @@ class MapScreenState extends State<MapScreen> {
                       .contains("mock position") &&
                   oldGpsPosition != _currentGpsPosition)) {
             _startLatLng =
-                activeInitialCenterForMock; 
+                activeInitialCenterForMock;
             _startMarker = _createMarker(
                 _startLatLng!,
-                Colors.green, 
+                Colors.green,
                 Icons.flag_circle,
                 "Start: Mock Position (${location.name})");
             _startSearchController.text = "Mock Position (${location.name})";
@@ -385,7 +385,7 @@ class MapScreenState extends State<MapScreen> {
       }
     }
 
-    if (mounted && targetToMoveToNullSafe != null) { 
+    if (mounted && targetToMoveToNullSafe != null) {
       _mapController.move(targetToMoveToNullSafe,
           _followGps && !_useMockLocation ? _followGpsZoomLevel : 17.0);
     }
@@ -408,7 +408,7 @@ class MapScreenState extends State<MapScreen> {
     }
 
     TextEditingController? controllerToUpdate;
-    FocusNode focusToUnset; 
+    FocusNode focusToUnset;
     FocusNode? nextFocus;
     bool isStartField = _activeSearchField == ActiveSearchField.start;
 
@@ -438,21 +438,20 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (controllerToUpdate != null) { 
-        controllerToUpdate.value = TextEditingValue(
-        text: feature.name,
-        selection: TextSelection.fromPosition(
-            TextPosition(offset: feature.name.length)),
-        );
-    }
-  
+    // *** HIER WAR DIE ÄNDERUNG: Die Null-Prüfung wurde entfernt ***
+    controllerToUpdate.value = TextEditingValue(
+      text: feature.name,
+      selection: TextSelection.fromPosition(
+          TextPosition(offset: feature.name.length)),
+    );
+
     setStateIfMounted(() {
       _showSearchResults = false;
       _searchResults = [];
       _followGps = false;
     });
 
-    focusToUnset.unfocus(); 
+    focusToUnset.unfocus();
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
@@ -617,7 +616,7 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    if (currentGraph.nodes.isEmpty) { 
+    if (currentGraph.nodes.isEmpty) {
       _showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() {
@@ -918,7 +917,7 @@ class MapScreenState extends State<MapScreen> {
       LatLng? centerTarget = _currentGpsPosition ??
           selectedLocationFromProvider?.initialCenter ??
           fallbackInitialCenter;
-      if (centerTarget != null && _isMapReady) { 
+      if (centerTarget != null && _isMapReady) {
         _mapController.move(centerTarget, _followGpsZoomLevel);
       }
       return;
@@ -1056,7 +1055,7 @@ class MapScreenState extends State<MapScreen> {
 
   String _formatDistance(double? distanceMeters) {
     if (distanceMeters == null) {
-      return ""; 
+      return "";
     }
     if (distanceMeters < 1000) {
       return "${distanceMeters.round()} m";
@@ -1209,7 +1208,7 @@ class MapScreenState extends State<MapScreen> {
               TileLayer(
                 // ====== HIER IST DIE ÄNDERUNG für den CORS-Proxy ======
                 urlTemplate: "https://api.allorigins.win/raw?url=https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                userAgentPackageName: 'dev.tom52538.campsitenav.app', 
+                userAgentPackageName: 'dev.tom52538.campsitenav.app',
                 // tileProvider: CancellableNetworkTileProvider(), // Vorerst auskommentiert für Standard-Web-Verhalten oder CORS-Proxy-Test
                 // ======================================================
               ),
