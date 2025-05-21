@@ -19,7 +19,7 @@ const double kCardInternalVerticalPadding = 4.0;
 const double kSearchCardMaxWidth = 360.0;
 const double kSearchCardHorizontalMargin = 10.0;
 const double kInstructionCardSpacing = 5.0;
-const double kCompactCardHeight = 60.0;
+const double kCompactCardHeight = 65.0;
 const double kMarkerWidth = 40.0;
 const double kMarkerHeight = 40.0;
 
