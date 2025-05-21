@@ -1,6 +1,6 @@
 // lib/screens/map_screen.dart
 import 'dart:async';
-import 'dart:math'; 
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -31,55 +31,55 @@ class MapScreen extends StatefulWidget {
 
 enum ActiveSearchField { none, start, end }
 
-class MapScreenState extends State<MapScreen> with MapScreenUIMixin { 
-  final MapController mapController = MapController(); // public
-  late TtsService ttsService; // public
+class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
+  final MapController mapController = MapController();
+  late TtsService ttsService;
 
-  Polyline? routePolyline; // public
-  Marker? currentLocationMarker; // public
-  Marker? startMarker; // public
-  Marker? endMarker; // public
-  LatLng? currentGpsPosition; // public
-  LatLng? endLatLng; // public
+  Polyline? routePolyline;
+  Marker? currentLocationMarker;
+  Marker? startMarker;
+  Marker? endMarker;
+  LatLng? currentGpsPosition;
+  LatLng? endLatLng;
 
-  bool isCalculatingRoute = false; // public
-  StreamSubscription<Position>? positionStreamSubscription; // public
-  List<SearchableFeature> searchResults = []; // public
-  bool showSearchResults = false; // public
+  bool isCalculatingRoute = false;
+  StreamSubscription<Position>? positionStreamSubscription;
+  List<SearchableFeature> searchResults = [];
+  bool showSearchResults = false;
 
-  bool useMockLocation = true; // public
-  bool isMapReady = false; // public
+  bool useMockLocation = true;
+  bool isMapReady = false;
 
-  LocationInfo? lastProcessedLocation; // public
+  LocationInfo? lastProcessedLocation;
 
-  double? routeDistance; // public
-  int? routeTimeMinutes; // public - WARNUNG WIRD HIER SEIN, WENN UNGENUTZT
+  double? routeDistance;
+  int? routeTimeMinutes; // Dieses Feld wird im UI Mixin verwendet
 
-  List<Maneuver> currentManeuvers = []; // public
-  Maneuver? currentDisplayedManeuver; // public
-  bool followGps = false; // public
-  static const double _followGpsZoomLevel = 17.5; // kann private bleiben, wenn nur hier genutzt
+  List<Maneuver> currentManeuvers = []; // Korrekt als public deklariert
+  Maneuver? currentDisplayedManeuver;
+  bool followGps = false;
+  static const double _followGpsZoomLevel = 17.5;
 
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
   static const double centerOnGpsMaxDistanceMeters = 5000;
 
-  final TextEditingController startSearchController = TextEditingController(); // public
-  final TextEditingController endSearchController = TextEditingController(); // public
-  final FocusNode startFocusNode = FocusNode(); // public
-  final FocusNode endFocusNode = FocusNode(); // public
-  LatLng? startLatLng; // public
-  ActiveSearchField activeSearchField = ActiveSearchField.none; // public
+  final TextEditingController startSearchController = TextEditingController();
+  final TextEditingController endSearchController = TextEditingController();
+  final FocusNode startFocusNode = FocusNode();
+  final FocusNode endFocusNode = FocusNode();
+  LatLng? startLatLng;
+  ActiveSearchField activeSearchField = ActiveSearchField.none;
 
-  static const double _maneuverReachedThreshold = 15.0; 
+  static const double _maneuverReachedThreshold = 15.0;
   static const double _significantGpsChangeThreshold = 2.0;
 
   static const double _offRouteThreshold = 25.0;
-  final Distance distanceCalculatorInstance = const Distance(); // public
+  final Distance distanceCalculatorInstance = const Distance();
 
-  bool isRouteActiveForCardSwitch = false; // public
-  final GlobalKey fullSearchCardKey = GlobalKey(); // public
-  double fullSearchCardHeight = 0; // public
+  bool isRouteActiveForCardSwitch = false;
+  final GlobalKey fullSearchCardKey = GlobalKey();
+  double fullSearchCardHeight = 0;
 
 
   @override
@@ -94,8 +94,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (fullSearchCardKey.currentContext != null) {
         final RenderBox? renderBox = fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
-        if (renderBox != null && mounted) { 
-          setStateIfMounted(() { 
+        if (renderBox != null && mounted) {
+          setStateIfMounted(() {
              fullSearchCardHeight = renderBox.size.height;
           });
         }
@@ -284,7 +284,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (isActualChange) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          showSnackbar("Standort geändert zu: ${newLocation.name}", 
+          showSnackbar("Standort geändert zu: ${newLocation.name}",
               durationSeconds: 3);
         }
       });
@@ -322,7 +322,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         _initializeGpsOrMock(currentLocationInfo);
       }
     });
-    showSnackbar( 
+    showSnackbar(
         useMockLocation
             ? "Mock-Position (${currentLocationInfo?.name ?? 'Fallback'}) aktiviert."
             : "Echtes GPS aktiviert. Follow-Modus ${followGps ? "an" : "aus"}.",
@@ -348,7 +348,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       if (mounted) {
         setState(() {
           currentGpsPosition = activeInitialCenterForMock;
-          currentLocationMarker = createMarker( 
+          currentLocationMarker = createMarker(
               activeInitialCenterForMock,
               Colors.orangeAccent,
               Icons.pin_drop,
@@ -360,7 +360,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   oldGpsPos != currentGpsPosition)) {
             startLatLng = activeInitialCenterForMock;
             if (startLatLng != null) {
-              startMarker = createMarker(startLatLng!, Colors.green, 
+              startMarker = createMarker(startLatLng!, Colors.green,
                   Icons.flag_circle, "Start: Mock Position (${location.name})");
             }
             startSearchController.text = "Mock Position (${location.name})";
@@ -422,7 +422,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
   }
 
-  void selectFeatureAndSetPoint(SearchableFeature feature) { // public
+  void selectFeatureAndSetPoint(SearchableFeature feature) {
     if (kDebugMode) {
       print(
           "<<< selectFeatureAndSetPoint: Feature ${feature.name} für Feld $activeSearchField >>>");
@@ -442,7 +442,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       nextFocus = endSearchController.text.isEmpty ? endFocusNode : null;
       setStateIfMounted(() {
         startLatLng = feature.center;
-        startMarker = createMarker(feature.center, Colors.green, 
+        startMarker = createMarker(feature.center, Colors.green,
             Icons.flag_circle, "Start: ${feature.name}");
       });
     } else if (activeSearchField == ActiveSearchField.end) {
@@ -451,7 +451,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       nextFocus = startSearchController.text.isEmpty ? startFocusNode : null;
       setStateIfMounted(() {
         endLatLng = feature.center;
-        endMarker = createMarker(feature.center, Colors.red, 
+        endMarker = createMarker(feature.center, Colors.red,
             Icons.flag_circle, "Ziel: ${feature.name}");
       });
     } else {
@@ -513,7 +513,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
-          showErrorDialog("GPS ist deaktiviert."); 
+          showErrorDialog("GPS ist deaktiviert.");
           setStateIfMounted(() => followGps = false);
         }
         return;
@@ -524,7 +524,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           if (mounted) {
-            showErrorDialog("GPS-Berechtigung verweigert."); 
+            showErrorDialog("GPS-Berechtigung verweigert.");
             setStateIfMounted(() => followGps = false);
           }
           return;
@@ -533,14 +533,14 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
-          showErrorDialog("GPS-Berechtigung dauerhaft verweigert."); 
+          showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
           setStateIfMounted(() => followGps = false);
         }
         return;
       }
     } catch (e) {
       if (mounted) {
-        showErrorDialog("Fehler GPS-Berechtigungen: $e"); 
+        showErrorDialog("Fehler GPS-Berechtigungen: $e");
         setStateIfMounted(() => followGps = false);
       }
       return;
@@ -570,12 +570,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       if (significantPositionChange) {
         currentGpsPosition = newGpsPos;
         setStateIfMounted(() {
-          currentLocationMarker = createMarker( 
+          currentLocationMarker = createMarker(
               newGpsPos, Colors.blueAccent, Icons.circle, "Meine Position");
           if (startSearchController.text == "Aktueller Standort") {
             startLatLng = currentGpsPosition;
             if (startLatLng != null) {
-              startMarker = createMarker(startLatLng!, Colors.green, 
+              startMarker = createMarker(startLatLng!, Colors.green,
                   Icons.flag_circle, "Start: Aktueller Standort");
             }
           }
@@ -598,7 +598,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         if (meters <= centerOnGpsMaxDistanceMeters) {
           mapController.move(currentGpsPosition!, _followGpsZoomLevel);
         } else {
-          showSnackbar( 
+          showSnackbar(
               "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
               durationSeconds: 4);
         }
@@ -623,13 +623,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             print(
                 "[MapScreen] Von Route abgekommen! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
           }
-          showSnackbar("Von Route abgekommen. Neue Route wird berechnet...", 
+          showSnackbar("Von Route abgekommen. Neue Route wird berechnet...",
               durationSeconds: 3);
 
           startLatLng = currentGpsPosition;
           startSearchController.text = "Aktueller Standort (neu)";
           if (startLatLng != null) {
-            startMarker = createMarker(startLatLng!, Colors.green, 
+            startMarker = createMarker(startLatLng!, Colors.green,
                 Icons.flag_circle, "Start: ${startSearchController.text}");
           }
           isRouteActiveForCardSwitch = false;
@@ -637,7 +637,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
     }, onError: (error) {
-      showErrorDialog("Fehler GPS-Empfang: $error"); 
+      showErrorDialog("Fehler GPS-Empfang: $error");
       if (mounted) {
         setStateIfMounted(() => followGps = false);
       }
@@ -747,12 +747,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
   }
 
-  Future<void> calculateAndDisplayRoute() async { // public
+  Future<void> calculateAndDisplayRoute() async {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
-    final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
+    final RoutingGraph? currentGraphValue = locationProvider.currentRoutingGraph; // Renamed to avoid conflict
     final bool isLoadingData = locationProvider.isLoadingLocationData;
-    final bool isDataReadyForRouting = !isLoadingData && currentGraph != null;
+    final bool isDataReadyForRouting = !isLoadingData && currentGraphValue != null;
     final selectedLocationFromProvider = locationProvider.selectedLocation;
 
     if (kDebugMode) {
@@ -773,7 +773,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     });
 
     if (!isDataReadyForRouting) {
-      showErrorDialog( 
+      showErrorDialog(
           "Kartendaten für ${selectedLocationFromProvider?.name ?? ''} nicht bereit.");
       setStateIfMounted(() {
         isCalculatingRoute = false;
@@ -782,8 +782,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    if (currentGraph.nodes.isEmpty) {
-      showErrorDialog( 
+    if (currentGraphValue.nodes.isEmpty) { // Use renamed variable
+      showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() {
         isCalculatingRoute = false;
@@ -804,19 +804,19 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setStateIfMounted(() => isCalculatingRoute = true);
 
     try {
-      currentGraph.resetAllNodeCosts();
-      final GraphNode? foundStartNode = currentGraph.findNearestNode(startLatLng!);
-      final GraphNode? foundEndNode = currentGraph.findNearestNode(endLatLng!);
+      currentGraphValue.resetAllNodeCosts(); // Use renamed variable
+      final GraphNode? foundStartNode = currentGraphValue.findNearestNode(startLatLng!); // Use renamed variable
+      final GraphNode? foundEndNode = currentGraphValue.findNearestNode(endLatLng!); // Use renamed variable
 
       if (foundStartNode == null || foundEndNode == null) {
-        showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden."); 
+        showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
         setStateIfMounted(() {
           routePolyline = null;
           followGps = false;
            isRouteActiveForCardSwitch = false;
         });
       } else if (foundStartNode.id == foundEndNode.id) {
-        showSnackbar("Start- und Zielpunkt sind identisch."); 
+        showSnackbar("Start- und Zielpunkt sind identisch.");
         setStateIfMounted(() {
           currentDisplayedManeuver = Maneuver(
               point: startLatLng!,
@@ -832,7 +832,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       } else {
         final List<LatLng>? routePointsResult =
-            await RoutingService.findPath(currentGraph, foundStartNode, foundEndNode);
+            await RoutingService.findPath(currentGraphValue, foundStartNode, foundEndNode); // Use renamed variable
         if (!mounted) {
           return;
         }
@@ -887,7 +887,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               followGps = false;
             }
 
-            showSnackbar("Route berechnet.", durationSeconds: 3); 
+            showSnackbar("Route berechnet.", durationSeconds: 3);
 
             if (isMapReady && mounted) {
               try {
@@ -903,7 +903,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   CameraFit.bounds(
                     bounds: LatLngBounds.fromPoints(pointsForBounds),
                     padding: const EdgeInsets.only(
-                        top: kCompactCardHeight + kSearchCardTopPadding + 20, 
+                        top: kCompactCardHeight + kSearchCardTopPadding + 20,
                         bottom: 80.0, left: 30.0, right: 30.0),
                   ),
                 );
@@ -923,7 +923,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             currentDisplayedManeuver = null;
             followGps = false;
             isRouteActiveForCardSwitch = false;
-            showErrorDialog("Keine Route gefunden."); 
+            showErrorDialog("Keine Route gefunden.");
           }
         });
       }
@@ -931,7 +931,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       if (kDebugMode) {
         print(">>> Fehler Routenberechnung: $e $stacktrace");
       }
-      showErrorDialog("Fehler Routenberechnung: $e"); 
+      showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() {
         routePolyline = null;
         followGps = false;
@@ -977,7 +977,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         Provider.of<LocationProvider>(context, listen: false);
     if (locationProvider.isLoadingLocationData ||
         locationProvider.currentRoutingGraph == null) {
-      showSnackbar("Kartendaten werden noch geladen.", durationSeconds: 2); 
+      showSnackbar("Kartendaten werden noch geladen.", durationSeconds: 2);
       return;
     }
     if (isCalculatingRoute) {
@@ -1021,12 +1021,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         if (fieldToSet == ActiveSearchField.start) {
           startLatLng = latLng;
           startMarker =
-              createMarker(latLng, Colors.green, Icons.flag_circle, pointName); 
+              createMarker(latLng, Colors.green, Icons.flag_circle, pointName);
           relevantController.text = pointName;
-        } else { 
+        } else {
           endLatLng = latLng;
           endMarker =
-              createMarker(latLng, Colors.red, Icons.flag_circle, pointName); 
+              createMarker(latLng, Colors.red, Icons.flag_circle, pointName);
           relevantController.text = pointName;
         }
         routePolyline = null;
@@ -1034,7 +1034,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routeTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
-        isRouteActiveForCardSwitch = false; 
+        isRouteActiveForCardSwitch = false;
       });
 
       if (startLatLng != null && endLatLng != null) {
@@ -1047,7 +1047,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             (fieldToSet == ActiveSearchField.end && endLatLng != null && endSearchController.text.isNotEmpty);
 
     if (isOverwriting) {
-      showConfirmationDialog( 
+      showConfirmationDialog(
           "Neuen ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt setzen?",
           "Aktuellen ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt verwerfen und neuen Punkt auf Karte setzen?",
           performUpdateAndRoute);
@@ -1056,7 +1056,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
   }
 
-  void clearRoute({bool showConfirmation = true, bool clearMarkers = true}) { // public
+  void clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
     void doClearAction() {
       if (!mounted) {
         return;
@@ -1080,7 +1080,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           showSearchResults = false;
         }
       });
-      showSnackbar( 
+      showSnackbar(
           clearMarkers
               ? "Route, Start- und Zielpunkt gelöscht."
               : "Route gelöscht.",
@@ -1095,7 +1095,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 endSearchController.text.isNotEmpty));
 
     if (showConfirmation && somethingToDelete) {
-      showConfirmationDialog( 
+      showConfirmationDialog(
           clearMarkers ? "Alles löschen?" : "Route löschen?",
           clearMarkers
               ? "Route, Start- und Zielpunkt wirklich löschen?"
@@ -1114,7 +1114,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
 
     if (useMockLocation) {
-      showSnackbar("Follow-Modus ist nur mit echtem GPS verfügbar.", 
+      showSnackbar("Follow-Modus ist nur mit echtem GPS verfügbar.",
           durationSeconds: 3);
       LatLng? centerTarget = currentGpsPosition ??
           selectedLocationFromProvider?.initialCenter ??
@@ -1132,22 +1132,22 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
       if (followGps) {
         mapController.move(currentGpsPosition!, _followGpsZoomLevel);
-        showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2); 
+        showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
       } else {
-        showSnackbar("Follow-GPS Modus deaktiviert.", durationSeconds: 2); 
+        showSnackbar("Follow-GPS Modus deaktiviert.", durationSeconds: 2);
       }
     } else {
-      showSnackbar( 
+      showSnackbar(
           "Aktuelle GPS-Position nicht verfügbar oder Karte nicht bereit.",
           durationSeconds: 3);
     }
   }
 
-  void swapStartAndEnd() { // public
+  void swapStartAndEnd() {
     if (!mounted) return;
 
     if (startLatLng == null && endLatLng == null) {
-      showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.", 
+      showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
           durationSeconds: 3);
       return;
     }
@@ -1162,7 +1162,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       endSearchController.text = tempStartText;
 
       if (startLatLng != null) {
-        startMarker = createMarker( 
+        startMarker = createMarker(
           startLatLng!,
           Colors.green,
           Icons.flag_circle,
@@ -1173,7 +1173,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
 
       if (endLatLng != null) {
-        endMarker = createMarker( 
+        endMarker = createMarker(
           endLatLng!,
           Colors.red,
           Icons.flag_circle,
@@ -1197,7 +1197,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     });
 
-    showSnackbar("Start und Ziel getauscht.", durationSeconds: 2); 
+    showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
   }
 
 
@@ -1239,7 +1239,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   double _calculateDistanceToPolyline(LatLng p, List<LatLng> polyline) {
     if (polyline.isEmpty) return double.infinity;
-    if (polyline.length == 1) { // Curly brace hinzugefügt
+    if (polyline.length == 1) {
       return distanceCalculatorInstance(p, polyline.first);
     }
 
@@ -1280,18 +1280,19 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
 
     double currentSearchCardHeight = isRouteActiveForCardSwitch
-        ? kCompactCardHeight 
+        ? kCompactCardHeight
         : fullSearchCardHeight > 0 ? fullSearchCardHeight : (kSearchInputRowHeight * 2) + kDividerAndSwapButtonHeight + (kCardInternalVerticalPadding * 2) + (routeDistance != null ? kRouteInfoHeight : 0);
 
 
     double instructionCardTop = kSearchCardTopPadding +
-        currentSearchCardHeight + 
+        currentSearchCardHeight +
         kInstructionCardSpacing;
 
     double searchResultsTopPosition = instructionCardTop;
+    // KORREKTUR HIER: _currentManeuvers wurde zu currentManeuvers
     bool instructionCardVisible = currentDisplayedManeuver != null &&
         currentDisplayedManeuver!.turnType != TurnType.depart &&
-        !(_currentManeuvers.length <= 2 &&
+        !(currentManeuvers.length <= 2 && 
             currentDisplayedManeuver!.turnType == TurnType.arrive);
 
     if (instructionCardVisible) {
@@ -1370,7 +1371,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     followGps) {
                   setStateIfMounted(() {
                     followGps = false;
-                    showSnackbar("Follow-GPS Modus deaktiviert.", 
+                    showSnackbar("Follow-GPS Modus deaktiviert.",
                         durationSeconds: 2);
                   });
                 }
@@ -1412,7 +1413,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   if (mounted && fullSearchCardKey.currentContext != null) {
                     final RenderBox? renderBox = fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
                      if (renderBox != null && renderBox.hasSize) {
-                        setStateIfMounted(() { 
+                        setStateIfMounted(() {
                           fullSearchCardHeight = renderBox.size.height;
                         });
                      }
@@ -1450,8 +1451,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   );
                 },
                 child: isRouteActiveForCardSwitch && isUiReady
-                    ? buildCompactRouteInfoCard(key: const ValueKey('compactCard')) 
-                    : buildSearchInputCard(key: const ValueKey('searchInputCard')), 
+                    ? buildCompactRouteInfoCard(key: const ValueKey('compactCard'))
+                    : buildSearchInputCard(key: const ValueKey('searchInputCard')),
               ),
             ),
           ),
@@ -1489,7 +1490,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                         itemBuilder: (context, index) {
                           final feature = searchResults[index];
                           return ListTile(
-                            leading: Icon(getIconForFeatureType(feature.type)), 
+                            leading: Icon(getIconForFeatureType(feature.type)),
                             title: Text(feature.name),
                             subtitle: Text("Typ: ${feature.type}"),
                             onTap: () => selectFeatureAndSetPoint(feature),
