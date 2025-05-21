@@ -18,7 +18,7 @@ import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
-import 'package:camping_osm_navi/services/tts_service.dart'; // NEUER IMPORT für TTS
+import 'package:camping_osm_navi/services/tts_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -40,7 +40,7 @@ enum ActiveSearchField { none, start, end }
 
 class MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
-  late TtsService _ttsService; // HINZUGEFÜGT: TTS Service Instanz
+  late TtsService _ttsService;
 
   Polyline? _routePolyline;
   Marker? _currentLocationMarker;
@@ -89,7 +89,7 @@ class MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    _ttsService = TtsService(); // HINZUGEFÜGT: TTS Service initialisieren
+    _ttsService = TtsService();
     _startSearchController.addListener(_onStartSearchChanged);
     _endSearchController.addListener(_onEndSearchChanged);
     _startFocusNode.addListener(_onStartFocusChanged);
@@ -127,7 +127,7 @@ class MapScreenState extends State<MapScreen> {
     }
     _mapController.dispose();
     _positionStreamSubscription?.cancel();
-    _ttsService.stop(); // HINZUGEFÜGT: TTS stoppen beim Dispose
+    _ttsService.stop();
 
     _startSearchController.removeListener(_onStartSearchChanged);
     _startSearchController.dispose();
@@ -580,7 +580,8 @@ class MapScreenState extends State<MapScreen> {
 
       if (_routePolyline != null &&
           _currentManeuvers.isNotEmpty &&
-          significantPositionChange) {
+          significantPositionChange &&
+          _currentGpsPosition != null) {
         _updateCurrentManeuverOnGpsUpdate(_currentGpsPosition!);
       }
 
@@ -618,9 +619,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    if (_currentManeuvers.isEmpty ||
-        _currentDisplayedManeuver == null ||
-        _routePolyline == null) {
+    if (_currentManeuvers.isEmpty || _currentDisplayedManeuver == null || _routePolyline == null || _routePolyline!.points.isEmpty) {
       return;
     }
 
@@ -628,30 +627,24 @@ class MapScreenState extends State<MapScreen> {
       return;
     }
 
-    int displayedManeuverIndex =
-        _currentManeuvers.indexOf(_currentDisplayedManeuver!);
+    int displayedManeuverIndex = _currentManeuvers.indexOf(_currentDisplayedManeuver!);
 
     if (displayedManeuverIndex == -1) {
       if (kDebugMode) {
-        print(
-            "[MapScreen] Fehler: _currentDisplayedManeuver nicht in _currentManeuvers gefunden.");
+        print("[MapScreen] Fehler: _currentDisplayedManeuver nicht in _currentManeuvers gefunden.");
       }
       if (_currentManeuvers.isNotEmpty) {
         Maneuver initialManeuver = _currentManeuvers.first;
-        if (_currentManeuvers.length > 1 &&
-            initialManeuver.turnType == TurnType.depart) {
-          if (_currentManeuvers[1].turnType != TurnType.arrive ||
-              _currentManeuvers.length == 2) {
+        if (_currentManeuvers.length > 1 && initialManeuver.turnType == TurnType.depart) {
+          if (_currentManeuvers[1].turnType != TurnType.arrive || _currentManeuvers.length == 2) {
             initialManeuver = _currentManeuvers[1];
-          } else if (_currentManeuvers.length > 2 &&
-              _currentManeuvers[1].turnType == TurnType.arrive) {
+          } else if (_currentManeuvers.length > 2 && _currentManeuvers[1].turnType == TurnType.arrive) {
             initialManeuver = _currentManeuvers[1];
           }
         }
         if (_currentDisplayedManeuver != initialManeuver) {
           setStateIfMounted(() {
             _currentDisplayedManeuver = initialManeuver;
-            // HIER TTS Aufruf für das initial angezeigte Manöver
             if (_currentDisplayedManeuver?.instructionText != null) {
               _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
             }
@@ -674,29 +667,60 @@ class MapScreenState extends State<MapScreen> {
       final int nextManeuverIndex = displayedManeuverIndex + 1;
 
       if (nextManeuverIndex < _currentManeuvers.length) {
-        Maneuver newManeuverToShow = _currentManeuvers[nextManeuverIndex];
-        if (newManeuverToShow != _currentDisplayedManeuver) {
-          setStateIfMounted(() {
-            _currentDisplayedManeuver = newManeuverToShow;
-            if (kDebugMode) {
-              print(
-                  "[MapScreen] Nächstes Manöver gesetzt: ${_currentDisplayedManeuver!.instructionText}");
+        Maneuver newPotentialManeuver = _currentManeuvers[nextManeuverIndex];
+
+        if (newPotentialManeuver.turnType == TurnType.arrive) {
+          if (_routePolyline != null && _routePolyline!.points.isNotEmpty) {
+            final LatLng actualDestinationPoint = _routePolyline!.points.last;
+            final double distanceToActualDestination = _distanceCalculatorInstance(
+              currentPosition,
+              actualDestinationPoint,
+            );
+
+            if (distanceToActualDestination < _maneuverReachedThreshold) {
+              if (newPotentialManeuver != _currentDisplayedManeuver) {
+                setStateIfMounted(() {
+                  _currentDisplayedManeuver = newPotentialManeuver;
+                  if (kDebugMode) {
+                    print("[MapScreen] Ziel erreicht und Ankunfts-Manöver gesetzt: ${_currentDisplayedManeuver!.instructionText}");
+                  }
+                  if (_currentDisplayedManeuver?.instructionText != null) {
+                    _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
+                  }
+                });
+              }
+            } else {
+              if (kDebugMode) {
+                print("[MapScreen] Vorletztes Manöver erreicht, aber Ziel (${distanceToActualDestination.toStringAsFixed(1)}m) noch nicht nah genug für 'Ankunft'. Aktuelles Manöver bleibt: ${_currentDisplayedManeuver?.instructionText}");
+              }
             }
-            // HIER TTS Aufruf für das neu angezeigte Manöver
-            if (_currentDisplayedManeuver?.instructionText != null) {
-              _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
-            }
-          });
+          } else {
+             if (kDebugMode) {
+                print("[MapScreen] Warnung: 'Ankunft'-Manöver wird geprüft, aber _routePolyline ist null oder leer.");
+             }
+          }
+        } else {
+          if (newPotentialManeuver != _currentDisplayedManeuver) {
+            setStateIfMounted(() {
+              _currentDisplayedManeuver = newPotentialManeuver;
+              if (kDebugMode) {
+                print("[MapScreen] Nächstes reguläres Manöver gesetzt: ${_currentDisplayedManeuver!.instructionText}");
+              }
+              if (_currentDisplayedManeuver?.instructionText != null) {
+                _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
+              }
+            });
+          }
         }
       } else if (displayedManeuverIndex == _currentManeuvers.length - 1 &&
           _currentDisplayedManeuver!.turnType != TurnType.arrive) {
         if (kDebugMode) {
-          print(
-              "[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${_currentDisplayedManeuver!.instructionText}");
+          print("[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${_currentDisplayedManeuver!.instructionText}");
         }
       }
     }
   }
+
 
   Marker _createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
@@ -786,7 +810,6 @@ class MapScreenState extends State<MapScreen> {
               point: _startLatLng!,
               turnType: TurnType.arrive,
               instructionText: "Start- und Zielpunkt sind identisch.");
-          // HIER TTS Aufruf
           if (_currentDisplayedManeuver?.instructionText != null) {
             _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
           }
@@ -834,7 +857,6 @@ class MapScreenState extends State<MapScreen> {
               } else if (_currentManeuvers.first.turnType != TurnType.depart) {
                 _currentDisplayedManeuver = _currentManeuvers.first;
               }
-              // HIER TTS Aufruf für das erste relevante Manöver
               if (_currentDisplayedManeuver?.instructionText != null) {
                 _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
               }
@@ -1245,7 +1267,6 @@ class MapScreenState extends State<MapScreen> {
     }
 
     final double s = (distAP + distBP + distAB) / 2;
-    // Handle potential floating point inaccuracies leading to negative areaArg
     final double areaArgCandidate =
         s * (s - distAP) * (s - distBP) * (s - distAB);
     final double areaArg = areaArgCandidate < 0 ? 0 : areaArgCandidate;
@@ -1325,7 +1346,6 @@ class MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         title: const Text("Campground Navigator"),
         actions: [
-          // HINZUGEFÜGT: Test-Button für TTS in AppBar (optional)
           IconButton(
             icon: const Icon(Icons.volume_up),
             tooltip: 'Test TTS',
