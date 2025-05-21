@@ -1,13 +1,14 @@
 // lib/screens/map_screen_parts/map_screen_ui_mixin.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart'; // Fehlender Import für Marker
+import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:camping_osm_navi/models/maneuver.dart';
-import 'package:camping_osm_navi/models/searchable_feature.dart';
+// import 'package:camping_osm_navi/models/maneuver.dart'; // Entfernt
+// import 'package:camping_osm_navi/models/searchable_feature.dart'; // Entfernt
 import 'package:camping_osm_navi/screens/map_screen.dart';
-import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
+// import 'package:camping_osm_navi/widgets/turn_instruction_card.dart'; // Entfernt
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
+
 
 // UI Konstanten
 const double kSearchCardTopPadding = 8.0;
@@ -30,7 +31,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
       if (mounted && state.fullSearchCardKey.currentContext != null) {
         final RenderBox? renderBox = state.fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
         if (renderBox != null && renderBox.hasSize && state.fullSearchCardHeight != renderBox.size.height) {
-          state.setStateIfMounted(() { // Verwende state. um auf setStateIfMounted zuzugreifen
+          state.setStateIfMounted(() { 
             state.fullSearchCardHeight = renderBox.size.height;
           });
         }
@@ -46,18 +47,18 @@ mixin MapScreenUIMixin on State<MapScreen> {
           padding: const EdgeInsets.symmetric(
               horizontal: 8.0, vertical: kCardInternalVerticalPadding),
           child: Column(
-            key: state.fullSearchCardKey, // Zugriff auf public member
+            key: state.fullSearchCardKey, 
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 decoration: BoxDecoration(
-                  border: state.startFocusNode.hasFocus // Zugriff auf public member
+                  border: state.startFocusNode.hasFocus 
                       ? Border.all(
                           color: Theme.of(context).colorScheme.primary,
                           width: 1.5)
                       : Border.all(color: Colors.transparent, width: 1.5),
                   borderRadius: BorderRadius.circular(6.0),
-                  color: state.startFocusNode.hasFocus // Zugriff auf public member
+                  color: state.startFocusNode.hasFocus 
                       ? Theme.of(context)
                           .colorScheme
                           .primary
@@ -70,27 +71,27 @@ mixin MapScreenUIMixin on State<MapScreen> {
                     children: [
                       Expanded(
                         child: TextField(
-                          controller: state.startSearchController, // Zugriff auf public member
-                          focusNode: state.startFocusNode, // Zugriff auf public member
+                          controller: state.startSearchController, 
+                          focusNode: state.startFocusNode, 
                           decoration: InputDecoration(
                             hintText: "Startpunkt wählen",
                             prefixIcon: const Icon(Icons.trip_origin),
-                            suffixIcon: state.startSearchController.text.isNotEmpty // Zugriff auf public member
+                            suffixIcon: state.startSearchController.text.isNotEmpty 
                                 ? IconButton(
                                     icon: const Icon(Icons.clear),
                                     iconSize: 20,
                                     onPressed: () {
-                                      state.startSearchController.clear(); // Zugriff auf public member
-                                      state.setStateIfMounted(() { // Korrekter Aufruf
-                                        state.startLatLng = null; // Zugriff auf public member
-                                        state.startMarker = null; // Zugriff auf public member
-                                        state.routePolyline = null; // Zugriff auf public member
-                                        state.routeDistance = null; // Zugriff auf public member
-                                        state.routeTimeMinutes = null; // Zugriff auf public member
-                                        state.currentManeuvers = []; // Zugriff auf public member
-                                        state.currentDisplayedManeuver = null; // Zugriff auf public member
-                                        state.followGps = false; // Zugriff auf public member
-                                        state.isRouteActiveForCardSwitch = false; // Zugriff auf public member
+                                      state.startSearchController.clear(); 
+                                      state.setStateIfMounted(() { 
+                                        state.startLatLng = null; 
+                                        state.startMarker = null; 
+                                        state.routePolyline = null; 
+                                        state.routeDistance = null; 
+                                        state.routeTimeMinutes = null; 
+                                        state.currentManeuvers = []; 
+                                        state.currentDisplayedManeuver = null; 
+                                        state.followGps = false; 
+                                        state.isRouteActiveForCardSwitch = false; 
                                       });
                                     },
                                   )
@@ -111,28 +112,28 @@ mixin MapScreenUIMixin on State<MapScreen> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                                  if (state.currentGpsPosition != null) { // Zugriff auf public member
-                                    final String locationName = state.useMockLocation // Zugriff auf public member
+                                  if (state.currentGpsPosition != null) { 
+                                    final String locationName = state.useMockLocation 
                                         ? "Mock Position (${Provider.of<LocationProvider>(context, listen: false).selectedLocation?.name ?? ''})"
                                         : "Aktueller Standort";
-                                    state.setStateIfMounted(() { // Korrekter Aufruf
-                                      state.startLatLng = state.currentGpsPosition; // Zugriff auf public member
-                                      if (state.startLatLng != null) { // Zugriff auf public member
+                                    state.setStateIfMounted(() { 
+                                      state.startLatLng = state.currentGpsPosition; 
+                                      if (state.startLatLng != null) { 
                                         state.startMarker = createMarker( 
-                                            state.startLatLng!, // Zugriff auf public member
+                                            state.startLatLng!, 
                                             Colors.green,
                                             Icons.flag_circle,
                                             "Start: $locationName");
                                       }
-                                      state.startSearchController.text = locationName; // Zugriff auf public member
-                                      if (state.startFocusNode.hasFocus) state.startFocusNode.unfocus(); // Zugriff auf public member
-                                      state.showSearchResults = false; // Zugriff auf public member
-                                      state.activeSearchField = ActiveSearchField.none; // Zugriff auf public member
-                                      state.followGps = false; // Zugriff auf public member
-                                      if (state.endLatLng != null) { // Zugriff auf public member
+                                      state.startSearchController.text = locationName; 
+                                      if (state.startFocusNode.hasFocus) state.startFocusNode.unfocus(); 
+                                      state.showSearchResults = false; 
+                                      state.activeSearchField = ActiveSearchField.none; 
+                                      state.followGps = false; 
+                                      if (state.endLatLng != null) { 
                                           state.calculateAndDisplayRoute(); 
                                       } else {
-                                        state.isRouteActiveForCardSwitch = false; // Zugriff auf public member
+                                        state.isRouteActiveForCardSwitch = false; 
                                       }
                                     });
                                   } else {
@@ -161,7 +162,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                         iconSize: 20,
                         padding: const EdgeInsets.all(4.0),
                         constraints: const BoxConstraints(),
-                        onPressed: (state.startLatLng != null || state.endLatLng != null) // Zugriff auf public member
+                        onPressed: (state.startLatLng != null || state.endLatLng != null) 
                             ? state.swapStartAndEnd 
                             : null,
                       ),
@@ -174,13 +175,13 @@ mixin MapScreenUIMixin on State<MapScreen> {
               ),
               Container(
                 decoration: BoxDecoration(
-                  border: state.endFocusNode.hasFocus // Zugriff auf public member
+                  border: state.endFocusNode.hasFocus 
                       ? Border.all(
                           color: Theme.of(context).colorScheme.primary,
                           width: 1.5)
                       : Border.all(color: Colors.transparent, width: 1.5),
                   borderRadius: BorderRadius.circular(6.0),
-                  color: state.endFocusNode.hasFocus // Zugriff auf public member
+                  color: state.endFocusNode.hasFocus 
                       ? Theme.of(context)
                           .colorScheme
                           .primary
@@ -190,27 +191,27 @@ mixin MapScreenUIMixin on State<MapScreen> {
                 child: SizedBox(
                   height: kSearchInputRowHeight,
                   child: TextField(
-                    controller: state.endSearchController, // Zugriff auf public member
-                    focusNode: state.endFocusNode, // Zugriff auf public member
+                    controller: state.endSearchController, 
+                    focusNode: state.endFocusNode, 
                     decoration: InputDecoration(
                       hintText: "Ziel wählen",
                       prefixIcon: const Icon(Icons.flag_outlined),
-                      suffixIcon: state.endSearchController.text.isNotEmpty // Zugriff auf public member
+                      suffixIcon: state.endSearchController.text.isNotEmpty 
                           ? IconButton(
                               icon: const Icon(Icons.clear),
                               iconSize: 20,
                               onPressed: () {
-                                state.endSearchController.clear(); // Zugriff auf public member
-                                state.setStateIfMounted(() { // Korrekter Aufruf
-                                  state.endLatLng = null; // Zugriff auf public member
-                                  state.endMarker = null; // Zugriff auf public member
-                                  state.routePolyline = null; // Zugriff auf public member
-                                  state.routeDistance = null; // Zugriff auf public member
-                                  state.routeTimeMinutes = null; // Zugriff auf public member
-                                  state.currentManeuvers = []; // Zugriff auf public member
-                                  state.currentDisplayedManeuver = null; // Zugriff auf public member
-                                  state.followGps = false; // Zugriff auf public member
-                                  state.isRouteActiveForCardSwitch = false; // Zugriff auf public member
+                                state.endSearchController.clear(); 
+                                state.setStateIfMounted(() { 
+                                  state.endLatLng = null; 
+                                  state.endMarker = null; 
+                                  state.routePolyline = null; 
+                                  state.routeDistance = null; 
+                                  state.routeTimeMinutes = null; 
+                                  state.currentManeuvers = []; 
+                                  state.currentDisplayedManeuver = null; 
+                                  state.followGps = false; 
+                                  state.isRouteActiveForCardSwitch = false; 
                                 });
                               },
                             )
@@ -223,7 +224,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                   ),
                 ),
               ),
-              if (state.routeDistance != null && state.routeTimeMinutes != null) // Zugriff auf public member
+              if (state.routeDistance != null && state.routeTimeMinutes != null) 
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
                   child: SizedBox(
@@ -239,7 +240,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: "~ ${state.routeTimeMinutes ?? '?'} min", // Zugriff auf public member
+                                text: "~ ${state.routeTimeMinutes ?? '?'} min", 
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
@@ -287,8 +288,8 @@ mixin MapScreenUIMixin on State<MapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      state.endSearchController.text.isNotEmpty // Zugriff auf public member
-                          ? "Ziel: ${state.endSearchController.text}" // Zugriff auf public member
+                      state.endSearchController.text.isNotEmpty 
+                          ? "Ziel: ${state.endSearchController.text}" 
                           : "Aktive Route",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -296,7 +297,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (state.routeDistance != null && state.routeTimeMinutes != null) // Zugriff auf public member
+                    if (state.routeDistance != null && state.routeTimeMinutes != null) 
                       Text(
                         "~ ${state.routeTimeMinutes ?? '?'} min / ${formatDistance(state.routeDistance)}", 
                         style: TextStyle(
@@ -313,8 +314,8 @@ mixin MapScreenUIMixin on State<MapScreen> {
                 color: Theme.of(context).colorScheme.primary,
                 tooltip: "Route bearbeiten",
                 onPressed: () {
-                  state.setStateIfMounted(() { // Korrekter Aufruf
-                    state.isRouteActiveForCardSwitch = false; // Zugriff auf public member
+                  state.setStateIfMounted(() { 
+                    state.isRouteActiveForCardSwitch = false; 
                   });
                 },
               ),
