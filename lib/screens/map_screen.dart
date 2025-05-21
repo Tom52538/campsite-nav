@@ -31,6 +31,7 @@ class MapScreen extends StatefulWidget {
   static const double searchCardMaxWidth = 360.0;
   static const double searchCardHorizontalMargin = 10.0;
   static const double instructionCardSpacing = 5.0;
+  static const double compactCardHeight = 60.0; // Höhe für die kompakte Ansicht
 
   @override
   MapScreenState createState() => MapScreenState();
@@ -86,6 +87,14 @@ class MapScreenState extends State<MapScreen> {
   static const double _offRouteThreshold = 25.0;
   final Distance _distanceCalculatorInstance = const Distance();
 
+  // NEUE Zustandsvariable für die dynamische Ansicht des Suchblocks
+  bool _isRouteActiveForCardSwitch = false;
+
+  // GlobalKey für die große Suchkarte, um die Höhe zu ermitteln
+  final GlobalKey _fullSearchCardKey = GlobalKey();
+  double _fullSearchCardHeight = 0;
+
+
   @override
   void initState() {
     super.initState();
@@ -94,6 +103,15 @@ class MapScreenState extends State<MapScreen> {
     _endSearchController.addListener(_onEndSearchChanged);
     _startFocusNode.addListener(_onStartFocusChanged);
     _endFocusNode.addListener(_onEndFocusChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_fullSearchCardKey.currentContext != null) {
+        final RenderBox renderBox = _fullSearchCardKey.currentContext!.findRenderObject() as RenderBox;
+        setState(() {
+           _fullSearchCardHeight = renderBox.size.height;
+        });
+      }
+    });
 
     if (kDebugMode) {
       print(
@@ -153,6 +171,11 @@ class MapScreenState extends State<MapScreen> {
       _showSearchResults = _startFocusNode.hasFocus &&
           query.isNotEmpty &&
           _searchResults.isNotEmpty;
+      if (_startSearchController.text.isEmpty && _startLatLng != null) {
+        // Wenn Text gelöscht wird, aber LatLng noch da ist (z.B. von "Aktueller Standort")
+        // Hier könnte man überlegen, ob _isRouteActiveForCardSwitch beeinflusst wird.
+        // Vorerst bleibt es, da dies meist vor Routenberechnung passiert oder Teil der Routenlöschung ist.
+      }
     });
   }
 
@@ -190,6 +213,7 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() {
       if (hasFocus) {
         _activeSearchField = ActiveSearchField.start;
+        _isRouteActiveForCardSwitch = false; // Bei Fokus zurück zur großen Karte
         _showSearchResults =
             _startSearchController.text.isNotEmpty && _searchResults.isNotEmpty;
       } else {
@@ -199,6 +223,10 @@ class MapScreenState extends State<MapScreen> {
               _activeSearchField == ActiveSearchField.start) {
             setStateIfMounted(() {
               _showSearchResults = false;
+               // Wenn beide Felder keinen Fokus haben und Route da ist, klein machen
+              if (!_endFocusNode.hasFocus && _routePolyline != null) {
+                _isRouteActiveForCardSwitch = true;
+              }
             });
           }
         });
@@ -214,6 +242,7 @@ class MapScreenState extends State<MapScreen> {
     setStateIfMounted(() {
       if (hasFocus) {
         _activeSearchField = ActiveSearchField.end;
+         _isRouteActiveForCardSwitch = false; // Bei Fokus zurück zur großen Karte
         _showSearchResults =
             _endSearchController.text.isNotEmpty && _searchResults.isNotEmpty;
       } else {
@@ -223,12 +252,17 @@ class MapScreenState extends State<MapScreen> {
               _activeSearchField == ActiveSearchField.end) {
             setStateIfMounted(() {
               _showSearchResults = false;
+              // Wenn beide Felder keinen Fokus haben und Route da ist, klein machen
+              if (!_startFocusNode.hasFocus && _routePolyline != null) {
+                _isRouteActiveForCardSwitch = true;
+              }
             });
           }
         });
       }
     });
   }
+
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
     if (newLocationParam == null) {
@@ -260,6 +294,7 @@ class MapScreenState extends State<MapScreen> {
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
       _followGps = false;
+      _isRouteActiveForCardSwitch = false; // Zurücksetzen bei Standortwechsel
     });
     if (_isMapReady && mounted) {
       _mapController.move(newLocation.initialCenter, 17.0);
@@ -299,6 +334,7 @@ class MapScreenState extends State<MapScreen> {
         _currentManeuvers = [];
         _currentDisplayedManeuver = null;
         _followGps = false;
+        _isRouteActiveForCardSwitch = false;
       }
       if (currentLocation != null) {
         _initializeGpsOrMock(currentLocation);
@@ -454,15 +490,27 @@ class MapScreenState extends State<MapScreen> {
       _showSearchResults = false;
       _searchResults = [];
       _followGps = false;
+      // _isRouteActiveForCardSwitch bleibt false, bis Route berechnet
     });
 
     focusToUnset.unfocus();
 
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
+       // Bleibe im Eingabemodus, wenn zum nächsten Feld gewechselt wird
+      setStateIfMounted(() {
+        _isRouteActiveForCardSwitch = false;
+      });
     } else {
       _activeSearchField = ActiveSearchField.none;
+       // Wenn keine weiteren Eingaben erwartet, und Route da ist, klein machen
+      if (_routePolyline != null) {
+         setStateIfMounted(() {
+          _isRouteActiveForCardSwitch = true;
+        });
+      }
     }
+
 
     if (_startLatLng != null && _endLatLng != null) {
       _calculateAndDisplayRoute();
@@ -606,7 +654,7 @@ class MapScreenState extends State<MapScreen> {
             _startMarker = _createMarker(_startLatLng!, Colors.green,
                 Icons.flag_circle, "Start: ${_startSearchController.text}");
           }
-
+          _isRouteActiveForCardSwitch = false; // Zurück in Eingabemodus für Neuberechnung
           _calculateAndDisplayRoute();
         }
       }
@@ -759,6 +807,7 @@ class MapScreenState extends State<MapScreen> {
       _routeTimeMinutes = null;
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
+      _isRouteActiveForCardSwitch = false; // Standardmäßig im Eingabemodus starten
     });
 
     if (!isDataReadyForRouting) {
@@ -802,6 +851,7 @@ class MapScreenState extends State<MapScreen> {
         setStateIfMounted(() {
           _routePolyline = null;
           _followGps = false;
+           _isRouteActiveForCardSwitch = false;
         });
       } else if (startNode.id == endNode.id) {
         _showSnackbar("Start- und Zielpunkt sind identisch.");
@@ -813,7 +863,7 @@ class MapScreenState extends State<MapScreen> {
           if (_currentDisplayedManeuver?.instructionText != null) {
             _ttsService.speak(_currentDisplayedManeuver!.instructionText!);
           }
-          _clearRoute(showConfirmation: false, clearMarkers: false);
+          _clearRoute(showConfirmation: false, clearMarkers: false); // Setzt _isRouteActiveForCardSwitch auch auf false
         });
         if (_isMapReady && mounted) {
           _mapController.move(_startLatLng!, _mapController.camera.zoom);
@@ -864,6 +914,8 @@ class MapScreenState extends State<MapScreen> {
               _currentDisplayedManeuver = null;
             }
 
+            _isRouteActiveForCardSwitch = true; // Route ist aktiv, kleine Karte anzeigen
+
             if (!_useMockLocation) {
               _followGps = true;
               if (_currentGpsPosition != null && _isMapReady && mounted) {
@@ -882,11 +934,16 @@ class MapScreenState extends State<MapScreen> {
                     _startLatLng == _currentGpsPosition) {
                   pointsForBounds.add(_currentGpsPosition!);
                 }
+                // Fokus verlieren, damit die Karte klein wird
+                if (_startFocusNode.hasFocus) _startFocusNode.unfocus();
+                if (_endFocusNode.hasFocus) _endFocusNode.unfocus();
+
                 _mapController.fitCamera(
                   CameraFit.bounds(
                     bounds: LatLngBounds.fromPoints(pointsForBounds),
                     padding: const EdgeInsets.only(
-                        top: 230.0, bottom: 80.0, left: 30.0, right: 30.0),
+                        top: MapScreen.compactCardHeight + MapScreen.searchCardTopPadding + 20, // Platz für kompakte Karte + etwas Puffer
+                        bottom: 80.0, left: 30.0, right: 30.0),
                   ),
                 );
               } catch (e) {
@@ -904,6 +961,7 @@ class MapScreenState extends State<MapScreen> {
             _routePolyline = null;
             _currentDisplayedManeuver = null;
             _followGps = false;
+            _isRouteActiveForCardSwitch = false;
             _showErrorDialog("Keine Route gefunden.");
           }
         });
@@ -916,6 +974,7 @@ class MapScreenState extends State<MapScreen> {
       setStateIfMounted(() {
         _routePolyline = null;
         _followGps = false;
+        _isRouteActiveForCardSwitch = false;
       });
     } finally {
       if (mounted) {
@@ -947,6 +1006,13 @@ class MapScreenState extends State<MapScreen> {
         _showSearchResults = false;
       });
     }
+    // Nach Unfokussieren, wenn Route existiert, klein machen
+    if(_routePolyline != null && !_startFocusNode.hasFocus && !_endFocusNode.hasFocus) {
+        setStateIfMounted(() {
+            _isRouteActiveForCardSwitch = true;
+        });
+    }
+
 
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
@@ -967,9 +1033,15 @@ class MapScreenState extends State<MapScreen> {
       } else if (_endLatLng == null && _endSearchController.text.isEmpty) {
         fieldToSetByTapDecision = ActiveSearchField.end;
       } else {
+        // Wenn beide Felder gesetzt sind und man tippt, wird das Ziel überschrieben
+        // und die Karte geht in den Eingabemodus
         fieldToSetByTapDecision = ActiveSearchField.end;
       }
     }
+    // Wenn auf Karte getippt wird, immer in den großen Eingabemodus
+    setStateIfMounted(() {
+       _isRouteActiveForCardSwitch = false;
+    });
 
     _setPointFromMapTap(latLng, fieldToSetByTapDecision);
 
@@ -995,7 +1067,7 @@ class MapScreenState extends State<MapScreen> {
           _startMarker =
               _createMarker(latLng, Colors.green, Icons.flag_circle, pointName);
           relevantController.text = pointName;
-        } else {
+        } else { // ActiveSearchField.end
           _endLatLng = latLng;
           _endMarker =
               _createMarker(latLng, Colors.red, Icons.flag_circle, pointName);
@@ -1006,6 +1078,7 @@ class MapScreenState extends State<MapScreen> {
         _routeTimeMinutes = null;
         _currentManeuvers = [];
         _currentDisplayedManeuver = null;
+        _isRouteActiveForCardSwitch = false; // Bleibe im Eingabemodus
       });
 
       if (_startLatLng != null && _endLatLng != null) {
@@ -1014,8 +1087,8 @@ class MapScreenState extends State<MapScreen> {
     }
 
     bool isOverwriting =
-        (fieldToSet == ActiveSearchField.start && _startLatLng != null) ||
-            (fieldToSet == ActiveSearchField.end && _endLatLng != null);
+        (fieldToSet == ActiveSearchField.start && _startLatLng != null && _startSearchController.text.isNotEmpty) ||
+            (fieldToSet == ActiveSearchField.end && _endLatLng != null && _endSearchController.text.isNotEmpty);
 
     if (isOverwriting) {
       _showConfirmationDialog(
@@ -1039,6 +1112,7 @@ class MapScreenState extends State<MapScreen> {
         _currentManeuvers = [];
         _currentDisplayedManeuver = null;
         _followGps = false;
+        _isRouteActiveForCardSwitch = false; // Zurück zum großen Eingabefeld
         if (clearMarkers) {
           _startMarker = null;
           _startLatLng = null;
@@ -1219,6 +1293,7 @@ class MapScreenState extends State<MapScreen> {
       _currentManeuvers = [];
       _currentDisplayedManeuver = null;
       _followGps = false;
+      _isRouteActiveForCardSwitch = false; // Bleibe im Eingabemodus nach Tausch
 
       if (_startLatLng != null && _endLatLng != null) {
         _calculateAndDisplayRoute();
@@ -1293,7 +1368,321 @@ class MapScreenState extends State<MapScreen> {
     return minDistance;
   }
 
-  final GlobalKey _searchUiCardKey = GlobalKey();
+  // Widget für die vollständige Such-/Eingabekarte
+  Widget _buildSearchInputCard({required Key key}) {
+     // Verzögere die Höhenberechnung, um sicherzustellen, dass das Widget gerendert wurde
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _fullSearchCardKey.currentContext != null) {
+        final RenderBox? renderBox = _fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
+        if (renderBox != null && renderBox.hasSize && _fullSearchCardHeight != renderBox.size.height) {
+          setState(() {
+            _fullSearchCardHeight = renderBox.size.height;
+            // print("FullSearchCard Height updated: $_fullSearchCardHeight");
+          });
+        }
+      }
+    });
+    return Container(
+      key: key, // Wichtig für AnimatedSwitcher
+      constraints: const BoxConstraints(maxWidth: MapScreen.searchCardMaxWidth),
+      child: Card(
+        elevation: 6.0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: 8.0, vertical: MapScreen.cardInternalVerticalPadding),
+          child: Column(
+            key: _fullSearchCardKey, // GlobalKey hier
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  border: _startFocusNode.hasFocus
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 1.5)
+                      : Border.all(color: Colors.transparent, width: 1.5),
+                  borderRadius: BorderRadius.circular(6.0),
+                  color: _startFocusNode.hasFocus
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withAlpha((255 * 0.05).round())
+                      : null,
+                ),
+                child: SizedBox(
+                  height: MapScreen.searchInputRowHeight,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _startSearchController,
+                          focusNode: _startFocusNode,
+                          decoration: InputDecoration(
+                            hintText: "Startpunkt wählen",
+                            prefixIcon: const Icon(Icons.trip_origin),
+                            suffixIcon: _startSearchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    iconSize: 20,
+                                    onPressed: () {
+                                      _startSearchController.clear();
+                                      setStateIfMounted(() {
+                                        _startLatLng = null;
+                                        _startMarker = null;
+                                        _routePolyline = null;
+                                        _routeDistance = null;
+                                        _routeTimeMinutes = null;
+                                        _currentManeuvers = [];
+                                        _currentDisplayedManeuver = null;
+                                        _followGps = false;
+                                        _isRouteActiveForCardSwitch = false;
+                                      });
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8.0, horizontal: 8.0),
+                          ),
+                          // enabled: isUiReady, // isUiReady wird im Haupt-Build geprüft
+                        ),
+                      ),
+                      Tooltip(
+                        message: "Aktuellen Standort als Start verwenden",
+                        child: IconButton(
+                          icon: const Icon(Icons.my_location),
+                          color: Theme.of(context).colorScheme.primary,
+                          iconSize: 22,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () { // isUiReady wird im Haupt-Build geprüft
+                                  if (_currentGpsPosition != null) {
+                                    final String locationName = _useMockLocation
+                                        ? "Mock Position (${Provider.of<LocationProvider>(context, listen: false).selectedLocation?.name ?? ''})"
+                                        : "Aktueller Standort";
+                                    setStateIfMounted(() {
+                                      _startLatLng = _currentGpsPosition;
+                                      if (_startLatLng != null) {
+                                        _startMarker = _createMarker(
+                                            _startLatLng!,
+                                            Colors.green,
+                                            Icons.flag_circle,
+                                            "Start: $locationName");
+                                      }
+                                      _startSearchController.text = locationName;
+                                      if (_startFocusNode.hasFocus) _startFocusNode.unfocus();
+                                      _showSearchResults = false;
+                                      _activeSearchField = ActiveSearchField.none;
+                                      _followGps = false;
+                                      // Wenn Ziel auch gesetzt, Route berechnen und klein machen
+                                      if (_endLatLng != null) {
+                                          _calculateAndDisplayRoute();
+                                      } else {
+                                        _isRouteActiveForCardSwitch = false; // Bleibe groß für Zieleingabe
+                                      }
+                                    });
+                                  } else {
+                                    _showSnackbar("Aktuelle Position nicht verfügbar.");
+                                  }
+                                },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: MapScreen.dividerAndSwapButtonHeight,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Expanded(
+                        child: Divider(
+                            height: 1, thickness: 0.5, indent: 20, endIndent: 5)),
+                    Tooltip(
+                      message: "Start und Ziel tauschen",
+                      child: IconButton(
+                        icon: Icon(Icons.swap_vert,
+                            color: Theme.of(context).colorScheme.primary),
+                        iconSize: 20,
+                        padding: const EdgeInsets.all(4.0),
+                        constraints: const BoxConstraints(),
+                        onPressed: (_startLatLng != null || _endLatLng != null) // isUiReady wird im Haupt-Build geprüft
+                            ? _swapStartAndEnd
+                            : null,
+                      ),
+                    ),
+                    const Expanded(
+                        child: Divider(
+                            height: 1, thickness: 0.5, indent: 5, endIndent: 20)),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  border: _endFocusNode.hasFocus
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 1.5)
+                      : Border.all(color: Colors.transparent, width: 1.5),
+                  borderRadius: BorderRadius.circular(6.0),
+                  color: _endFocusNode.hasFocus
+                      ? Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withAlpha((255 * 0.05).round())
+                      : null,
+                ),
+                child: SizedBox(
+                  height: MapScreen.searchInputRowHeight,
+                  child: TextField(
+                    controller: _endSearchController,
+                    focusNode: _endFocusNode,
+                    decoration: InputDecoration(
+                      hintText: "Ziel wählen",
+                      prefixIcon: const Icon(Icons.flag_outlined),
+                      suffixIcon: _endSearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              iconSize: 20,
+                              onPressed: () {
+                                _endSearchController.clear();
+                                setStateIfMounted(() {
+                                  _endLatLng = null;
+                                  _endMarker = null;
+                                  _routePolyline = null;
+                                  _routeDistance = null;
+                                  _routeTimeMinutes = null;
+                                  _currentManeuvers = [];
+                                  _currentDisplayedManeuver = null;
+                                  _followGps = false;
+                                  _isRouteActiveForCardSwitch = false;
+                                });
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8.0, horizontal: 8.0),
+                    ),
+                    // enabled: isUiReady, // isUiReady wird im Haupt-Build geprüft
+                  ),
+                ),
+              ),
+              if (_routeDistance != null && _routeTimeMinutes != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
+                  child: SizedBox(
+                    height: MapScreen.routeInfoHeight - 6.0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.directions_walk,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 18),
+                        const SizedBox(width: 6),
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: "~ ${_routeTimeMinutes ?? '?'} min",
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              TextSpan(
+                                text: " / ${_formatDistance(_routeDistance)}",
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Widget für die kompakte Routeninformationskarte
+  Widget _buildCompactRouteInfoCard({required Key key}) {
+    return Container(
+      key: key, // Wichtig für AnimatedSwitcher
+      constraints: const BoxConstraints(maxWidth: MapScreen.searchCardMaxWidth),
+      height: MapScreen.compactCardHeight, // Feste Höhe für die kompakte Karte
+      child: Card(
+        elevation: 6.0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _endSearchController.text.isNotEmpty
+                          ? "Ziel: ${_endSearchController.text}"
+                          : "Aktive Route",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (_routeDistance != null && _routeTimeMinutes != null)
+                      Text(
+                        "~ ${_routeTimeMinutes ?? '?'} min / ${_formatDistance(_routeDistance)}",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.edit_location_alt_outlined),
+                color: Theme.of(context).colorScheme.primary,
+                tooltip: "Route bearbeiten",
+                onPressed: () {
+                  setStateIfMounted(() {
+                    _isRouteActiveForCardSwitch = false; // Zurück zur großen Karte
+                    // Optional: Fokus auf ein Feld setzen, z.B. Ziel
+                    // FocusScope.of(context).requestFocus(_endFocusNode);
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                 color: Theme.of(context).colorScheme.error,
+                tooltip: "Route abbrechen",
+                onPressed: () => _clearRoute(showConfirmation: true, clearMarkers: true),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1317,15 +1706,14 @@ class MapScreenState extends State<MapScreen> {
       activeMarkers.add(_endMarker!);
     }
 
-    double searchUiCardHeight = (MapScreen.searchInputRowHeight * 2) +
-        MapScreen.dividerAndSwapButtonHeight +
-        (MapScreen.cardInternalVerticalPadding * 2);
-    if (_routeDistance != null) {
-      searchUiCardHeight += MapScreen.routeInfoHeight;
-    }
+    // Dynamische Höhe der Suchkarte bestimmen
+    double currentSearchCardHeight = _isRouteActiveForCardSwitch
+        ? MapScreen.compactCardHeight
+        : _fullSearchCardHeight > 0 ? _fullSearchCardHeight : (MapScreen.searchInputRowHeight * 2) + MapScreen.dividerAndSwapButtonHeight + (MapScreen.cardInternalVerticalPadding * 2) + (_routeDistance != null ? MapScreen.routeInfoHeight : 0);
+
 
     double instructionCardTop = MapScreen.searchCardTopPadding +
-        searchUiCardHeight +
+        currentSearchCardHeight + // Angepasste Höhe verwenden
         MapScreen.instructionCardSpacing;
 
     double searchResultsTopPosition = instructionCardTop;
@@ -1335,11 +1723,7 @@ class MapScreenState extends State<MapScreen> {
             _currentDisplayedManeuver!.turnType == TurnType.arrive);
 
     if (instructionCardVisible) {
-      searchResultsTopPosition += 65.0 + MapScreen.instructionCardSpacing;
-    } else {
-      searchResultsTopPosition = MapScreen.searchCardTopPadding +
-          searchUiCardHeight +
-          MapScreen.instructionCardSpacing;
+      searchResultsTopPosition += 65.0 + MapScreen.instructionCardSpacing; // Höhe der TurnInstructionCard
     }
 
     return Scaffold(
@@ -1429,6 +1813,12 @@ class MapScreenState extends State<MapScreen> {
                   if (_endFocusNode.hasFocus) {
                     _endFocusNode.unfocus();
                   }
+                   // Nach Unfokussieren, wenn Route existiert, klein machen
+                  if(_routePolyline != null && !_startFocusNode.hasFocus && !_endFocusNode.hasFocus) {
+                      setStateIfMounted(() {
+                          _isRouteActiveForCardSwitch = true;
+                      });
+                  }
                 }
               },
               onMapReady: () {
@@ -1447,6 +1837,18 @@ class MapScreenState extends State<MapScreen> {
                 } else {
                   _performInitialMapMove();
                 }
+                 // Höhe der vollen Karte initial messen
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && _fullSearchCardKey.currentContext != null) {
+                    final RenderBox? renderBox = _fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
+                     if (renderBox != null && renderBox.hasSize) {
+                        setState(() {
+                          _fullSearchCardHeight = renderBox.size.height;
+                          // print("Initial FullSearchCard Height: $_fullSearchCardHeight");
+                        });
+                     }
+                  }
+                });
               },
             ),
             children: [
@@ -1463,278 +1865,29 @@ class MapScreenState extends State<MapScreen> {
                 MarkerLayer(markers: activeMarkers),
             ],
           ),
+          // Positioned Widget mit AnimatedSwitcher für die Such-/Routenkarten
           Positioned(
-            key: _searchUiCardKey,
             top: MapScreen.searchCardTopPadding,
             left: MapScreen.searchCardHorizontalMargin,
-            child: Container(
-              constraints:
-                  const BoxConstraints(maxWidth: MapScreen.searchCardMaxWidth),
-              child: Card(
-                elevation: 6.0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.0)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: MapScreen.cardInternalVerticalPadding),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          border: _startFocusNode.hasFocus
-                              ? Border.all(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 1.5)
-                              : Border.all(
-                                  color: Colors.transparent, width: 1.5),
-                          borderRadius: BorderRadius.circular(6.0),
-                          color: _startFocusNode.hasFocus
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withAlpha((255 * 0.05).round())
-                              : null,
-                        ),
-                        child: SizedBox(
-                          height: MapScreen.searchInputRowHeight,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _startSearchController,
-                                  focusNode: _startFocusNode,
-                                  decoration: InputDecoration(
-                                    hintText: "Startpunkt wählen",
-                                    prefixIcon: const Icon(Icons.trip_origin),
-                                    suffixIcon: _startSearchController
-                                            .text.isNotEmpty
-                                        ? IconButton(
-                                            icon: const Icon(Icons.clear),
-                                            iconSize: 20,
-                                            onPressed: () {
-                                              _startSearchController.clear();
-                                              setStateIfMounted(() {
-                                                _startLatLng = null;
-                                                _startMarker = null;
-                                                _routePolyline = null;
-                                                _routeDistance = null;
-                                                _routeTimeMinutes = null;
-                                                _currentManeuvers = [];
-                                                _currentDisplayedManeuver =
-                                                    null;
-                                                _followGps = false;
-                                              });
-                                            },
-                                          )
-                                        : null,
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        vertical: 8.0, horizontal: 8.0),
-                                  ),
-                                  enabled: isUiReady,
-                                ),
-                              ),
-                              Tooltip(
-                                message:
-                                    "Aktuellen Standort als Start verwenden",
-                                child: IconButton(
-                                  icon: const Icon(Icons.my_location),
-                                  color: Theme.of(context).colorScheme.primary,
-                                  iconSize: 22,
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  onPressed: isUiReady
-                                      ? () {
-                                          if (_currentGpsPosition != null) {
-                                            final String locationName =
-                                                _useMockLocation
-                                                    ? "Mock Position (${selectedLocationFromUI?.name ?? ''})"
-                                                    : "Aktueller Standort";
-                                            setStateIfMounted(() {
-                                              _startLatLng =
-                                                  _currentGpsPosition;
-                                              if (_startLatLng != null) {
-                                                _startMarker = _createMarker(
-                                                    _startLatLng!,
-                                                    Colors.green,
-                                                    Icons.flag_circle,
-                                                    "Start: $locationName");
-                                              }
-                                              WidgetsBinding.instance
-                                                  .addPostFrameCallback((_) {
-                                                if (mounted) {
-                                                  _startSearchController.text =
-                                                      locationName;
-                                                }
-                                              });
-
-                                              if (_startFocusNode.hasFocus) {
-                                                _startFocusNode.unfocus();
-                                              }
-                                              _showSearchResults = false;
-                                              _activeSearchField =
-                                                  ActiveSearchField.none;
-                                              _followGps = false;
-                                            });
-                                            if (_startLatLng != null &&
-                                                _endLatLng != null) {
-                                              _calculateAndDisplayRoute();
-                                            }
-                                          } else {
-                                            _showSnackbar(
-                                                "Aktuelle Position nicht verfügbar.");
-                                          }
-                                        }
-                                      : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        height: MapScreen.dividerAndSwapButtonHeight,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Expanded(
-                                child: Divider(
-                                    height: 1,
-                                    thickness: 0.5,
-                                    indent: 20,
-                                    endIndent: 5)),
-                            Tooltip(
-                              message: "Start und Ziel tauschen",
-                              child: IconButton(
-                                icon: Icon(Icons.swap_vert,
-                                    color:
-                                        Theme.of(context).colorScheme.primary),
-                                iconSize: 20,
-                                padding: const EdgeInsets.all(4.0),
-                                constraints: const BoxConstraints(),
-                                onPressed: (isUiReady &&
-                                        (_startLatLng != null ||
-                                            _endLatLng != null))
-                                    ? _swapStartAndEnd
-                                    : null,
-                              ),
-                            ),
-                            const Expanded(
-                                child: Divider(
-                                    height: 1,
-                                    thickness: 0.5,
-                                    indent: 5,
-                                    endIndent: 20)),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: _endFocusNode.hasFocus
-                              ? Border.all(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 1.5)
-                              : Border.all(
-                                  color: Colors.transparent, width: 1.5),
-                          borderRadius: BorderRadius.circular(6.0),
-                          color: _endFocusNode.hasFocus
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withAlpha((255 * 0.05).round())
-                              : null,
-                        ),
-                        child: SizedBox(
-                          height: MapScreen.searchInputRowHeight,
-                          child: TextField(
-                            controller: _endSearchController,
-                            focusNode: _endFocusNode,
-                            decoration: InputDecoration(
-                              hintText: "Ziel wählen",
-                              prefixIcon: const Icon(Icons.flag_outlined),
-                              suffixIcon: _endSearchController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear),
-                                      iconSize: 20,
-                                      onPressed: () {
-                                        _endSearchController.clear();
-                                        setStateIfMounted(() {
-                                          _endLatLng = null;
-                                          _endMarker = null;
-                                          _routePolyline = null;
-                                          _routeDistance = null;
-                                          _routeTimeMinutes = null;
-                                          _currentManeuvers = [];
-                                          _currentDisplayedManeuver = null;
-                                          _followGps = false;
-                                        });
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 8.0, horizontal: 8.0),
-                            ),
-                            enabled: isUiReady,
-                          ),
-                        ),
-                      ),
-                      if (_routeDistance != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
-                          child: SizedBox(
-                            height: MapScreen.routeInfoHeight - 6.0,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.directions_walk,
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    size: 18),
-                                const SizedBox(width: 6),
-                                Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text:
-                                            "~ ${_routeTimeMinutes ?? '?'} min",
-                                        style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text:
-                                            " / ${_formatDistance(_routeDistance)}",
-                                        style: TextStyle(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+            right: MapScreen.searchCardHorizontalMargin, // Damit es zentriert wird bei maxWidth
+            child: Align( // Stellt sicher, dass die Karte innerhalb der Constraints zentriert ist
+              alignment: Alignment.topCenter,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1.0, // Animation von oben
+                    child: child,
+                  );
+                },
+                child: _isRouteActiveForCardSwitch && isUiReady // Nur umschalten, wenn UI bereit
+                    ? _buildCompactRouteInfoCard(key: const ValueKey('compactCard'))
+                    : _buildSearchInputCard(key: const ValueKey('searchInputCard')),
               ),
             ),
           ),
-          if (instructionCardVisible)
+          if (instructionCardVisible && isUiReady)
             Positioned(
                 top: instructionCardTop,
                 left: MapScreen.searchCardHorizontalMargin,
@@ -1749,29 +1902,33 @@ class MapScreenState extends State<MapScreen> {
             Positioned(
               top: searchResultsTopPosition,
               left: MapScreen.searchCardHorizontalMargin,
-              child: Container(
-                constraints: const BoxConstraints(
-                    maxWidth: MapScreen.searchCardMaxWidth),
-                child: Card(
-                  elevation: 4.0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0)),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height * 0.3),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final feature = _searchResults[index];
-                        return ListTile(
-                          leading: Icon(getIconForFeatureType(feature.type)),
-                          title: Text(feature.name),
-                          subtitle: Text("Typ: ${feature.type}"),
-                          onTap: () => _selectFeatureAndSetPoint(feature),
-                          dense: true,
-                        );
-                      },
+               right: MapScreen.searchCardHorizontalMargin,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  constraints: const BoxConstraints(
+                      maxWidth: MapScreen.searchCardMaxWidth),
+                  child: Card(
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0)),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.3),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, index) {
+                          final feature = _searchResults[index];
+                          return ListTile(
+                            leading: Icon(getIconForFeatureType(feature.type)),
+                            title: Text(feature.name),
+                            subtitle: Text("Typ: ${feature.type}"),
+                            onTap: () => _selectFeatureAndSetPoint(feature),
+                            dense: true,
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
