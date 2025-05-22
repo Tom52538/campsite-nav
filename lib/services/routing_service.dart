@@ -12,7 +12,6 @@ class RoutingService {
   static const double averageWalkingSpeedKmh = 4.5;
   static const Distance _distanceCalculator = Distance();
 
-  // Konstanten für die Winkel-Schwellenwerte (können hier zentral verwaltet werden)
   static const double slightTurnThreshold = 35.0;
   static const double normalTurnThreshold = 75.0;
   static const double sharpTurnThreshold = 135.0;
@@ -93,17 +92,13 @@ class RoutingService {
         if (tentativeGCost < neighborNode.gCost) {
           neighborNode.parent = currentNode;
           neighborNode.gCost = tentativeGCost;
-          // Stelle sicher, dass der Knoten nicht bereits mit höheren Kosten in der Queue ist
-          // oder aktualisiere ihn, falls die PriorityQueue das unterstützt.
-          // Einfache Implementierungen fügen ihn einfach hinzu, was zu Duplikaten führen kann,
-          // aber der visitedNodes-Check fängt das meiste ab.
           priorityQueue.add(neighborNode);
         }
       }
     }
 
     if (kDebugMode) {
-      print(// Ln 125, Col 7 -> now wrapped
+      print(// Ln 125
           "[RoutingService._dijkstra] Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id} nach $iterations Iterationen.");
     }
     return null;
@@ -113,7 +108,7 @@ class RoutingService {
     final List<LatLng> path = [];
     GraphNode? currentNode = endNode;
     int safetyBreak = 0;
-    const int maxPathLength = 10000; // Erhöht für potenziell längere Pfade
+    const int maxPathLength = 10000;
 
     while (currentNode != null && safetyBreak < maxPathLength) {
       path.add(currentNode.position);
@@ -192,9 +187,9 @@ class RoutingService {
 
   static List<Maneuver> analyzeRouteForTurns(List<LatLng> routePoints) {
     if (kDebugMode) {
-      print(// Ln 202, Col 9 -> now wrapped
+      print(// Ln 202
           "[RoutingService.analyzeRouteForTurns] Analysiere Route mit ${routePoints.length} Punkten.");
-      print(// Ln 205, Col 9 -> now wrapped
+      print(// Ln 205
           "[RoutingService.analyzeRouteForTurns] Verwendete Schwellenwerte: slight=$slightTurnThreshold, normal=$normalTurnThreshold, sharp=$sharpTurnThreshold, uTurn=$uTurnAngleThreshold");
     }
     if (routePoints.length < 2) {
@@ -219,7 +214,6 @@ class RoutingService {
 
     if (routePoints.length < 3) {
       if (routePoints.length == 2) {
-        // Nur Start und Ziel
         maneuvers.add(Maneuver(
             point: routePoints.last,
             turnType: TurnType.arrive,
@@ -237,7 +231,6 @@ class RoutingService {
       final LatLng p2 = routePoints[i + 1];
       final LatLng p3 = routePoints[i + 2];
 
-      // Um Division durch Null oder ungenaue Winkel bei identischen Punkten zu vermeiden
       if (p1 == p2 || p2 == p3) {
         if (kDebugMode) {
           print(
@@ -273,16 +266,12 @@ class RoutingService {
         turnType = TurnType.turnRight;
       } else if (angleDegrees > sharpTurnThreshold &&
           angleDegrees < uTurnAngleThreshold) {
-        // uTurnAngleThreshold exklusiv für scharfe Kurven
         turnType = TurnType.sharpRight;
       } else if (angleDegrees >= uTurnAngleThreshold ||
           angleDegrees <= -uTurnAngleThreshold) {
-        // U-Turns
         if (angleDegrees > 0) {
-          // Positiver Winkel -> Rechtsdrehung
           turnType = TurnType.uTurnRight;
         } else {
-          // Negativer Winkel -> Linksdrehung
           turnType = TurnType.uTurnLeft;
         }
       } else if (angleDegrees < -slightTurnThreshold &&
@@ -293,7 +282,6 @@ class RoutingService {
         turnType = TurnType.turnLeft;
       } else if (angleDegrees < -sharpTurnThreshold &&
           angleDegrees > -uTurnAngleThreshold) {
-        // uTurnAngleThreshold exklusiv für scharfe Kurven
         turnType = TurnType.sharpLeft;
       }
 
@@ -310,7 +298,7 @@ class RoutingService {
 
       if (turnType != TurnType.straight) {
         final maneuver = Maneuver(
-            point: p2, // Manöver findet am Punkt p2 statt
+            point: p2,
             turnType: turnType,
             instructionText: _getInstructionTextForTurnType(turnType));
         maneuvers.add(maneuver);
