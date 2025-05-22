@@ -72,9 +72,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   LatLng? startLatLng;
   ActiveSearchField activeSearchField = ActiveSearchField.none;
 
-  // prefer_const_declarations (Ln 76, Col 10 in new problem list)
-  static const double _maneuverReachedThreshold =
-      15.0; // FIXED: Changed to const
+  static const double _maneuverReachedThreshold = 15.0;
   static const double _significantGpsChangeThreshold = 2.0;
 
   static const double _offRouteThreshold = 25.0;
@@ -672,7 +670,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
     }, onError: (error) {
-      // avoid_print (Ln 740, Col 9 in new problem list)
       if (kDebugMode) {
         print("[MapScreen._initializeGpsReal] Fehler GPS-Empfang: $error");
       }
@@ -1634,7 +1631,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             children: [
               TileLayer(
                 urlTemplate:
-                    'https://retina-tiles.p.rapidapi.com/local/osm/xyz/{z}/{x}/{y}.png',
+                    'https://retina-tiles.p.rapidapi.com/local/osm@2x/v1/{z}/{x}/{y}.png', // UPDATED
                 additionalOptions: const {
                   'X-RapidAPI-Key':
                       'ab552fb7c4mshe66675e5149dcf8p14a109jsn95b9ded847d3',
