@@ -21,7 +21,6 @@ import 'package:camping_osm_navi/services/tts_service.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 
-
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
@@ -52,10 +51,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   LocationInfo? lastProcessedLocation;
 
-  double? routeDistance;
-  int? routeTimeMinutes; // Dieses Feld wird im UI Mixin verwendet
+  double? routeDistance; // Gesamtdistanz der initialen Route
+  int? routeTimeMinutes; // Gesamtzeit der initialen Route
+  double? remainingRouteDistance; // Verbleibende Distanz zum Ziel
+  int? remainingRouteTimeMinutes; // Verbleibende Zeit zum Ziel
 
-  List<Maneuver> currentManeuvers = []; // Korrekt als public deklariert
+  List<Maneuver> currentManeuvers = [];
   Maneuver? currentDisplayedManeuver;
   bool followGps = false;
   static const double _followGpsZoomLevel = 17.5;
@@ -81,7 +82,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   final GlobalKey fullSearchCardKey = GlobalKey();
   double fullSearchCardHeight = 0;
 
-
   @override
   void initState() {
     super.initState();
@@ -93,10 +93,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (fullSearchCardKey.currentContext != null) {
-        final RenderBox? renderBox = fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
+        final RenderBox? renderBox =
+            fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
         if (renderBox != null && mounted) {
           setStateIfMounted(() {
-             fullSearchCardHeight = renderBox.size.height;
+            fullSearchCardHeight = renderBox.size.height;
           });
         }
       }
@@ -172,9 +173,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final query = endSearchController.text.toLowerCase().trim();
     _updateSearchResults(query, locationProvider.currentSearchableFeatures);
     setStateIfMounted(() {
-      showSearchResults = endFocusNode.hasFocus &&
-          query.isNotEmpty &&
-          searchResults.isNotEmpty;
+      showSearchResults =
+          endFocusNode.hasFocus && query.isNotEmpty && searchResults.isNotEmpty;
     });
   }
 
@@ -225,7 +225,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setStateIfMounted(() {
       if (hasFocus) {
         activeSearchField = ActiveSearchField.end;
-         isRouteActiveForCardSwitch = false;
+        isRouteActiveForCardSwitch = false;
         showSearchResults =
             endSearchController.text.isNotEmpty && searchResults.isNotEmpty;
       } else {
@@ -244,7 +244,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     });
   }
-
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
     if (newLocationParam == null) {
@@ -273,6 +272,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       activeSearchField = ActiveSearchField.none;
       routeDistance = null;
       routeTimeMinutes = null;
+      remainingRouteDistance = null;
+      remainingRouteTimeMinutes = null;
       currentManeuvers = [];
       currentDisplayedManeuver = null;
       followGps = false;
@@ -313,6 +314,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline = null;
         routeDistance = null;
         routeTimeMinutes = null;
+        remainingRouteDistance = null;
+        remainingRouteTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
         followGps = false;
@@ -364,6 +367,16 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   Icons.flag_circle, "Start: Mock Position (${location.name})");
             }
             startSearchController.text = "Mock Position (${location.name})";
+          }
+          // Update remaining distance/time if route is active
+          if (routePolyline != null &&
+              endLatLng != null &&
+              currentGpsPosition != null) {
+            remainingRouteDistance =
+                distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
+            remainingRouteTimeMinutes =
+                RoutingService.estimateWalkingTimeMinutes(
+                    remainingRouteDistance!);
           }
         });
         if (isMapReady && mounted) {
@@ -451,8 +464,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       nextFocus = startSearchController.text.isEmpty ? startFocusNode : null;
       setStateIfMounted(() {
         endLatLng = feature.center;
-        endMarker = createMarker(feature.center, Colors.red,
-            Icons.flag_circle, "Ziel: ${feature.name}");
+        endMarker = createMarker(feature.center, Colors.red, Icons.flag_circle,
+            "Ziel: ${feature.name}");
       });
     } else {
       if (kDebugMode) {
@@ -484,7 +497,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     } else {
       activeSearchField = ActiveSearchField.none;
       if (routePolyline != null) {
-         setStateIfMounted(() {
+        setStateIfMounted(() {
           isRouteActiveForCardSwitch = true;
         });
       }
@@ -579,6 +592,16 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   Icons.flag_circle, "Start: Aktueller Standort");
             }
           }
+          // Update remaining distance/time if route is active
+          if (routePolyline != null &&
+              endLatLng != null &&
+              currentGpsPosition != null) {
+            remainingRouteDistance =
+                distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
+            remainingRouteTimeMinutes =
+                RoutingService.estimateWalkingTimeMinutes(
+                    remainingRouteDistance!);
+          }
         });
       }
 
@@ -645,7 +668,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    if (currentManeuvers.isEmpty || currentDisplayedManeuver == null || routePolyline == null || routePolyline!.points.isEmpty) {
+    if (currentManeuvers.isEmpty ||
+        currentDisplayedManeuver == null ||
+        routePolyline == null ||
+        routePolyline!.points.isEmpty) {
       return;
     }
 
@@ -653,18 +679,23 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    int displayedManeuverIndex = currentManeuvers.indexOf(currentDisplayedManeuver!);
+    int displayedManeuverIndex =
+        currentManeuvers.indexOf(currentDisplayedManeuver!);
 
     if (displayedManeuverIndex == -1) {
       if (kDebugMode) {
-        print("[MapScreen] Fehler: currentDisplayedManeuver nicht in currentManeuvers gefunden.");
+        print(
+            "[MapScreen] Fehler: currentDisplayedManeuver nicht in currentManeuvers gefunden.");
       }
       if (currentManeuvers.isNotEmpty) {
         Maneuver initialManeuver = currentManeuvers.first;
-        if (currentManeuvers.length > 1 && initialManeuver.turnType == TurnType.depart) {
-          if (currentManeuvers[1].turnType != TurnType.arrive || currentManeuvers.length == 2) {
+        if (currentManeuvers.length > 1 &&
+            initialManeuver.turnType == TurnType.depart) {
+          if (currentManeuvers[1].turnType != TurnType.arrive ||
+              currentManeuvers.length == 2) {
             initialManeuver = currentManeuvers[1];
-          } else if (currentManeuvers.length > 2 && currentManeuvers[1].turnType == TurnType.arrive) {
+          } else if (currentManeuvers.length > 2 &&
+              currentManeuvers[1].turnType == TurnType.arrive) {
             initialManeuver = currentManeuvers[1];
           }
         }
@@ -698,7 +729,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         if (newPotentialManeuver.turnType == TurnType.arrive) {
           if (routePolyline != null && routePolyline!.points.isNotEmpty) {
             final LatLng actualDestinationPoint = routePolyline!.points.last;
-            final double distanceToActualDestination = distanceCalculatorInstance(
+            final double distanceToActualDestination =
+                distanceCalculatorInstance(
               currentPosition,
               actualDestinationPoint,
             );
@@ -708,29 +740,34 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 setStateIfMounted(() {
                   currentDisplayedManeuver = newPotentialManeuver;
                   if (kDebugMode) {
-                    print("[MapScreen] Ziel erreicht und Ankunfts-Manöver gesetzt: ${currentDisplayedManeuver!.instructionText}");
+                    print(
+                        "[MapScreen] Ziel erreicht und Ankunfts-Manöver gesetzt: ${currentDisplayedManeuver!.instructionText}");
                   }
                   if (currentDisplayedManeuver?.instructionText != null) {
-                    ttsService.speak(currentDisplayedManeuver!.instructionText!);
+                    ttsService
+                        .speak(currentDisplayedManeuver!.instructionText!);
                   }
                 });
               }
             } else {
               if (kDebugMode) {
-                print("[MapScreen] Vorletztes Manöver erreicht, aber Ziel (${distanceToActualDestination.toStringAsFixed(1)}m) noch nicht nah genug für 'Ankunft'. Aktuelles Manöver bleibt: ${currentDisplayedManeuver?.instructionText}");
+                print(
+                    "[MapScreen] Vorletztes Manöver erreicht, aber Ziel (${distanceToActualDestination.toStringAsFixed(1)}m) noch nicht nah genug für 'Ankunft'. Aktuelles Manöver bleibt: ${currentDisplayedManeuver?.instructionText}");
               }
             }
           } else {
-             if (kDebugMode) {
-                print("[MapScreen] Warnung: 'Ankunft'-Manöver wird geprüft, aber routePolyline ist null oder leer.");
-             }
+            if (kDebugMode) {
+              print(
+                  "[MapScreen] Warnung: 'Ankunft'-Manöver wird geprüft, aber routePolyline ist null oder leer.");
+            }
           }
         } else {
           if (newPotentialManeuver != currentDisplayedManeuver) {
             setStateIfMounted(() {
               currentDisplayedManeuver = newPotentialManeuver;
               if (kDebugMode) {
-                print("[MapScreen] Nächstes reguläres Manöver gesetzt: ${currentDisplayedManeuver!.instructionText}");
+                print(
+                    "[MapScreen] Nächstes reguläres Manöver gesetzt: ${currentDisplayedManeuver!.instructionText}");
               }
               if (currentDisplayedManeuver?.instructionText != null) {
                 ttsService.speak(currentDisplayedManeuver!.instructionText!);
@@ -741,7 +778,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       } else if (displayedManeuverIndex == currentManeuvers.length - 1 &&
           currentDisplayedManeuver!.turnType != TurnType.arrive) {
         if (kDebugMode) {
-          print("[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${currentDisplayedManeuver!.instructionText}");
+          print(
+              "[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${currentDisplayedManeuver!.instructionText}");
         }
       }
     }
@@ -750,9 +788,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   Future<void> calculateAndDisplayRoute() async {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
-    final RoutingGraph? currentGraphValue = locationProvider.currentRoutingGraph; // Renamed to avoid conflict
+    final RoutingGraph? currentGraphValue =
+        locationProvider.currentRoutingGraph;
     final bool isLoadingData = locationProvider.isLoadingLocationData;
-    final bool isDataReadyForRouting = !isLoadingData && currentGraphValue != null;
+    final bool isDataReadyForRouting =
+        !isLoadingData && currentGraphValue != null;
     final selectedLocationFromProvider = locationProvider.selectedLocation;
 
     if (kDebugMode) {
@@ -767,6 +807,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       routePolyline = null;
       routeDistance = null;
       routeTimeMinutes = null;
+      remainingRouteDistance = null;
+      remainingRouteTimeMinutes = null;
       currentManeuvers = [];
       currentDisplayedManeuver = null;
       isRouteActiveForCardSwitch = false;
@@ -782,7 +824,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    if (currentGraphValue.nodes.isEmpty) { // Use renamed variable
+    if (currentGraphValue.nodes.isEmpty) {
       showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() {
@@ -804,16 +846,18 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setStateIfMounted(() => isCalculatingRoute = true);
 
     try {
-      currentGraphValue.resetAllNodeCosts(); // Use renamed variable
-      final GraphNode? foundStartNode = currentGraphValue.findNearestNode(startLatLng!); // Use renamed variable
-      final GraphNode? foundEndNode = currentGraphValue.findNearestNode(endLatLng!); // Use renamed variable
+      currentGraphValue.resetAllNodeCosts();
+      final GraphNode? foundStartNode =
+          currentGraphValue.findNearestNode(startLatLng!);
+      final GraphNode? foundEndNode =
+          currentGraphValue.findNearestNode(endLatLng!);
 
       if (foundStartNode == null || foundEndNode == null) {
         showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
         setStateIfMounted(() {
           routePolyline = null;
           followGps = false;
-           isRouteActiveForCardSwitch = false;
+          isRouteActiveForCardSwitch = false;
         });
       } else if (foundStartNode.id == foundEndNode.id) {
         showSnackbar("Start- und Zielpunkt sind identisch.");
@@ -825,14 +869,21 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           if (currentDisplayedManeuver?.instructionText != null) {
             ttsService.speak(currentDisplayedManeuver!.instructionText!);
           }
-          clearRoute(showConfirmation: false, clearMarkers: false);
+          // Da Start und Ziel identisch, ist die verbleibende Distanz 0
+          routeDistance = 0;
+          routeTimeMinutes = 0;
+          remainingRouteDistance = 0;
+          remainingRouteTimeMinutes = 0;
+          clearRoute(
+              showConfirmation: false,
+              clearMarkers: false); // Behält Marker, löscht aber Route etc.
         });
         if (isMapReady && mounted) {
           mapController.move(startLatLng!, mapController.camera.zoom);
         }
       } else {
-        final List<LatLng>? routePointsResult =
-            await RoutingService.findPath(currentGraphValue, foundStartNode, foundEndNode); // Use renamed variable
+        final List<LatLng>? routePointsResult = await RoutingService.findPath(
+            currentGraphValue, foundStartNode, foundEndNode);
         if (!mounted) {
           return;
         }
@@ -843,9 +894,14 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 strokeWidth: 5.0,
                 color: Colors.deepPurpleAccent);
 
-            routeDistance = RoutingService.calculateTotalDistance(routePointsResult);
+            routeDistance =
+                RoutingService.calculateTotalDistance(routePointsResult);
             routeTimeMinutes =
                 RoutingService.estimateWalkingTimeMinutes(routeDistance!);
+
+            // Initialisiere verbleibende Distanz/Zeit mit Gesamtwerten
+            remainingRouteDistance = routeDistance;
+            remainingRouteTimeMinutes = routeTimeMinutes;
 
             currentManeuvers =
                 RoutingService.analyzeRouteForTurns(routePointsResult);
@@ -885,6 +941,14 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               }
             } else {
               followGps = false;
+              // Auch im Mock-Modus die verbleibende Distanz aktualisieren, falls GPS-Pos gesetzt
+              if (currentGpsPosition != null && endLatLng != null) {
+                remainingRouteDistance =
+                    distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
+                remainingRouteTimeMinutes =
+                    RoutingService.estimateWalkingTimeMinutes(
+                        remainingRouteDistance!);
+              }
             }
 
             showSnackbar("Route berechnet.", durationSeconds: 3);
@@ -904,7 +968,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     bounds: LatLngBounds.fromPoints(pointsForBounds),
                     padding: const EdgeInsets.only(
                         top: kCompactCardHeight + kSearchCardTopPadding + 20,
-                        bottom: 80.0, left: 30.0, right: 30.0),
+                        bottom: 80.0,
+                        left: 30.0,
+                        right: 30.0),
                   ),
                 );
               } catch (e) {
@@ -912,8 +978,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   print(
                       "Fehler beim Anpassen der Kartenansicht an die Route: $e");
                   if (endLatLng != null) {
-                    mapController.move(
-                        endLatLng!, mapController.camera.zoom);
+                    mapController.move(endLatLng!, mapController.camera.zoom);
                   }
                 }
               }
@@ -967,10 +1032,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         showSearchResults = false;
       });
     }
-    if(routePolyline != null && !startFocusNode.hasFocus && !endFocusNode.hasFocus) {
-        setStateIfMounted(() {
-            isRouteActiveForCardSwitch = true;
-        });
+    if (routePolyline != null &&
+        !startFocusNode.hasFocus &&
+        !endFocusNode.hasFocus) {
+      setStateIfMounted(() {
+        isRouteActiveForCardSwitch = true;
+      });
     }
 
     final locationProvider =
@@ -996,7 +1063,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     }
     setStateIfMounted(() {
-       isRouteActiveForCardSwitch = false;
+      isRouteActiveForCardSwitch = false;
     });
 
     _setPointFromMapTap(latLng, fieldToSetByTapDecision);
@@ -1032,6 +1099,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline = null;
         routeDistance = null;
         routeTimeMinutes = null;
+        remainingRouteDistance = null;
+        remainingRouteTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
         isRouteActiveForCardSwitch = false;
@@ -1042,9 +1111,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     }
 
-    bool isOverwriting =
-        (fieldToSet == ActiveSearchField.start && startLatLng != null && startSearchController.text.isNotEmpty) ||
-            (fieldToSet == ActiveSearchField.end && endLatLng != null && endSearchController.text.isNotEmpty);
+    bool isOverwriting = (fieldToSet == ActiveSearchField.start &&
+            startLatLng != null &&
+            startSearchController.text.isNotEmpty) ||
+        (fieldToSet == ActiveSearchField.end &&
+            endLatLng != null &&
+            endSearchController.text.isNotEmpty);
 
     if (isOverwriting) {
       showConfirmationDialog(
@@ -1065,6 +1137,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline = null;
         routeDistance = null;
         routeTimeMinutes = null;
+        remainingRouteDistance = null;
+        remainingRouteTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
         followGps = false;
@@ -1185,6 +1259,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
       routeDistance = null;
       routeTimeMinutes = null;
+      remainingRouteDistance = null;
+      remainingRouteTimeMinutes = null;
       currentManeuvers = [];
       currentDisplayedManeuver = null;
       followGps = false;
@@ -1199,7 +1275,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
   }
-
 
   double _distanceToSegment(
       LatLng p, LatLng a, LatLng b, Distance distanceCalc) {
@@ -1256,7 +1331,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     return minDistance;
   }
 
-
   @override
   Widget build(BuildContext context) {
     final locationProvider = Provider.of<LocationProvider>(context);
@@ -1281,18 +1355,24 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     double currentSearchCardHeight = isRouteActiveForCardSwitch
         ? kCompactCardHeight
-        : fullSearchCardHeight > 0 ? fullSearchCardHeight : (kSearchInputRowHeight * 2) + kDividerAndSwapButtonHeight + (kCardInternalVerticalPadding * 2) + (routeDistance != null ? kRouteInfoHeight : 0);
-
+        : fullSearchCardHeight > 0
+            ? fullSearchCardHeight
+            : (kSearchInputRowHeight * 2) +
+                kDividerAndSwapButtonHeight +
+                (kCardInternalVerticalPadding * 2) +
+                (routeDistance != null || remainingRouteDistance != null
+                    ? kRouteInfoHeight
+                    : 0);
 
     double instructionCardTop = kSearchCardTopPadding +
         currentSearchCardHeight +
         kInstructionCardSpacing;
 
     double searchResultsTopPosition = instructionCardTop;
-    // KORREKTUR HIER: _currentManeuvers wurde zu currentManeuvers
+
     bool instructionCardVisible = currentDisplayedManeuver != null &&
         currentDisplayedManeuver!.turnType != TurnType.depart &&
-        !(currentManeuvers.length <= 2 && 
+        !(currentManeuvers.length <= 2 &&
             currentDisplayedManeuver!.turnType == TurnType.arrive);
 
     if (instructionCardVisible) {
@@ -1386,10 +1466,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   if (endFocusNode.hasFocus) {
                     endFocusNode.unfocus();
                   }
-                  if(routePolyline != null && !startFocusNode.hasFocus && !endFocusNode.hasFocus) {
-                      setStateIfMounted(() {
-                          isRouteActiveForCardSwitch = true;
-                      });
+                  if (routePolyline != null &&
+                      !startFocusNode.hasFocus &&
+                      !endFocusNode.hasFocus) {
+                    setStateIfMounted(() {
+                      isRouteActiveForCardSwitch = true;
+                    });
                   }
                 }
               },
@@ -1411,12 +1493,14 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted && fullSearchCardKey.currentContext != null) {
-                    final RenderBox? renderBox = fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
-                     if (renderBox != null && renderBox.hasSize) {
-                        setStateIfMounted(() {
-                          fullSearchCardHeight = renderBox.size.height;
-                        });
-                     }
+                    final RenderBox? renderBox =
+                        fullSearchCardKey.currentContext!.findRenderObject()
+                            as RenderBox?;
+                    if (renderBox != null && renderBox.hasSize) {
+                      setStateIfMounted(() {
+                        fullSearchCardHeight = renderBox.size.height;
+                      });
+                    }
                   }
                 });
               },
@@ -1451,8 +1535,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   );
                 },
                 child: isRouteActiveForCardSwitch && isUiReady
-                    ? buildCompactRouteInfoCard(key: const ValueKey('compactCard'))
-                    : buildSearchInputCard(key: const ValueKey('searchInputCard')),
+                    ? buildCompactRouteInfoCard(
+                        key: const ValueKey('compactCard'))
+                    : buildSearchInputCard(
+                        key: const ValueKey('searchInputCard')),
               ),
             ),
           ),
@@ -1471,12 +1557,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             Positioned(
               top: searchResultsTopPosition,
               left: kSearchCardHorizontalMargin,
-               right: kSearchCardHorizontalMargin,
+              right: kSearchCardHorizontalMargin,
               child: Align(
                 alignment: Alignment.topCenter,
                 child: Container(
-                  constraints: const BoxConstraints(
-                      maxWidth: kSearchCardMaxWidth),
+                  constraints:
+                      const BoxConstraints(maxWidth: kSearchCardMaxWidth),
                   child: Card(
                     elevation: 4.0,
                     shape: RoundedRectangleBorder(
@@ -1554,9 +1640,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               tooltip: followGps
                   ? 'Follow-GPS Modus aktiv'
                   : 'Follow-GPS Modus aktivieren',
-              backgroundColor: followGps
-                  ? Colors.greenAccent[700]
-                  : Colors.deepOrangeAccent,
+              backgroundColor:
+                  followGps ? Colors.greenAccent[700] : Colors.deepOrangeAccent,
               child: Icon(followGps ? Icons.navigation : Icons.my_location),
             ),
           ),
