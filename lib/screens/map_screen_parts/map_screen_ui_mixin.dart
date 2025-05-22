@@ -9,7 +9,6 @@ import 'package:camping_osm_navi/screens/map_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 
-
 // UI Konstanten
 const double kSearchCardTopPadding = 8.0;
 const double kSearchInputRowHeight = 40.0;
@@ -29,14 +28,26 @@ mixin MapScreenUIMixin on State<MapScreen> {
   Widget buildSearchInputCard({required Key key}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && state.fullSearchCardKey.currentContext != null) {
-        final RenderBox? renderBox = state.fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
-        if (renderBox != null && renderBox.hasSize && state.fullSearchCardHeight != renderBox.size.height) {
-          state.setStateIfMounted(() { 
+        final RenderBox? renderBox = state.fullSearchCardKey.currentContext!
+            .findRenderObject() as RenderBox?;
+        if (renderBox != null &&
+            renderBox.hasSize &&
+            state.fullSearchCardHeight != renderBox.size.height) {
+          state.setStateIfMounted(() {
             state.fullSearchCardHeight = renderBox.size.height;
           });
         }
       }
     });
+
+    // Entscheide, welche Distanz/Zeit angezeigt wird
+    final double? displayDistance =
+        state.remainingRouteDistance ?? state.routeDistance;
+    final int? displayTime =
+        state.remainingRouteTimeMinutes ?? state.routeTimeMinutes;
+    final String timeLabelPrefix =
+        state.remainingRouteDistance != null ? "Rest: ~ " : "~ ";
+
     return Container(
       key: key,
       constraints: const BoxConstraints(maxWidth: kSearchCardMaxWidth),
@@ -47,18 +58,18 @@ mixin MapScreenUIMixin on State<MapScreen> {
           padding: const EdgeInsets.symmetric(
               horizontal: 8.0, vertical: kCardInternalVerticalPadding),
           child: Column(
-            key: state.fullSearchCardKey, 
+            key: state.fullSearchCardKey,
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 decoration: BoxDecoration(
-                  border: state.startFocusNode.hasFocus 
+                  border: state.startFocusNode.hasFocus
                       ? Border.all(
                           color: Theme.of(context).colorScheme.primary,
                           width: 1.5)
                       : Border.all(color: Colors.transparent, width: 1.5),
                   borderRadius: BorderRadius.circular(6.0),
-                  color: state.startFocusNode.hasFocus 
+                  color: state.startFocusNode.hasFocus
                       ? Theme.of(context)
                           .colorScheme
                           .primary
@@ -71,27 +82,31 @@ mixin MapScreenUIMixin on State<MapScreen> {
                     children: [
                       Expanded(
                         child: TextField(
-                          controller: state.startSearchController, 
-                          focusNode: state.startFocusNode, 
+                          controller: state.startSearchController,
+                          focusNode: state.startFocusNode,
                           decoration: InputDecoration(
                             hintText: "Startpunkt wählen",
                             prefixIcon: const Icon(Icons.trip_origin),
-                            suffixIcon: state.startSearchController.text.isNotEmpty 
+                            suffixIcon: state
+                                    .startSearchController.text.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.clear),
                                     iconSize: 20,
                                     onPressed: () {
-                                      state.startSearchController.clear(); 
-                                      state.setStateIfMounted(() { 
-                                        state.startLatLng = null; 
-                                        state.startMarker = null; 
-                                        state.routePolyline = null; 
-                                        state.routeDistance = null; 
-                                        state.routeTimeMinutes = null; 
-                                        state.currentManeuvers = []; 
-                                        state.currentDisplayedManeuver = null; 
-                                        state.followGps = false; 
-                                        state.isRouteActiveForCardSwitch = false; 
+                                      state.startSearchController.clear();
+                                      state.setStateIfMounted(() {
+                                        state.startLatLng = null;
+                                        state.startMarker = null;
+                                        state.routePolyline = null;
+                                        state.routeDistance = null;
+                                        state.routeTimeMinutes = null;
+                                        state.remainingRouteDistance = null;
+                                        state.remainingRouteTimeMinutes = null;
+                                        state.currentManeuvers = [];
+                                        state.currentDisplayedManeuver = null;
+                                        state.followGps = false;
+                                        state.isRouteActiveForCardSwitch =
+                                            false;
                                       });
                                     },
                                   )
@@ -112,34 +127,37 @@ mixin MapScreenUIMixin on State<MapScreen> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                                  if (state.currentGpsPosition != null) { 
-                                    final String locationName = state.useMockLocation 
-                                        ? "Mock Position (${Provider.of<LocationProvider>(context, listen: false).selectedLocation?.name ?? ''})"
-                                        : "Aktueller Standort";
-                                    state.setStateIfMounted(() { 
-                                      state.startLatLng = state.currentGpsPosition; 
-                                      if (state.startLatLng != null) { 
-                                        state.startMarker = createMarker( 
-                                            state.startLatLng!, 
-                                            Colors.green,
-                                            Icons.flag_circle,
-                                            "Start: $locationName");
-                                      }
-                                      state.startSearchController.text = locationName; 
-                                      if (state.startFocusNode.hasFocus) state.startFocusNode.unfocus(); 
-                                      state.showSearchResults = false; 
-                                      state.activeSearchField = ActiveSearchField.none; 
-                                      state.followGps = false; 
-                                      if (state.endLatLng != null) { 
-                                          state.calculateAndDisplayRoute(); 
-                                      } else {
-                                        state.isRouteActiveForCardSwitch = false; 
-                                      }
-                                    });
-                                  } else {
-                                    showSnackbar("Aktuelle Position nicht verfügbar."); 
-                                  }
-                                },
+                            if (state.currentGpsPosition != null) {
+                              final String locationName = state.useMockLocation
+                                  ? "Mock Position (${Provider.of<LocationProvider>(context, listen: false).selectedLocation?.name ?? ''})"
+                                  : "Aktueller Standort";
+                              state.setStateIfMounted(() {
+                                state.startLatLng = state.currentGpsPosition;
+                                if (state.startLatLng != null) {
+                                  state.startMarker = createMarker(
+                                      state.startLatLng!,
+                                      Colors.green,
+                                      Icons.flag_circle,
+                                      "Start: $locationName");
+                                }
+                                state.startSearchController.text = locationName;
+                                if (state.startFocusNode.hasFocus)
+                                  state.startFocusNode.unfocus();
+                                state.showSearchResults = false;
+                                state.activeSearchField =
+                                    ActiveSearchField.none;
+                                state.followGps = false;
+                                if (state.endLatLng != null) {
+                                  state.calculateAndDisplayRoute();
+                                } else {
+                                  state.isRouteActiveForCardSwitch = false;
+                                }
+                              });
+                            } else {
+                              showSnackbar(
+                                  "Aktuelle Position nicht verfügbar.");
+                            }
+                          },
                         ),
                       ),
                     ],
@@ -153,7 +171,10 @@ mixin MapScreenUIMixin on State<MapScreen> {
                   children: [
                     const Expanded(
                         child: Divider(
-                            height: 1, thickness: 0.5, indent: 20, endIndent: 5)),
+                            height: 1,
+                            thickness: 0.5,
+                            indent: 20,
+                            endIndent: 5)),
                     Tooltip(
                       message: "Start und Ziel tauschen",
                       child: IconButton(
@@ -162,26 +183,30 @@ mixin MapScreenUIMixin on State<MapScreen> {
                         iconSize: 20,
                         padding: const EdgeInsets.all(4.0),
                         constraints: const BoxConstraints(),
-                        onPressed: (state.startLatLng != null || state.endLatLng != null) 
-                            ? state.swapStartAndEnd 
+                        onPressed: (state.startLatLng != null ||
+                                state.endLatLng != null)
+                            ? state.swapStartAndEnd
                             : null,
                       ),
                     ),
                     const Expanded(
                         child: Divider(
-                            height: 1, thickness: 0.5, indent: 5, endIndent: 20)),
+                            height: 1,
+                            thickness: 0.5,
+                            indent: 5,
+                            endIndent: 20)),
                   ],
                 ),
               ),
               Container(
                 decoration: BoxDecoration(
-                  border: state.endFocusNode.hasFocus 
+                  border: state.endFocusNode.hasFocus
                       ? Border.all(
                           color: Theme.of(context).colorScheme.primary,
                           width: 1.5)
                       : Border.all(color: Colors.transparent, width: 1.5),
                   borderRadius: BorderRadius.circular(6.0),
-                  color: state.endFocusNode.hasFocus 
+                  color: state.endFocusNode.hasFocus
                       ? Theme.of(context)
                           .colorScheme
                           .primary
@@ -191,27 +216,29 @@ mixin MapScreenUIMixin on State<MapScreen> {
                 child: SizedBox(
                   height: kSearchInputRowHeight,
                   child: TextField(
-                    controller: state.endSearchController, 
-                    focusNode: state.endFocusNode, 
+                    controller: state.endSearchController,
+                    focusNode: state.endFocusNode,
                     decoration: InputDecoration(
                       hintText: "Ziel wählen",
                       prefixIcon: const Icon(Icons.flag_outlined),
-                      suffixIcon: state.endSearchController.text.isNotEmpty 
+                      suffixIcon: state.endSearchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
                               iconSize: 20,
                               onPressed: () {
-                                state.endSearchController.clear(); 
-                                state.setStateIfMounted(() { 
-                                  state.endLatLng = null; 
-                                  state.endMarker = null; 
-                                  state.routePolyline = null; 
-                                  state.routeDistance = null; 
-                                  state.routeTimeMinutes = null; 
-                                  state.currentManeuvers = []; 
-                                  state.currentDisplayedManeuver = null; 
-                                  state.followGps = false; 
-                                  state.isRouteActiveForCardSwitch = false; 
+                                state.endSearchController.clear();
+                                state.setStateIfMounted(() {
+                                  state.endLatLng = null;
+                                  state.endMarker = null;
+                                  state.routePolyline = null;
+                                  state.routeDistance = null;
+                                  state.routeTimeMinutes = null;
+                                  state.remainingRouteDistance = null;
+                                  state.remainingRouteTimeMinutes = null;
+                                  state.currentManeuvers = [];
+                                  state.currentDisplayedManeuver = null;
+                                  state.followGps = false;
+                                  state.isRouteActiveForCardSwitch = false;
                                 });
                               },
                             )
@@ -224,7 +251,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                   ),
                 ),
               ),
-              if (state.routeDistance != null && state.routeTimeMinutes != null) 
+              if (displayDistance != null && displayTime != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
                   child: SizedBox(
@@ -240,7 +267,8 @@ mixin MapScreenUIMixin on State<MapScreen> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: "~ ${state.routeTimeMinutes ?? '?'} min", 
+                                text:
+                                    "$timeLabelPrefix${displayTime ?? '?'} min",
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
@@ -248,7 +276,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                                 ),
                               ),
                               TextSpan(
-                                text: " / ${formatDistance(state.routeDistance)}", 
+                                text: " / ${formatDistance(displayDistance)}",
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontSize: 13,
@@ -270,6 +298,16 @@ mixin MapScreenUIMixin on State<MapScreen> {
   }
 
   Widget buildCompactRouteInfoCard({required Key key}) {
+    // Entscheide, welche Distanz/Zeit angezeigt wird
+    final double? displayDistance =
+        state.remainingRouteDistance ?? state.routeDistance;
+    final int? displayTime =
+        state.remainingRouteTimeMinutes ?? state.routeTimeMinutes;
+    final String timeLabelPrefix =
+        state.remainingRouteDistance != null && state.routePolyline != null
+            ? "Rest: ~ "
+            : "~ ";
+
     return Container(
       key: key,
       constraints: const BoxConstraints(maxWidth: kSearchCardMaxWidth),
@@ -288,8 +326,8 @@ mixin MapScreenUIMixin on State<MapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      state.endSearchController.text.isNotEmpty 
-                          ? "Ziel: ${state.endSearchController.text}" 
+                      state.endSearchController.text.isNotEmpty
+                          ? "Ziel: ${state.endSearchController.text}"
                           : "Aktive Route",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -297,9 +335,9 @@ mixin MapScreenUIMixin on State<MapScreen> {
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (state.routeDistance != null && state.routeTimeMinutes != null) 
+                    if (displayDistance != null && displayTime != null)
                       Text(
-                        "~ ${state.routeTimeMinutes ?? '?'} min / ${formatDistance(state.routeDistance)}", 
+                        "$timeLabelPrefix${displayTime ?? '?'} min / ${formatDistance(displayDistance)}",
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -314,16 +352,17 @@ mixin MapScreenUIMixin on State<MapScreen> {
                 color: Theme.of(context).colorScheme.primary,
                 tooltip: "Route bearbeiten",
                 onPressed: () {
-                  state.setStateIfMounted(() { 
-                    state.isRouteActiveForCardSwitch = false; 
+                  state.setStateIfMounted(() {
+                    state.isRouteActiveForCardSwitch = false;
                   });
                 },
               ),
               IconButton(
                 icon: const Icon(Icons.close),
-                 color: Theme.of(context).colorScheme.error,
+                color: Theme.of(context).colorScheme.error,
                 tooltip: "Route abbrechen",
-                onPressed: () => state.clearRoute(showConfirmation: true, clearMarkers: true), 
+                onPressed: () => state.clearRoute(
+                    showConfirmation: true, clearMarkers: true),
               ),
             ],
           ),
@@ -347,8 +386,8 @@ mixin MapScreenUIMixin on State<MapScreen> {
     );
   }
 
-  void showSnackbar(String message, {int durationSeconds = 3}) { 
-    if (!mounted) { 
+  void showSnackbar(String message, {int durationSeconds = 3}) {
+    if (!mounted) {
       return;
     }
     ScaffoldMessenger.of(context).removeCurrentSnackBar();
@@ -361,7 +400,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
     );
   }
 
-  void showErrorDialog(String message) { 
+  void showErrorDialog(String message) {
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       return;
     }
@@ -381,7 +420,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
     );
   }
 
- void showConfirmationDialog( 
+  void showConfirmationDialog(
       String title, String content, VoidCallback onConfirm) {
     if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
       return;
@@ -408,7 +447,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
     );
   }
 
-  String formatDistance(double? distanceMeters) { 
+  String formatDistance(double? distanceMeters) {
     if (distanceMeters == null) {
       return "";
     }
