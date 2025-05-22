@@ -1631,7 +1631,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             children: [
               TileLayer(
                 urlTemplate:
-                    'https://retina-tiles.p.rapidapi.com/local/osm@2x/v1/{z}/{x}/{y}.png', // UPDATED
+                    'https://retina-tiles.p.rapidapi.com/local/osm@2x/v1/{z}/{x}/{y}.png',
                 additionalOptions: const {
                   'X-RapidAPI-Key':
                       'ab552fb7c4mshe66675e5149dcf8p14a109jsn95b9ded847d3',
@@ -1639,6 +1639,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
                 retinaMode: true,
+                keepBuffer: 1, // ADDED to reduce tile requests
+                panBuffer: 0, // ADDED to reduce tile requests
               ),
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
