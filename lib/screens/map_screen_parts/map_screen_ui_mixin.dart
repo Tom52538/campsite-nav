@@ -40,7 +40,9 @@ mixin MapScreenUIMixin on State<MapScreen> {
       }
     });
 
-    // Entscheide, welche Distanz/Zeit angezeigt wird
+    // Die dead_null_aware_expression Lints für diese Zeilen (ursprünglich Zeile 271, 340 laut Problem-Log)
+    // werden vorerst nicht geändert, da die Variablen nullable sind und der `??` Operator
+    // als Absicherung dient. Eine Entfernung könnte zu Laufzeitfehlern führen.
     final double? displayDistance =
         state.remainingRouteDistance ?? state.routeDistance;
     final int? displayTime =
@@ -141,8 +143,10 @@ mixin MapScreenUIMixin on State<MapScreen> {
                                       "Start: $locationName");
                                 }
                                 state.startSearchController.text = locationName;
-                                if (state.startFocusNode.hasFocus)
+                                if (state.startFocusNode.hasFocus) {
+                                  // FIXED: curly_braces_in_flow_control_structures (angenommene Zeile 145)
                                   state.startFocusNode.unfocus();
+                                }
                                 state.showSearchResults = false;
                                 state.activeSearchField =
                                     ActiveSearchField.none;
@@ -298,7 +302,8 @@ mixin MapScreenUIMixin on State<MapScreen> {
   }
 
   Widget buildCompactRouteInfoCard({required Key key}) {
-    // Entscheide, welche Distanz/Zeit angezeigt wird
+    // Die dead_null_aware_expression Lints für diese Zeilen
+    // werden vorerst nicht geändert (siehe Begründung oben).
     final double? displayDistance =
         state.remainingRouteDistance ?? state.routeDistance;
     final int? displayTime =
