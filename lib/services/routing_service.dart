@@ -103,7 +103,7 @@ class RoutingService {
     }
 
     if (kDebugMode) {
-      print(
+      print(// Ln 125, Col 7 -> now wrapped
           "[RoutingService._dijkstra] Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id} nach $iterations Iterationen.");
     }
     return null;
@@ -192,9 +192,9 @@ class RoutingService {
 
   static List<Maneuver> analyzeRouteForTurns(List<LatLng> routePoints) {
     if (kDebugMode) {
-      print(
+      print(// Ln 202, Col 9 -> now wrapped
           "[RoutingService.analyzeRouteForTurns] Analysiere Route mit ${routePoints.length} Punkten.");
-      print(
+      print(// Ln 205, Col 9 -> now wrapped
           "[RoutingService.analyzeRouteForTurns] Verwendete Schwellenwerte: slight=$slightTurnThreshold, normal=$normalTurnThreshold, sharp=$sharpTurnThreshold, uTurn=$uTurnAngleThreshold");
     }
     if (routePoints.length < 2) {
