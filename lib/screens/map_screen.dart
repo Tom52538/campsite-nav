@@ -51,10 +51,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   LocationInfo? lastProcessedLocation;
 
-  double? routeDistance; // Gesamtdistanz der initialen Route
-  int? routeTimeMinutes; // Gesamtzeit der initialen Route
-  double? remainingRouteDistance; // Verbleibende Distanz zum Ziel
-  int? remainingRouteTimeMinutes; // Verbleibende Zeit zum Ziel
+  double? routeDistance;
+  int? routeTimeMinutes;
+  double? remainingRouteDistance;
+  int? remainingRouteTimeMinutes;
 
   List<Maneuver> currentManeuvers = [];
   Maneuver? currentDisplayedManeuver;
@@ -72,8 +72,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   LatLng? startLatLng;
   ActiveSearchField activeSearchField = ActiveSearchField.none;
 
-  // prefer_final_fields: _maneuverReachedThreshold could be 'final'.
-  static final double _maneuverReachedThreshold = 15.0; // FIXED: Added final
+  // prefer_const_declarations (Ln 76, Col 10 in new problem list)
+  static const double _maneuverReachedThreshold =
+      15.0; // FIXED: Changed to const
   static const double _significantGpsChangeThreshold = 2.0;
 
   static const double _offRouteThreshold = 25.0;
@@ -93,7 +94,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     endFocusNode.addListener(_onEndFocusChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (fullSearchCardKey.currentContext != null) {
+      if (mounted && fullSearchCardKey.currentContext != null) {
         final RenderBox? renderBox =
             fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
         if (renderBox != null && mounted) {
@@ -369,7 +370,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             }
             startSearchController.text = "Mock Position (${location.name})";
           }
-          // Update remaining distance/time if route is active
           if (routePolyline != null &&
               endLatLng != null &&
               currentGpsPosition != null) {
@@ -569,7 +569,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 2, // Meter
+        distanceFilter: 2,
       ),
     ).listen((Position position) {
       if (!mounted) {
@@ -602,7 +602,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   Icons.flag_circle, "Start: Aktueller Standort");
             }
           }
-          // Update remaining distance/time if route is active
           if (routePolyline != null &&
               endLatLng != null &&
               currentGpsPosition != null) {
@@ -673,8 +672,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
     }, onError: (error) {
+      // avoid_print (Ln 740, Col 9 in new problem list)
       if (kDebugMode) {
-        // avoid_print (Ln 693, Col 9 in original file structure)
         print("[MapScreen._initializeGpsReal] Fehler GPS-Empfang: $error");
       }
       showErrorDialog("Fehler GPS-Empfang: $error");
@@ -685,51 +684,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    if (currentManeuvers.isEmpty ||
-        // currentDisplayedManeuver == null || // Temporarily allowing this to be null to attempt fix
-        routePolyline == null ||
-        routePolyline!.points.isEmpty) {
-      if (kDebugMode &&
-          currentManeuvers.isNotEmpty &&
-          currentDisplayedManeuver == null) {
-        if (kDebugMode) {
-          print(
-              "[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null, obwohl currentManeuvers nicht leer ist. Setze auf erstes/zweites Manöver.");
-        }
-        // Versuche, das Manöver zu initialisieren, falls es noch nicht geschehen ist
-        Maneuver initialManeuver = currentManeuvers.first;
-        if (currentManeuvers.length > 1 &&
-            initialManeuver.turnType == TurnType.depart) {
-          if (currentManeuvers[1].turnType != TurnType.arrive ||
-              currentManeuvers.length == 2) {
-            initialManeuver = currentManeuvers[1];
-          } else if (currentManeuvers.length > 2 &&
-              currentManeuvers[1].turnType == TurnType.arrive) {
-            initialManeuver = currentManeuvers[
-                1]; // Fallback zum Arrive, wenn nur Depart und Arrive da sind
-          }
-        }
-        if (currentDisplayedManeuver != initialManeuver) {
-          setStateIfMounted(() {
-            currentDisplayedManeuver = initialManeuver;
-            if (kDebugMode) {
-              print(
-                  "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
-            }
-            if (currentDisplayedManeuver?.instructionText != null) {
-              ttsService.speak(currentDisplayedManeuver!.instructionText!);
-            }
-          });
-        }
-      }
-      // curly_braces_in_flow_control_structures (Ln 721, Col 11 in original file structure)
-      if (currentDisplayedManeuver == null) {
-        // FIXED: Added curly braces
-        return; // Immer noch null, dann Abbruch
-      }
-    } // This closing brace was for the outer if, the one for currentDisplayedManeuver == null needs to be inside
-
-    // Refixed structure for the above block
     if (currentManeuvers.isEmpty ||
         routePolyline == null ||
         routePolyline!.points.isEmpty) {
@@ -764,7 +718,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
       if (currentDisplayedManeuver == null) {
-        // This is the one from Ln 721
         return;
       }
     }
@@ -784,7 +737,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         print(
             "[MapScreen._updateCurrentManeuverOnGpsUpdate] FEHLER: currentDisplayedManeuver nicht in currentManeuvers gefunden. Aktuell: ${currentDisplayedManeuver?.instructionText}, Manöverliste: ${currentManeuvers.map((m) => m.instructionText).join(', ')}");
       }
-      // Fallback: Versuche, das erste sinnvolle Manöver zu setzen
       if (currentManeuvers.isNotEmpty) {
         Maneuver newFallbackManeuver =
             currentManeuvers.first.turnType == TurnType.depart &&
@@ -804,7 +756,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           });
         }
       }
-      return; // Nach Fehlerbehandlung abbrechen für diesen Durchlauf
+      return;
     }
 
     final double distanceToDisplayedManeuverPoint = distanceCalculatorInstance(
@@ -832,7 +784,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
 
         if (newPotentialManeuver.turnType == TurnType.arrive) {
-          // Spezielle Prüfung für das "Arrive"-Manöver
           final LatLng actualDestinationPoint = routePolyline!.points.last;
           final double distanceToActualDestination = distanceCalculatorInstance(
             currentPosition,
@@ -861,11 +812,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               print(
                   "[MapScreen._updateCurrentManeuverOnGpsUpdate] Vorletztes Manöver erreicht, aber Ziel (${distanceToActualDestination.toStringAsFixed(1)}m) noch nicht nah genug für 'Ankunft'. Aktuelles Manöver bleibt: ${currentDisplayedManeuver?.instructionText}");
             }
-            // Nicht zum "Arrive"-Manöver wechseln, wenn das tatsächliche Ziel noch zu weit ist.
-            // Das aktuelle Manöver (das vor "Arrive") bleibt bestehen.
           }
         } else {
-          // Reguläres nächstes Manöver (nicht "Arrive")
           if (newPotentialManeuver != currentDisplayedManeuver) {
             setStateIfMounted(() {
               currentDisplayedManeuver = newPotentialManeuver;
@@ -881,8 +829,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       } else if (displayedManeuverIndex == currentManeuvers.length - 1 &&
           currentDisplayedManeuver!.turnType != TurnType.arrive) {
-        // Dies sollte eigentlich nicht passieren, wenn das letzte Manöver immer "Arrive" ist.
-        // Aber als Sicherheitsnetz:
         if (kDebugMode) {
           print(
               "[MapScreen._updateCurrentManeuverOnGpsUpdate] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${currentDisplayedManeuver!.instructionText}. Prüfe Distanz zum Ziel.");
@@ -893,7 +839,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           actualDestinationPoint,
         );
         if (distanceToActualDestination < _maneuverReachedThreshold) {
-          // Finde das "Arrive" Manöver (sollte das letzte sein)
           Maneuver? arriveManeuver = currentManeuvers.lastWhere(
               (m) => m.turnType == TurnType.arrive,
               orElse: () => currentManeuvers.last);
@@ -1002,13 +947,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           routeTimeMinutes = 0;
           remainingRouteDistance = 0;
           remainingRouteTimeMinutes = 0;
-          // Nicht clearRoute aufrufen, da Marker bleiben sollen, aber Route ist quasi 0
           routePolyline = Polyline(
               points: [startLatLng!, endLatLng!],
               strokeWidth: 0.1,
-              color: Colors.transparent); // Minimale Route
-          isRouteActiveForCardSwitch =
-              true; // Damit die Compact Card angezeigt wird
+              color: Colors.transparent);
+          isRouteActiveForCardSwitch = true;
         });
         if (isMapReady && mounted) {
           mapController.move(startLatLng!, mapController.camera.zoom);
@@ -1046,27 +989,20 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             }
 
             if (currentManeuvers.isNotEmpty) {
-              currentDisplayedManeuver =
-                  currentManeuvers.first; // Start mit "Depart"
+              currentDisplayedManeuver = currentManeuvers.first;
               if (currentManeuvers.length > 1 &&
                   currentManeuvers.first.turnType == TurnType.depart) {
-                // Wenn das zweite Manöver nicht "Arrive" ist ODER es nur Depart und Arrive gibt
                 if (currentManeuvers[1].turnType != TurnType.arrive ||
                     currentManeuvers.length == 2) {
                   currentDisplayedManeuver = currentManeuvers[1];
                 } else if (currentManeuvers.length > 2 &&
                     currentManeuvers[1].turnType == TurnType.arrive) {
-                  // Sollte nicht passieren, wenn Arrive immer das letzte ist. Aber als Sicherheit.
                   currentDisplayedManeuver = currentManeuvers[1];
                 }
-                // Wenn das erste Manöver "Depart" ist, wird es gesprochen.
-                // Das `currentDisplayedManeuver` für die UI wird aber auf das *nächste* gesetzt,
-                // außer es ist direkt das Ziel.
                 if (currentManeuvers.first.instructionText != null) {
                   ttsService.speak(currentManeuvers.first.instructionText!);
                 }
               } else if (currentManeuvers.first.turnType != TurnType.depart) {
-                // Sollte nicht der Fall sein, da wir "Depart" immer hinzufügen
                 currentDisplayedManeuver = currentManeuvers.first;
                 if (currentDisplayedManeuver?.instructionText != null) {
                   ttsService.speak(currentDisplayedManeuver!.instructionText!);
@@ -1216,8 +1152,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       } else if (endLatLng == null && endSearchController.text.isEmpty) {
         fieldToSetByTapDecision = ActiveSearchField.end;
       } else {
-        // Standardverhalten, wenn beide Felder schon belegt sind oder eines davon
-        // und kein Feld aktiv war: Ziel setzen/überschreiben
         fieldToSetByTapDecision = ActiveSearchField.end;
       }
     }
@@ -1230,9 +1164,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     });
 
     _setPointFromMapTap(latLng, fieldToSetByTapDecision);
-
-    // activeSearchField wird in _setPointFromMapTap oder durch Fokus-Listener zurückgesetzt
-    // Hier nicht explizit auf ActiveSearchField.none setzen, da es durch _onFocusChanged gehandhabt wird.
   }
 
   void _setPointFromMapTap(LatLng latLng, ActiveSearchField fieldToSet) {
@@ -1259,7 +1190,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               createMarker(latLng, Colors.green, Icons.flag_circle, pointName);
           relevantController.text = pointName;
         } else {
-          // ActiveSearchField.end
           endLatLng = latLng;
           endMarker =
               createMarker(latLng, Colors.red, Icons.flag_circle, pointName);
@@ -1487,15 +1417,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (distBP == 0) return 0.0;
     if (distAB == 0) return distAP;
 
-    // Kosinussatz für Winkel PAB
     double cosPAB = (pow(distAP, 2) + pow(distAB, 2) - pow(distBP, 2)) /
         (2 * distAP * distAB);
-    // Kosinussatz für Winkel PBA
     double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) /
         (2 * distBP * distAB);
 
-    // Wenn einer der Winkel stumpf ist (>90 Grad, also Kosinus < 0),
-    // ist der nächstgelegene Punkt auf dem Segment einer der Endpunkte A oder B.
     if (cosPAB < 0) {
       return distAP;
     }
@@ -1503,16 +1429,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return distBP;
     }
 
-    // Andernfalls liegt der nächstgelegene Punkt auf dem Segment zwischen A und B.
-    // Berechne die Höhe des Dreiecks PAB mit Basis AB.
-    // Heron'sche Formel für die Fläche
     final double s = (distAP + distBP + distAB) / 2;
     final double areaArgCandidate =
         s * (s - distAP) * (s - distBP) * (s - distAB);
-    // Sicherstellen, dass der Radikand nicht negativ ist aufgrund von Rundungsfehlern
     final double areaArg = areaArgCandidate < 0 ? 0 : areaArgCandidate;
     final double area = sqrt(areaArg);
-    // Höhe = 2 * Fläche / Basis
     return (2 * area) / distAB;
   }
 
@@ -1580,8 +1501,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             currentDisplayedManeuver!.turnType == TurnType.arrive);
 
     if (instructionCardVisible) {
-      searchResultsTopPosition +=
-          65.0 + kInstructionCardSpacing; // Höhe der TurnInstructionCard
+      searchResultsTopPosition += 65.0 + kInstructionCardSpacing;
     }
 
     return Scaffold(
@@ -1693,10 +1613,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     Provider.of<LocationProvider>(context, listen: false);
                 if (locationProvider.selectedLocation != null &&
                     currentGpsPosition == null) {
-                  // Nur initialisieren, wenn noch keine GPS-Pos da ist
                   _initializeGpsOrMock(locationProvider.selectedLocation!);
                 } else {
-                  _performInitialMapMove(); // Falls schon eine Pos da ist (z.B. nach Hot Restart)
+                  _performInitialMapMove();
                 }
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted && fullSearchCardKey.currentContext != null) {
@@ -1724,9 +1643,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 tileProvider: CancellableNetworkTileProvider(),
                 retinaMode: true,
               ),
-              // unnecessary_null_comparison (Original Ln 1332, Col 24 for routePolyline != null):
-              // Belasse den Check, da routePolyline (Polyline?) nullable ist. Der Lint könnte hier spezifische Pfadanalysen durchführen,
-              // die nicht immer zutreffen oder zu komplex sind, um sie ohne Weiteres zu entfernen.
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
