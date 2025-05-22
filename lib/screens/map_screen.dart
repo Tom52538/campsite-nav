@@ -1631,16 +1631,17 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             children: [
               TileLayer(
                 urlTemplate:
-                    'https://retina-tiles.p.rapidapi.com/local/osm@2x/v1/{z}/{x}/{y}.png',
-                additionalOptions: const {
-                  'X-RapidAPI-Key':
-                      'ab552fb7c4mshe66675e5149dcf8p14a109jsn95b9ded847d3',
-                },
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", // Standard OSM Mapnik
+                subdomains: const [
+                  'a',
+                  'b',
+                  'c'
+                ], // Standard Subdomains für openstreetmap.org
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
-                retinaMode: true,
-                keepBuffer: 1, // ADDED to reduce tile requests
-                panBuffer: 0, // ADDED to reduce tile requests
+                // retinaMode: false, // Nicht benötigt für Standard OSM, oder auf false setzen
+                // keepBuffer: 2, // Standardwerte wiederherstellen oder nach Bedarf anpassen
+                // panBuffer: 1,  // Standardwerte wiederherstellen oder nach Bedarf anpassen
               ),
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
