@@ -52,7 +52,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   LocationInfo? lastProcessedLocation;
 
   double? routeDistance;
-  int? routeTimeMinutes;
+  int? routeTimeMinutes; // Dieses Feld wird im UI Mixin verwendet
 
   List<Maneuver> currentManeuvers = [];
   Maneuver? currentDisplayedManeuver;
@@ -108,7 +108,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     if (kDebugMode) {
       print(
-          "<<< initState: MapScreenState initialisiert. lastProcessedLocation ist anfangs: ${lastProcessedLocation?.name}, isMapReady: $isMapReady >>>");
+          "[MapScreen.initState] MapScreenState initialisiert. lastProcessedLocation: ${lastProcessedLocation?.name}, isMapReady: $isMapReady. _maneuverReachedThreshold: $_maneuverReachedThreshold");
     }
   }
 
@@ -124,7 +124,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             newLocationInfo.id != lastProcessedLocation!.id)) {
       if (kDebugMode) {
         print(
-            "<<< didChangeDependencies: Standortwechsel/Initialisierung für ${newLocationInfo.name}. Vorheriger: ${lastProcessedLocation?.name} >>>");
+            "[MapScreen.didChangeDependencies] Standortwechsel/Initialisierung für ${newLocationInfo.name}. Vorheriger: ${lastProcessedLocation?.name}");
       }
       _handleLocationChangeUIUpdates(newLocationInfo);
       lastProcessedLocation = newLocationInfo;
@@ -134,7 +134,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   @override
   void dispose() {
     if (kDebugMode) {
-      print("<<< dispose: MapScreen wird zerstört. >>>");
+      print("[MapScreen.dispose] MapScreen wird zerstört.");
     }
     mapController.dispose();
     positionStreamSubscription?.cancel();
@@ -231,7 +231,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       if (hasFocus) {
         activeSearchField = ActiveSearchField.end;
         isRouteActiveForCardSwitch = false;
-        _isInRouteOverviewMode = false; // Bei Eingabe immer Detailansicht
         showSearchResults =
             endSearchController.text.isNotEmpty && searchResults.isNotEmpty;
       } else {
@@ -279,6 +278,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       activeSearchField = ActiveSearchField.none;
       routeDistance = null;
       routeTimeMinutes = null;
+      remainingRouteDistance = null;
+      remainingRouteTimeMinutes = null;
       currentManeuvers = [];
       currentDisplayedManeuver = null;
       followGps = false;
@@ -298,7 +299,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
     if (kDebugMode) {
       print(
-          "<<< _handleLocationChangeUIUpdates: Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath} >>>");
+          "[MapScreen._handleLocationChangeUIUpdates] Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath}");
     }
     _initializeGpsOrMock(newLocation);
   }
@@ -324,6 +325,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline = null;
         routeDistance = null;
         routeTimeMinutes = null;
+        remainingRouteDistance = null;
+        remainingRouteTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
         // followGps wurde oben schon gesetzt
@@ -359,7 +362,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       });
       if (kDebugMode) {
         print(
-            "<<< _initializeGpsOrMock: Mock-Modus AKTIV. Setze Position auf initialCenter von ${location.name}: $activeInitialCenterForMock. >>>");
+            "[MapScreen._initializeGpsOrMock] Mock-Modus AKTIV. Setze Position auf initialCenter von ${location.name}: $activeInitialCenterForMock.");
       }
       if (mounted) {
         setState(() {
@@ -381,6 +384,19 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             }
             startSearchController.text = "Mock Position (${location.name})";
           }
+          if (routePolyline != null &&
+              endLatLng != null &&
+              currentGpsPosition != null) {
+            remainingRouteDistance =
+                distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
+            remainingRouteTimeMinutes =
+                RoutingService.estimateWalkingTimeMinutes(
+                    remainingRouteDistance!);
+            if (kDebugMode) {
+              print(
+                  "[MapScreen._initializeGpsOrMock] Mock-Modus: Restdistanz aktualisiert: ${remainingRouteDistance?.toStringAsFixed(1)}m");
+            }
+          }
         });
         if (isMapReady && mounted) {
           if (_isInRouteOverviewMode && routePolyline != null) {
@@ -396,7 +412,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     } else {
       if (kDebugMode) {
         print(
-            "<<< _initializeGpsOrMock: Echtes GPS AKTIV. Starte Initialisierung für ${location.name}... >>>");
+            "[MapScreen._initializeGpsOrMock] Echtes GPS AKTIV. Starte Initialisierung für ${location.name}...");
       }
       _initializeGpsReal(location);
     }
@@ -448,7 +464,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   void selectFeatureAndSetPoint(SearchableFeature feature) {
     if (kDebugMode) {
       print(
-          "<<< selectFeatureAndSetPoint: Feature ${feature.name} für Feld $activeSearchField >>>");
+          "[MapScreen.selectFeatureAndSetPoint] Feature ${feature.name} für Feld $activeSearchField ausgewählt.");
     }
     if (!mounted) {
       return;
@@ -480,7 +496,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     } else {
       if (kDebugMode) {
         print(
-            "<<< selectFeatureAndSetPoint: Kein aktives Suchfeld für Auswahl! >>>");
+            "[MapScreen.selectFeatureAndSetPoint] Kein aktives Suchfeld für Auswahl!");
       }
       return;
     }
@@ -509,8 +525,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       });
     } else {
       activeSearchField = ActiveSearchField.none;
-      // Wenn beide Felder gesetzt sind, wird calculateAndDisplayRoute aufgerufen,
-      // das dann _isRouteActiveForCardSwitch und _isInRouteOverviewMode setzt.
+      if (routePolyline != null) {
+        setStateIfMounted(() {
+          isRouteActiveForCardSwitch = true;
+        });
+      }
     }
 
     if (startLatLng != null && endLatLng != null) {
@@ -526,7 +545,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   Future<void> _initializeGpsReal(LocationInfo location) async {
     if (kDebugMode) {
-      print("<<< _initializeGpsReal für ${location.name} >>>");
+      print(
+          "[MapScreen._initializeGpsReal] GPS Initialisierung für ${location.name}");
     }
     if (!mounted) {
       return;
@@ -593,6 +613,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
 
+      if (kDebugMode && significantPositionChange) {
+        // print("[MapScreen._initializeGpsReal] GPS Update: ${newGpsPos.latitude.toStringAsFixed(6)},${newGpsPos.longitude.toStringAsFixed(6)}. Signifikant: $significantPositionChange");
+      }
+
       if (significantPositionChange) {
         currentGpsPosition = newGpsPos;
         setStateIfMounted(() {
@@ -603,6 +627,18 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             if (startLatLng != null) {
               startMarker = createMarker(startLatLng!, Colors.green,
                   Icons.flag_circle, "Start: Aktueller Standort");
+            }
+          }
+          if (routePolyline != null &&
+              endLatLng != null &&
+              currentGpsPosition != null) {
+            remainingRouteDistance =
+                distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
+            remainingRouteTimeMinutes =
+                RoutingService.estimateWalkingTimeMinutes(
+                    remainingRouteDistance!);
+            if (kDebugMode) {
+              // print("[MapScreen._initializeGpsReal] GPS-Modus: Restdistanz aktualisiert: ${remainingRouteDistance?.toStringAsFixed(1)}m");
             }
           }
         });
@@ -654,7 +690,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         if (distanceToRoute > _offRouteThreshold) {
           if (kDebugMode) {
             print(
-                "[MapScreen] Von Route abgekommen! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
+                "[MapScreen._initializeGpsReal] VON ROUTE ABGEKOMMEN! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
           }
           showSnackbar("Von Route abgekommen. Neue Route wird berechnet...",
               durationSeconds: 3);
@@ -671,6 +707,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
     }, onError: (error) {
+      if (kDebugMode) {
+        print("[MapScreen._initializeGpsReal] Fehler GPS-Empfang: $error");
+      }
       showErrorDialog("Fehler GPS-Empfang: $error");
       if (mounted) {
         setStateIfMounted(() => followGps = false);
@@ -685,8 +724,43 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline!.points.isEmpty) {
       return;
     }
+    if (currentDisplayedManeuver == null) {
+      if (kDebugMode && currentManeuvers.isNotEmpty) {
+        print(
+            "[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null, obwohl currentManeuvers nicht leer ist. Setze auf erstes/zweites Manöver.");
+        Maneuver initialManeuver = currentManeuvers.first;
+        if (currentManeuvers.length > 1 &&
+            initialManeuver.turnType == TurnType.depart) {
+          if (currentManeuvers[1].turnType != TurnType.arrive ||
+              currentManeuvers.length == 2) {
+            initialManeuver = currentManeuvers[1];
+          } else if (currentManeuvers.length > 2 &&
+              currentManeuvers[1].turnType == TurnType.arrive) {
+            initialManeuver = currentManeuvers[1];
+          }
+        }
+        if (currentDisplayedManeuver != initialManeuver) {
+          setStateIfMounted(() {
+            currentDisplayedManeuver = initialManeuver;
+            if (kDebugMode) {
+              print(
+                  "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
+            }
+            if (currentDisplayedManeuver?.instructionText != null) {
+              ttsService.speak(currentDisplayedManeuver!.instructionText!);
+            }
+          });
+        }
+      }
+      if (currentDisplayedManeuver == null) {
+        return;
+      }
+    }
 
     if (currentDisplayedManeuver!.turnType == TurnType.arrive) {
+      if (kDebugMode) {
+        // print("[MapScreen._updateCurrentManeuverOnGpsUpdate] Ziel bereits erreicht (Typ Arrive). Keine weitere Aktualisierung.");
+      }
       return;
     }
 
@@ -712,7 +786,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
         if (currentDisplayedManeuver != initialManeuver) {
           setStateIfMounted(() {
-            currentDisplayedManeuver = initialManeuver;
+            currentDisplayedManeuver = newFallbackManeuver;
+            if (kDebugMode) {
+              print(
+                  "[MapScreen._updateCurrentManeuverOnGpsUpdate] Fallback-Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
+            }
             if (currentDisplayedManeuver?.instructionText != null) {
               ttsService.speak(currentDisplayedManeuver!.instructionText!);
             }
@@ -728,7 +806,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
 
     if (kDebugMode) {
-      // print("[MapScreen] Distanz zu '${currentDisplayedManeuver!.instructionText}': ${distanceToDisplayedManeuverPoint.toStringAsFixed(1)}m. Aktueller Index: $displayedManeuverIndex");
+      String gpsPosStr =
+          "GPS:(${currentPosition.latitude.toStringAsFixed(6)},${currentPosition.longitude.toStringAsFixed(6)})";
+      String maneuverPosStr =
+          "Maneuver(${currentDisplayedManeuver!.turnType}):(${currentDisplayedManeuver!.point.latitude.toStringAsFixed(6)},${currentDisplayedManeuver!.point.longitude.toStringAsFixed(6)})";
+      print(
+          "[MapScreen._updateCurrentManeuverOnGpsUpdate] $gpsPosStr | $maneuverPosStr | Dist: ${distanceToDisplayedManeuverPoint.toStringAsFixed(1)}m (Threshold: $_maneuverReachedThreshold) | AktIdx: $displayedManeuverIndex | Instr: '${currentDisplayedManeuver!.instructionText}'");
     }
 
     if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) {
@@ -736,6 +819,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
       if (nextManeuverIndex < currentManeuvers.length) {
         Maneuver newPotentialManeuver = currentManeuvers[nextManeuverIndex];
+        if (kDebugMode) {
+          print(
+              "[MapScreen._updateCurrentManeuverOnGpsUpdate] Manöver erreicht. Nächstes potenzielles Manöver (Index $nextManeuverIndex): ${newPotentialManeuver.instructionText}");
+        }
 
         if (newPotentialManeuver.turnType == TurnType.arrive) {
           if (routePolyline != null && routePolyline!.points.isNotEmpty) {
@@ -808,7 +895,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     if (kDebugMode) {
       print(
-          "<<< calculateAndDisplayRoute: Start: $startLatLng, Ziel: $endLatLng >>>");
+          "[MapScreen.calculateAndDisplayRoute] Start: $startLatLng, Ziel: $endLatLng. _maneuverReachedThreshold: $_maneuverReachedThreshold. Winkel-Schwellenwerte (RoutingService): slight=${RoutingService.slightTurnThreshold}, normal=${RoutingService.normalTurnThreshold}, sharp=${RoutingService.sharpTurnThreshold}, uTurn=${RoutingService.uTurnAngleThreshold}");
     }
     if (!mounted) {
       return;
@@ -818,6 +905,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       routePolyline = null;
       routeDistance = null;
       routeTimeMinutes = null;
+      remainingRouteDistance = null;
+      remainingRouteTimeMinutes = null;
       currentManeuvers = [];
       currentDisplayedManeuver = null;
       isRouteActiveForCardSwitch = false;
@@ -879,7 +968,15 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           if (currentDisplayedManeuver?.instructionText != null) {
             ttsService.speak(currentDisplayedManeuver!.instructionText!);
           }
-          clearRoute(showConfirmation: false, clearMarkers: false);
+          routeDistance = 0;
+          routeTimeMinutes = 0;
+          remainingRouteDistance = 0;
+          remainingRouteTimeMinutes = 0;
+          routePolyline = Polyline(
+              points: [startLatLng!, endLatLng!],
+              strokeWidth: 0.1,
+              color: Colors.transparent);
+          isRouteActiveForCardSwitch = true;
         });
         if (isMapReady && mounted) {
           mapController.move(startLatLng!, mapController.camera.zoom);
@@ -902,12 +999,17 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             routeTimeMinutes =
                 RoutingService.estimateWalkingTimeMinutes(routeDistance!);
 
+            remainingRouteDistance = routeDistance;
+            remainingRouteTimeMinutes = routeTimeMinutes;
+
             currentManeuvers =
                 RoutingService.analyzeRouteForTurns(routePointsResult);
             if (kDebugMode) {
-              print("Berechnete Manöver für die aktuelle Route:");
+              print(
+                  "[MapScreen.calculateAndDisplayRoute] Berechnete Manöver (${currentManeuvers.length}):");
               for (var maneuver in currentManeuvers) {
-                print(maneuver.toString());
+                print(
+                    "  - ${maneuver.instructionText} @ ${maneuver.point.latitude.toStringAsFixed(6)},${maneuver.point.longitude.toStringAsFixed(6)} (${maneuver.turnType})");
               }
             }
 
@@ -918,14 +1020,22 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 if (currentManeuvers[1].turnType != TurnType.arrive ||
                     currentManeuvers.length == 2) {
                   currentDisplayedManeuver = currentManeuvers[1];
-                } else if (currentManeuvers.length > 2) {
+                } else if (currentManeuvers.length > 2 &&
+                    currentManeuvers[1].turnType == TurnType.arrive) {
                   currentDisplayedManeuver = currentManeuvers[1];
+                }
+                if (currentManeuvers.first.instructionText != null) {
+                  ttsService.speak(currentManeuvers.first.instructionText!);
                 }
               } else if (currentManeuvers.first.turnType != TurnType.depart) {
                 currentDisplayedManeuver = currentManeuvers.first;
+                if (currentDisplayedManeuver?.instructionText != null) {
+                  ttsService.speak(currentDisplayedManeuver!.instructionText!);
+                }
               }
-              if (currentDisplayedManeuver?.instructionText != null) {
-                ttsService.speak(currentDisplayedManeuver!.instructionText!);
+              if (kDebugMode) {
+                print(
+                    "[MapScreen.calculateAndDisplayRoute] Initial angezeigtes Manöver: ${currentDisplayedManeuver?.instructionText}");
               }
             } else {
               currentDisplayedManeuver = null;
@@ -939,6 +1049,17 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   true; // Follow GPS aktivieren, wenn echte Position genutzt wird
             } else {
               followGps = false;
+              if (currentGpsPosition != null && endLatLng != null) {
+                remainingRouteDistance =
+                    distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
+                remainingRouteTimeMinutes =
+                    RoutingService.estimateWalkingTimeMinutes(
+                        remainingRouteDistance!);
+                if (kDebugMode) {
+                  print(
+                      "[MapScreen.calculateAndDisplayRoute] Mock-Modus nach Routenberechnung: Restdistanz aktualisiert: ${remainingRouteDistance?.toStringAsFixed(1)}m");
+                }
+              }
             }
 
             showSnackbar("Route berechnet.", durationSeconds: 3);
@@ -950,8 +1071,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     startLatLng == currentGpsPosition) {
                   pointsForBounds.add(currentGpsPosition!);
                 }
-                if (startFocusNode.hasFocus) startFocusNode.unfocus();
-                if (endFocusNode.hasFocus) endFocusNode.unfocus();
+                if (startFocusNode.hasFocus) {
+                  startFocusNode.unfocus();
+                }
+                if (endFocusNode.hasFocus) {
+                  endFocusNode.unfocus();
+                }
 
                 // Zuerst Gesamtübersicht zeigen
                 mapController.fitCamera(
@@ -995,7 +1120,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               } catch (e) {
                 if (kDebugMode) {
                   print(
-                      "Fehler beim Anpassen der Kartenansicht an die Route: $e");
+                      "[MapScreen.calculateAndDisplayRoute] Fehler beim Anpassen der Kartenansicht an die Route: $e");
                   if (endLatLng != null) {
                     mapController.move(endLatLng!, mapController.camera.zoom);
                   }
@@ -1014,7 +1139,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     } catch (e, stacktrace) {
       if (kDebugMode) {
-        print(">>> Fehler Routenberechnung: $e $stacktrace");
+        print(
+            "[MapScreen.calculateAndDisplayRoute] FEHLER bei Routenberechnung: $e");
+        print("[MapScreen.calculateAndDisplayRoute] Stacktrace: $stacktrace");
       }
       showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() {
@@ -1033,7 +1160,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
     if (kDebugMode) {
       print(
-          "<<< _handleMapTap: $latLng, aktives Feld vor Tap: $activeSearchField >>>");
+          "[MapScreen._handleMapTap] Tap bei: ${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}. Aktives Feld vor Tap: $activeSearchField");
     }
     if (!mounted) {
       return;
@@ -1061,7 +1188,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         !endFocusNode.hasFocus) {
       setStateIfMounted(() {
         isRouteActiveForCardSwitch = true;
-        // _isInRouteOverviewMode bleibt erstmal false, bis explizit umgeschaltet
       });
     }
 
@@ -1087,16 +1213,15 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         fieldToSetByTapDecision = ActiveSearchField.end;
       }
     }
+    if (kDebugMode) {
+      print(
+          "[MapScreen._handleMapTap] Feld, das durch Tap gesetzt wird: $fieldToSetByTapDecision");
+    }
     setStateIfMounted(() {
-      isRouteActiveForCardSwitch = false; // Bei Kartentipp immer große Karte
-      _isInRouteOverviewMode = false;
+      isRouteActiveForCardSwitch = false;
     });
 
     _setPointFromMapTap(latLng, fieldToSetByTapDecision);
-
-    setStateIfMounted(() {
-      activeSearchField = ActiveSearchField.none;
-    });
   }
 
   void _setPointFromMapTap(LatLng latLng, ActiveSearchField fieldToSet) {
@@ -1108,7 +1233,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             ? startSearchController
             : endSearchController;
 
+    if (kDebugMode) {
+      print(
+          "[MapScreen._setPointFromMapTap] Setze Punkt für $fieldToSet: ${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}");
+    }
+
     void performUpdateAndRoute() {
+      if (!mounted) return;
       setStateIfMounted(() {
         followGps = false;
         _isInRouteOverviewMode = false;
@@ -1126,6 +1257,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline = null;
         routeDistance = null;
         routeTimeMinutes = null;
+        remainingRouteDistance = null;
+        remainingRouteTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
         isRouteActiveForCardSwitch = false;
@@ -1146,7 +1279,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (isOverwriting) {
       showConfirmationDialog(
           "Neuen ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt setzen?",
-          "Aktuellen ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt verwerfen und neuen Punkt auf Karte setzen?",
+          "Aktuellen ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt '${fieldToSet == ActiveSearchField.start ? startSearchController.text : endSearchController.text}' verwerfen und neuen Punkt auf Karte setzen?",
           performUpdateAndRoute);
     } else {
       performUpdateAndRoute();
@@ -1154,6 +1287,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
+    if (kDebugMode) {
+      print(
+          "[MapScreen.clearRoute] Aufgerufen mit showConfirmation: $showConfirmation, clearMarkers: $clearMarkers");
+    }
     void doClearAction() {
       if (!mounted) {
         return;
@@ -1162,6 +1299,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline = null;
         routeDistance = null;
         routeTimeMinutes = null;
+        remainingRouteDistance = null;
+        remainingRouteTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
         followGps = false;
@@ -1176,6 +1315,14 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           endSearchController.clear();
           activeSearchField = ActiveSearchField.none;
           showSearchResults = false;
+          if (kDebugMode) {
+            print("[MapScreen.clearRoute] Alle Marker und Suchfelder geleert.");
+          }
+        } else {
+          if (kDebugMode) {
+            print(
+                "[MapScreen.clearRoute] Nur Route gelöscht, Marker und Suchfelder beibehalten.");
+          }
         }
       });
       showSnackbar(
@@ -1201,6 +1348,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           doClearAction);
     } else if (somethingToDelete) {
       doClearAction();
+    } else {
+      if (kDebugMode) {
+        print("[MapScreen.clearRoute] Nichts zu löschen.");
+      }
     }
   }
 
@@ -1235,6 +1386,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               false; // Bei Aktivierung von Follow GPS -> Navigationsansicht
         }
       });
+      if (kDebugMode) {
+        print(
+            "[MapScreen._centerOnGps] Follow-GPS Modus umgeschaltet auf: $followGps");
+      }
 
       if (followGps && !_isInRouteOverviewMode) {
         mapController.move(currentGpsPosition!, _followGpsZoomLevel);
@@ -1254,6 +1409,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       showSnackbar(
           "Aktuelle GPS-Position nicht verfügbar oder Karte nicht bereit.",
           durationSeconds: 3);
+      if (kDebugMode) {
+        print(
+            "[MapScreen._centerOnGps] Follow-GPS nicht möglich. currentGpsPosition: $currentGpsPosition, isMapReady: $isMapReady");
+      }
     }
   }
 
@@ -1321,6 +1480,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   void swapStartAndEnd() {
     if (!mounted) return;
+    if (kDebugMode) {
+      print("[MapScreen.swapStartAndEnd] Tausche Start und Ziel.");
+    }
 
     if (startLatLng == null && endLatLng == null) {
       showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
@@ -1361,6 +1523,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
       routeDistance = null;
       routeTimeMinutes = null;
+      remainingRouteDistance = null;
+      remainingRouteTimeMinutes = null;
       currentManeuvers = [];
       currentDisplayedManeuver = null;
       followGps = false;
@@ -1394,12 +1558,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     double cosPAB = (pow(distAP, 2) + pow(distAB, 2) - pow(distBP, 2)) /
         (2 * distAP * distAB);
+    double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) /
+        (2 * distBP * distAB);
+
     if (cosPAB < 0) {
       return distAP;
     }
-
-    double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) /
-        (2 * distBP * distAB);
     if (cosPBA < 0) {
       return distBP;
     }
@@ -1408,7 +1572,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final double areaArgCandidate =
         s * (s - distAP) * (s - distBP) * (s - distAB);
     final double areaArg = areaArgCandidate < 0 ? 0 : areaArgCandidate;
-
     final double area = sqrt(areaArg);
     return (2 * area) / distAB;
   }
@@ -1468,6 +1631,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         kInstructionCardSpacing;
 
     double searchResultsTopPosition = instructionCardTop;
+    // KORREKTUR HIER: _currentManeuvers wurde zu currentManeuvers
     bool instructionCardVisible = currentDisplayedManeuver != null &&
         currentDisplayedManeuver!.turnType != TurnType.depart &&
         !(currentManeuvers.length <= 2 &&
@@ -1574,7 +1738,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                       !endFocusNode.hasFocus) {
                     setStateIfMounted(() {
                       isRouteActiveForCardSwitch = true;
-                      // _isInRouteOverviewMode bleibt wie es ist
                     });
                   }
                 }
@@ -1584,7 +1747,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   return;
                 }
                 if (kDebugMode) {
-                  print("<<< Map bereit, isMapReady=true >>>");
+                  print(
+                      "[MapScreen.onMapReady] Karte ist bereit. isMapReady=true");
                 }
                 setState(() => isMapReady = true);
                 final locationProvider =
@@ -1612,10 +1776,17 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             children: [
               TileLayer(
                 urlTemplate:
-                    "https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png",
-                subdomains: const ['a', 'b', 'c'],
+                    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", // Standard OSM Mapnik
+                subdomains: const [
+                  'a',
+                  'b',
+                  'c'
+                ], // Standard Subdomains für openstreetmap.org
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
+                // retinaMode: false, // Nicht benötigt für Standard OSM, oder auf false setzen
+                // keepBuffer: 2, // Standardwerte wiederherstellen oder nach Bedarf anpassen
+                // panBuffer: 1,  // Standardwerte wiederherstellen oder nach Bedarf anpassen
               ),
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
@@ -1763,13 +1934,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               onPressed: isUiReady ? _centerOnGps : null,
               tooltip: followGps && !_isInRouteOverviewMode // Tooltip anpassen
                   ? 'Follow-GPS Modus aktiv'
-                  : 'Follow-GPS Modus aktivieren/Zur Navigation',
-              backgroundColor: followGps && !_isInRouteOverviewMode
-                  ? Colors.greenAccent[700]
-                  : Colors.deepOrangeAccent,
-              child: Icon(followGps && !_isInRouteOverviewMode
-                  ? Icons.navigation
-                  : Icons.my_location),
+                  : 'Follow-GPS Modus aktivieren',
+              backgroundColor:
+                  followGps ? Colors.greenAccent[700] : Colors.deepOrangeAccent,
+              child: Icon(followGps ? Icons.navigation : Icons.my_location),
             ),
           ),
         ],
