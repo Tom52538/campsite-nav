@@ -40,15 +40,15 @@ mixin MapScreenUIMixin on State<MapScreen> {
       }
     });
 
-    // Die dead_null_aware_expression Lints für diese Zeilen (ursprünglich Zeile 271, 340 laut Problem-Log)
-    // werden vorerst nicht geändert, da die Variablen nullable sind und der `??` Operator
-    // als Absicherung dient. Eine Entfernung könnte zu Laufzeitfehlern führen.
     final double? displayDistance =
         state.remainingRouteDistance ?? state.routeDistance;
     final int? displayTime =
         state.remainingRouteTimeMinutes ?? state.routeTimeMinutes;
     final String timeLabelPrefix =
         state.remainingRouteDistance != null ? "Rest: ~ " : "~ ";
+    
+    // KORREKTUR: Logik zur Vermeidung der Lint-Warnung `dead_null_aware_expression`
+    final String displayTimeString = displayTime?.toString() ?? '?';
 
     return Container(
       key: key,
@@ -144,7 +144,6 @@ mixin MapScreenUIMixin on State<MapScreen> {
                                 }
                                 state.startSearchController.text = locationName;
                                 if (state.startFocusNode.hasFocus) {
-                                  // FIXED: curly_braces_in_flow_control_structures (angenommene Zeile 145)
                                   state.startFocusNode.unfocus();
                                 }
                                 state.showSearchResults = false;
@@ -271,8 +270,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text:
-                                    "$timeLabelPrefix${displayTime ?? '?'} min",
+                                text: "$timeLabelPrefix$displayTimeString min", // KORREKTUR: Verwendung der neuen Variable
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.primary,
                                   fontWeight: FontWeight.bold,
@@ -302,8 +300,6 @@ mixin MapScreenUIMixin on State<MapScreen> {
   }
 
   Widget buildCompactRouteInfoCard({required Key key}) {
-    // Die dead_null_aware_expression Lints für diese Zeilen
-    // werden vorerst nicht geändert (siehe Begründung oben).
     final double? displayDistance =
         state.remainingRouteDistance ?? state.routeDistance;
     final int? displayTime =
@@ -312,6 +308,9 @@ mixin MapScreenUIMixin on State<MapScreen> {
         state.remainingRouteDistance != null && state.routePolyline != null
             ? "Rest: ~ "
             : "~ ";
+            
+    // KORREKTUR: Logik zur Vermeidung der Lint-Warnung `dead_null_aware_expression`
+    final String displayTimeString = displayTime?.toString() ?? '?';
 
     return Container(
       key: key,
@@ -342,7 +341,7 @@ mixin MapScreenUIMixin on State<MapScreen> {
                     ),
                     if (displayDistance != null && displayTime != null)
                       Text(
-                        "$timeLabelPrefix${displayTime ?? '?'} min / ${formatDistance(displayDistance)}",
+                        "$timeLabelPrefix$displayTimeString min / ${formatDistance(displayDistance)}", // KORREKTUR: Verwendung der neuen Variable
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
