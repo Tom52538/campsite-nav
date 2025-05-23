@@ -17,10 +17,10 @@ dependencies:
   flutter_map: ^6.1.0 # Beibehaltung für Stabilität, bis ggf. gezieltes Update erfolgt
   flutter_map_cancellable_tile_provider: ^2.0.0 # Passend zu flutter_map ^6.1.0
   
-  # --- NEUE PAKETE für Vektor-Kacheln ---
-  vector_map_tiles: ^4.2.3
+  # --- KORRIGIERTE PAKETE für Vektor-Kacheln ---
+  vector_map_tiles: ^7.3.1
   http: ^1.2.1
-  # --- ENDE NEUE PAKETE ---
+  # --- ENDE KORRIGIERTE PAKETE ---
 
   latlong2: ^0.9.1
   collection: ^1.18.0
