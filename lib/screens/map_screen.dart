@@ -52,7 +52,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   LocationInfo? lastProcessedLocation;
 
   double? routeDistance;
-  int? routeTimeMinutes; // Dieses Feld wird im UI Mixin verwendet
+  int? routeTimeMinutes;
+  // KORREKTUR: Fehlende Felder hinzugefügt
+  double? remainingRouteDistance;
+  int? remainingRouteTimeMinutes;
 
   List<Maneuver> currentManeuvers = [];
   Maneuver? currentDisplayedManeuver;
@@ -773,18 +776,18 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             "[MapScreen] Fehler: currentDisplayedManeuver nicht in currentManeuvers gefunden.");
       }
       if (currentManeuvers.isNotEmpty) {
-        Maneuver initialManeuver = currentManeuvers.first;
+        Maneuver newFallbackManeuver = currentManeuvers.first;
         if (currentManeuvers.length > 1 &&
-            initialManeuver.turnType == TurnType.depart) {
+            newFallbackManeuver.turnType == TurnType.depart) {
           if (currentManeuvers[1].turnType != TurnType.arrive ||
               currentManeuvers.length == 2) {
-            initialManeuver = currentManeuvers[1];
+            newFallbackManeuver = currentManeuvers[1];
           } else if (currentManeuvers.length > 2 &&
               currentManeuvers[1].turnType == TurnType.arrive) {
-            initialManeuver = currentManeuvers[1];
+            newFallbackManeuver = currentManeuvers[1];
           }
         }
-        if (currentDisplayedManeuver != initialManeuver) {
+        if (currentDisplayedManeuver != newFallbackManeuver) {
           setStateIfMounted(() {
             currentDisplayedManeuver = newFallbackManeuver;
             if (kDebugMode) {
