@@ -720,42 +720,39 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    if (currentManeuvers.isEmpty || routePolyline == null || routePolyline!.points.isEmpty) { // KORREKTUR: currentDisplayedManeuver kann hier null sein
+    // Guard clause for empty maneuvers or missing route
+    if (currentManeuvers.isEmpty || routePolyline == null || routePolyline!.points.isEmpty) {
       return;
     }
 
-    // Initialisiere currentDisplayedManeuver, falls es null ist und Manöver vorhanden sind
-    if (currentDisplayedManeuver == null && currentManeuvers.isNotEmpty) {
+    // Initialize currentDisplayedManeuver if it's null and maneuvers exist
+    if (currentDisplayedManeuver == null) {
       if (kDebugMode) {
-        print(
-            "[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null. Setze auf erstes/zweites Manöver.");
+        print("[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null. Setze auf erstes/zweites Manöver.");
       }
       Maneuver initialManeuver = currentManeuvers.first;
-      if (currentManeuvers.length > 1 &&
-          initialManeuver.turnType == TurnType.depart) {
-        if (currentManeuvers[1].turnType != TurnType.arrive ||
-            currentManeuvers.length == 2) {
+      if (currentManeuvers.length > 1 && initialManeuver.turnType == TurnType.depart) {
+        if (currentManeuvers[1].turnType != TurnType.arrive || currentManeuvers.length == 2) {
           initialManeuver = currentManeuvers[1];
-        } else if (currentManeuvers.length > 2 &&
-            currentManeuvers[1].turnType == TurnType.arrive) {
-          initialManeuver = currentManeuvers[1]; // Bleibe bei 'arrive', wenn es das einzige nach depart ist
+        } else if (currentManeuvers.length > 2 && currentManeuvers[1].turnType == TurnType.arrive) {
+          initialManeuver = currentManeuvers[1]; 
         }
       }
-      setStateIfMounted(() { // Stelle sicher, dass setStateIfMounted hier aufgerufen wird
+      // KORREKTUR: unnecessary_null_comparison - Fehler entfernt durch Logikänderung
+      // Die Bedingung `if (currentDisplayedManeuver != initialManeuver)` wurde entfernt,
+      // da currentDisplayedManeuver hier immer null ist. Es wird direkt gesetzt.
+      setStateIfMounted(() {
         currentDisplayedManeuver = initialManeuver;
         if (kDebugMode) {
-          print(
-              "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
+          print("[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
         }
         if (currentDisplayedManeuver?.instructionText != null) {
           ttsService.speak(currentDisplayedManeuver!.instructionText!);
         }
       });
-    }
-    
-    // Nach der Initialisierung oben, kann currentDisplayedManeuver immer noch null sein, wenn currentManeuvers leer war.
-    if (currentDisplayedManeuver == null) {
-        return;
+       // currentDisplayedManeuver wurde gerade gesetzt, es kann nicht null sein, wenn currentManeuvers nicht leer war
+       // Wenn es immer noch null ist, dann war currentManeuvers leer, was der erste Guard abfängt.
+      if (currentDisplayedManeuver == null) return;
     }
 
 
@@ -770,10 +767,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         currentManeuvers.indexOf(currentDisplayedManeuver!);
 
     if (displayedManeuverIndex == -1) {
-      // KORREKTUR: avoid_print
+      // KORREKTUR: avoid_print (Zeile 736)
       if (kDebugMode) {
-        print(
-            "[MapScreen] Fehler: currentDisplayedManeuver nicht in currentManeuvers gefunden.");
+        print("[MapScreen] Fehler: currentDisplayedManeuver nicht in currentManeuvers gefunden.");
       }
       if (currentManeuvers.isNotEmpty) {
         Maneuver newFallbackManeuver = currentManeuvers.first;
@@ -787,9 +783,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             newFallbackManeuver = currentManeuvers[1];
           }
         }
-         // KORREKTUR: unnecessary_null_comparison - `currentDisplayedManeuver` kann hier nicht null sein,
-         // da es oben bereits initialisiert wurde oder die Funktion verlassen wurde.
-         // Die Prüfung `if (currentDisplayedManeuver != newFallbackManeuver)` ist hier korrekt.
         if (currentDisplayedManeuver != newFallbackManeuver) {
           setStateIfMounted(() {
             currentDisplayedManeuver = newFallbackManeuver;
@@ -1637,7 +1630,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         kInstructionCardSpacing;
 
     double searchResultsTopPosition = instructionCardTop;
-    // KORREKTUR HIER: _currentManeuvers wurde zu currentManeuvers
     bool instructionCardVisible = currentDisplayedManeuver != null &&
         currentDisplayedManeuver!.turnType != TurnType.depart &&
         !(currentManeuvers.length <= 2 &&
@@ -1790,9 +1782,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 ], // Standard Subdomains für openstreetmap.org
                 userAgentPackageName: 'dev.tom52538.campsitenav.app',
                 tileProvider: CancellableNetworkTileProvider(),
-                // retinaMode: false, // Nicht benötigt für Standard OSM, oder auf false setzen
-                // keepBuffer: 2, // Standardwerte wiederherstellen oder nach Bedarf anpassen
-                // panBuffer: 1,  // Standardwerte wiederherstellen oder nach Bedarf anpassen
               ),
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
@@ -1904,7 +1893,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // NEUER Button zum Umschalten der Routenansicht
           if (isUiReady && routePolyline != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
@@ -1938,7 +1926,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             child: FloatingActionButton.small(
               heroTag: "centerBtn",
               onPressed: isUiReady ? _centerOnGps : null,
-              tooltip: followGps && !_isInRouteOverviewMode // Tooltip anpassen
+              tooltip: followGps && !_isInRouteOverviewMode
                   ? 'Follow-GPS Modus aktiv'
                   : 'Follow-GPS Modus aktivieren',
               backgroundColor:
