@@ -315,7 +315,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setState(() {
       useMockLocation = !useMockLocation;
       followGps = !useMockLocation && routePolyline != null;
-      // KORREKTUR: curly_braces_in_flow_control_structures
       if (followGps) {
         _isInRouteOverviewMode = false;
       } // Bei Aktivierung von echtem GPS Follow -> Navigationsansicht
@@ -721,46 +720,44 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    if (currentManeuvers.isEmpty ||
-        currentDisplayedManeuver == null ||
-        routePolyline == null ||
-        routePolyline!.points.isEmpty) {
+    if (currentManeuvers.isEmpty || routePolyline == null || routePolyline!.points.isEmpty) { // KORREKTUR: currentDisplayedManeuver kann hier null sein
       return;
     }
-    if (currentDisplayedManeuver == null) {
-      // KORREKTUR: unnecessary_null_comparison
-      // Die ursprüngliche Prüfung `if (currentDisplayedManeuver != initialManeuver)`
-      // war fehlerhaft, da `currentDisplayedManeuver` hier immer `null` ist.
-      // Die Aktion soll einfach ausgeführt werden.
-      if (kDebugMode && currentManeuvers.isNotEmpty) {
+
+    // Initialisiere currentDisplayedManeuver, falls es null ist und Manöver vorhanden sind
+    if (currentDisplayedManeuver == null && currentManeuvers.isNotEmpty) {
+      if (kDebugMode) {
         print(
-            "[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null, obwohl currentManeuvers nicht leer ist. Setze auf erstes/zweites Manöver.");
-        Maneuver initialManeuver = currentManeuvers.first;
-        if (currentManeuvers.length > 1 &&
-            initialManeuver.turnType == TurnType.depart) {
-          if (currentManeuvers[1].turnType != TurnType.arrive ||
-              currentManeuvers.length == 2) {
-            initialManeuver = currentManeuvers[1];
-          } else if (currentManeuvers.length > 2 &&
-              currentManeuvers[1].turnType == TurnType.arrive) {
-            initialManeuver = currentManeuvers[1];
-          }
+            "[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null. Setze auf erstes/zweites Manöver.");
+      }
+      Maneuver initialManeuver = currentManeuvers.first;
+      if (currentManeuvers.length > 1 &&
+          initialManeuver.turnType == TurnType.depart) {
+        if (currentManeuvers[1].turnType != TurnType.arrive ||
+            currentManeuvers.length == 2) {
+          initialManeuver = currentManeuvers[1];
+        } else if (currentManeuvers.length > 2 &&
+            currentManeuvers[1].turnType == TurnType.arrive) {
+          initialManeuver = currentManeuvers[1]; // Bleibe bei 'arrive', wenn es das einzige nach depart ist
         }
-        setStateIfMounted(() {
-          currentDisplayedManeuver = initialManeuver;
-          if (kDebugMode) {
-            print(
-                "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
-          }
-          if (currentDisplayedManeuver?.instructionText != null) {
-            ttsService.speak(currentDisplayedManeuver!.instructionText!);
-          }
-        });
       }
-      if (currentDisplayedManeuver == null) {
-        return;
-      }
+      setStateIfMounted(() { // Stelle sicher, dass setStateIfMounted hier aufgerufen wird
+        currentDisplayedManeuver = initialManeuver;
+        if (kDebugMode) {
+          print(
+              "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
+        }
+        if (currentDisplayedManeuver?.instructionText != null) {
+          ttsService.speak(currentDisplayedManeuver!.instructionText!);
+        }
+      });
     }
+    
+    // Nach der Initialisierung oben, kann currentDisplayedManeuver immer noch null sein, wenn currentManeuvers leer war.
+    if (currentDisplayedManeuver == null) {
+        return;
+    }
+
 
     if (currentDisplayedManeuver!.turnType == TurnType.arrive) {
       if (kDebugMode) {
@@ -790,6 +787,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             newFallbackManeuver = currentManeuvers[1];
           }
         }
+         // KORREKTUR: unnecessary_null_comparison - `currentDisplayedManeuver` kann hier nicht null sein,
+         // da es oben bereits initialisiert wurde oder die Funktion verlassen wurde.
+         // Die Prüfung `if (currentDisplayedManeuver != newFallbackManeuver)` ist hier korrekt.
         if (currentDisplayedManeuver != newFallbackManeuver) {
           setStateIfMounted(() {
             currentDisplayedManeuver = newFallbackManeuver;
