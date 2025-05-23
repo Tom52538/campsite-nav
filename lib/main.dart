@@ -2,9 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
-import 'package:camping_osm_navi/screens/map_screen.dart'; // NEUER IMPORT
+import 'package:camping_osm_navi/screens/map_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // HINZUGEFÜGT
 
-void main() {
+Future<void> main() async {
+  // Geändert zu async
+  await dotenv.load(fileName: ".env"); // HINZUGEFÜGT: Lädt die .env-Datei
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ChangeNotifierProvider(
