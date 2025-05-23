@@ -53,7 +53,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   double? routeDistance;
   int? routeTimeMinutes;
-  // KORREKTUR: Fehlende Felder hinzugefügt
   double? remainingRouteDistance;
   int? remainingRouteTimeMinutes;
 
@@ -316,9 +315,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setState(() {
       useMockLocation = !useMockLocation;
       followGps = !useMockLocation && routePolyline != null;
-      if (followGps)
-        _isInRouteOverviewMode =
-            false; // Bei Aktivierung von echtem GPS Follow -> Navigationsansicht
+      // KORREKTUR: curly_braces_in_flow_control_structures
+      if (followGps) {
+        _isInRouteOverviewMode = false;
+      } // Bei Aktivierung von echtem GPS Follow -> Navigationsansicht
 
       if (!useMockLocation &&
           startSearchController.text.toLowerCase().contains("mock position")) {
@@ -728,6 +728,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
     if (currentDisplayedManeuver == null) {
+      // KORREKTUR: unnecessary_null_comparison
+      // Die ursprüngliche Prüfung `if (currentDisplayedManeuver != initialManeuver)`
+      // war fehlerhaft, da `currentDisplayedManeuver` hier immer `null` ist.
+      // Die Aktion soll einfach ausgeführt werden.
       if (kDebugMode && currentManeuvers.isNotEmpty) {
         print(
             "[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null, obwohl currentManeuvers nicht leer ist. Setze auf erstes/zweites Manöver.");
@@ -742,18 +746,16 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             initialManeuver = currentManeuvers[1];
           }
         }
-        if (currentDisplayedManeuver != initialManeuver) {
-          setStateIfMounted(() {
-            currentDisplayedManeuver = initialManeuver;
-            if (kDebugMode) {
-              print(
-                  "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
-            }
-            if (currentDisplayedManeuver?.instructionText != null) {
-              ttsService.speak(currentDisplayedManeuver!.instructionText!);
-            }
-          });
-        }
+        setStateIfMounted(() {
+          currentDisplayedManeuver = initialManeuver;
+          if (kDebugMode) {
+            print(
+                "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
+          }
+          if (currentDisplayedManeuver?.instructionText != null) {
+            ttsService.speak(currentDisplayedManeuver!.instructionText!);
+          }
+        });
       }
       if (currentDisplayedManeuver == null) {
         return;
@@ -771,6 +773,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         currentManeuvers.indexOf(currentDisplayedManeuver!);
 
     if (displayedManeuverIndex == -1) {
+      // KORREKTUR: avoid_print
       if (kDebugMode) {
         print(
             "[MapScreen] Fehler: currentDisplayedManeuver nicht in currentManeuvers gefunden.");
