@@ -1,134 +1,109 @@
-[{
-	"resource": "/C:/App Projekte/campsite-nav/lib/screens/map_screen.dart",
-	"owner": "_generated_diagnostic_collection_name_#1",
-	"code": {
-		"value": "undefined_method",
-		"target": {
-			"$mid": 1,
-			"path": "/diagnostics/undefined_method",
-			"scheme": "https",
-			"authority": "dart.dev"
-		}
-	},
-	"severity": 8,
-	"message": "The method 'MaptilerVectorTileProvider' isn't defined for the type 'MapScreenState'.\nTry correcting the name to the name of an existing method, or defining a method named 'MaptilerVectorTileProvider'.",
-	"source": "dart",
-	"startLineNumber": 322,
-	"startColumn": 25,
-	"endLineNumber": 322,
-	"endColumn": 51
-},{
-	"resource": "/C:/App Projekte/campsite-nav/lib/screens/map_screen.dart",
-	"owner": "_generated_diagnostic_collection_name_#1",
-	"code": {
-		"value": "unnecessary_null_comparison",
-		"target": {
-			"$mid": 1,
-			"path": "/diagnostics/unnecessary_null_comparison",
-			"scheme": "https",
-			"authority": "dart.dev"
-		}
-	},
-	"severity": 4,
-	"message": "The operand can't be 'null', so the condition is always 'false'.\nTry removing the condition, an enclosing condition, or the whole conditional statement.",
-	"source": "dart",
-	"startLineNumber": 1126,
-	"startColumn": 27,
-	"endLineNumber": 1126,
-	"endColumn": 34
-},{
-	"resource": "/C:/App Projekte/campsite-nav/lib/screens/map_screen.dart",
-	"owner": "_generated_diagnostic_collection_name_#1",
-	"code": {
-		"value": "unnecessary_null_comparison",
-		"target": {
-			"$mid": 1,
-			"path": "/diagnostics/unnecessary_null_comparison",
-			"scheme": "https",
-			"authority": "dart.dev"
-		}
-	},
-	"severity": 4,
-	"message": "The operand can't be 'null', so the condition is always 'true'.\nRemove the condition.",
-	"source": "dart",
-	"startLineNumber": 1512,
-	"startColumn": 24,
-	"endLineNumber": 1512,
-	"endColumn": 31
-},{
-	"resource": "/C:/App Projekte/campsite-nav/lib/screens/map_screen.dart",
-	"owner": "_generated_diagnostic_collection_name_#1",
-	"code": {
-		"value": "curly_braces_in_flow_control_structures",
-		"target": {
-			"$mid": 1,
-			"path": "/diagnostics/curly_braces_in_flow_control_structures",
-			"scheme": "https",
-			"authority": "dart.dev"
-		}
-	},
-	"severity": 2,
-	"message": "Statements in an if should be enclosed in a block.\nTry wrapping the statement in a block.",
-	"source": "dart",
-	"startLineNumber": 1299,
-	"startColumn": 19,
-	"endLineNumber": 1300,
-	"endColumn": 119
-},{
-	"resource": "/C:/App Projekte/campsite-nav/lib/screens/map_screen.dart",
-	"owner": "_generated_diagnostic_collection_name_#1",
-	"code": {
-		"value": "curly_braces_in_flow_control_structures",
-		"target": {
-			"$mid": 1,
-			"path": "/diagnostics/curly_braces_in_flow_control_structures",
-			"scheme": "https",
-			"authority": "dart.dev"
-		}
-	},
-	"severity": 2,
-	"message": "Statements in an if should be enclosed in a block.\nTry wrapping the statement in a block.",
-	"source": "dart",
-	"startLineNumber": 1319,
-	"startColumn": 9,
-	"endLineNumber": 1320,
-	"endColumn": 85
-},{
-	"resource": "/C:/App Projekte/campsite-nav/lib/screens/map_screen.dart",
-	"owner": "_generated_diagnostic_collection_name_#1",
-	"code": {
-		"value": "curly_braces_in_flow_control_structures",
-		"target": {
-			"$mid": 1,
-			"path": "/diagnostics/curly_braces_in_flow_control_structures",
-			"scheme": "https",
-			"authority": "dart.dev"
-		}
-	},
-	"severity": 2,
-	"message": "Statements in an if should be enclosed in a block.\nTry wrapping the statement in a block.",
-	"source": "dart",
-	"startLineNumber": 1323,
-	"startColumn": 9,
-	"endLineNumber": 1323,
-	"endColumn": 79
-},{
-	"resource": "/C:/App Projekte/campsite-nav/lib/screens/map_screen.dart",
-	"owner": "_generated_diagnostic_collection_name_#1",
-	"code": {
-		"value": "curly_braces_in_flow_control_structures",
-		"target": {
-			"$mid": 1,
-			"path": "/diagnostics/curly_braces_in_flow_control_structures",
-			"scheme": "https",
-			"authority": "dart.dev"
-		}
-	},
-	"severity": 2,
-	"message": "Statements in an if should be enclosed in a block.\nTry wrapping the statement in a block.",
-	"source": "dart",
-	"startLineNumber": 1699,
-	"startColumn": 7,
-	"endLineNumber": 1699,
-	"endColumn": 60
-}]
+// lib/providers/location_provider.dart
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'dart:async';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
+import 'package:logging/logging.dart';
+
+import 'package:camping_osm_navi/models/location_info.dart';
+import 'package:camping_osm_navi/models/routing_graph.dart';
+import 'package:camping_osm_navi/models/searchable_feature.dart';
+import 'package:camping_osm_navi/services/geojson_parser_service.dart';
+import 'package:camping_osm_navi/services/style_caching_service.dart';
+
+class LocationProvider with ChangeNotifier {
+  final List<LocationInfo> _availableLocations = appLocations;
+  LocationInfo? _selectedLocation;
+
+  RoutingGraph? _currentRoutingGraph;
+  List<SearchableFeature> _currentSearchableFeatures = [];
+  bool _isLoadingLocationData = false;
+
+  final StyleCachingService _styleCachingService = StyleCachingService();
+  vtr.Theme? _mapTheme;
+  final Logger _logger = Logger('LocationProvider');
+
+  LocationProvider() {
+    if (kDebugMode) {
+      Logger.root.level = Level.INFO; 
+      Logger.root.onRecord.listen((record) {
+        // ignore: avoid_print
+        print('${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+      });
+    }
+
+    if (_availableLocations.isNotEmpty) {
+      _selectedLocation = _availableLocations.first;
+      loadDataForSelectedLocation();
+    }
+  }
+
+  List<LocationInfo> get availableLocations => _availableLocations;
+  LocationInfo? get selectedLocation => _selectedLocation;
+  RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
+  List<SearchableFeature> get currentSearchableFeatures =>
+      _currentSearchableFeatures;
+  bool get isLoadingLocationData => _isLoadingLocationData;
+  vtr.Theme? get mapTheme => _mapTheme;
+
+  void selectLocation(LocationInfo? newLocation) {
+    if (newLocation != null && newLocation != _selectedLocation) {
+      _selectedLocation = newLocation;
+      _logger.info("Standort gewechselt zu: ${newLocation.name}");
+      loadDataForSelectedLocation();
+    }
+  }
+
+  Future<void> loadDataForSelectedLocation() async {
+    if (_selectedLocation == null) {
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _mapTheme = null;
+      _isLoadingLocationData = false;
+      Future.microtask(() {
+        notifyListeners();
+      });
+      return;
+    }
+
+    Future.microtask(() {
+      _isLoadingLocationData = true;
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _mapTheme = null;
+      notifyListeners();
+    });
+
+    try {
+      final stylePathFuture = _styleCachingService.ensureStyleIsCached(
+          styleUrl: _selectedLocation!.styleUrl,
+          styleId: _selectedLocation!.styleId);
+
+      final geoJsonStringFuture =
+          rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
+
+      final List<Object?> results =
+          await Future.wait([stylePathFuture, geoJsonStringFuture]);
+
+      final stylePath = results[0] as String?;
+      final geoJsonString = results[1] as String;
+
+      if (stylePath != null) {
+        final styleFile = File(stylePath);
+        if (await styleFile.exists()) {
+          final String styleJsonContent = await styleFile.readAsString();
+          final Map<String, dynamic> styleJsonMap = jsonDecode(styleJsonContent) as Map<String, dynamic>; 
+          
+          final themeReaderLogger = Logger('VTRThemeReader');
+          final themeReader = vtr.ThemeReader(logger: themeReaderLogger); // Korrekt: benannter Parameter
+          
+          // Korrekter Aufruf von read:
+          // 1. positional argument: styleJsonMap
+          // benannter argument: uri
+          _mapTheme = await themeReader.read(styleJsonMap, uri: Uri.file(stylePath)); 
+
+          _logger.info("Vector-Theme erfolgreich geladen von: $stylePath");
+        } else {
+           _logger.warning("Fehler: Gecachte Style-Datei
