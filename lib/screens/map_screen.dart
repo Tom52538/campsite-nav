@@ -1,7 +1,7 @@
 // lib/screens/map_screen.dart
 import 'dart:async';
 import 'dart:math';
-import 'dart:io'; // NEU
+// import 'dart:io'; // ungenutzt, entfernt
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -10,10 +10,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// --- NEUE IMPORTE für Vektor-Karten ---
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
-// --- ENDE NEUE IMPORTE ---
 
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -40,7 +38,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   final MapController mapController = MapController();
   late TtsService ttsService;
 
-  // ... (der Rest der Variablen bleibt gleich)
   Polyline? routePolyline;
   Marker? currentLocationMarker;
   Marker? startMarker;
@@ -159,9 +156,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     super.dispose();
   }
 
-  // Alle anderen Methoden (_onStartSearchChanged, calculateAndDisplayRoute, etc.) bleiben unverändert.
-  // Hier nur der relevante build-Teil:
-
   @override
   Widget build(BuildContext context) {
     final locationProvider = Provider.of<LocationProvider>(context);
@@ -169,10 +163,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final bool isLoading = locationProvider.isLoadingLocationData;
-    final String? stylePath = locationProvider.cachedStylePath;
+    final vtr.Theme? mapTheme = locationProvider.mapTheme;
     final bool isUiReady = !isLoading &&
         locationProvider.currentRoutingGraph != null &&
-        stylePath != null;
+        mapTheme != null;
 
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
 
@@ -213,7 +207,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     return Scaffold(
       appBar: AppBar(
-        // ... (AppBar bleibt unverändert)
         title: const Text("Campground Navigator"),
         actions: [
           IconButton(
@@ -270,7 +263,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           FlutterMap(
             mapController: mapController,
             options: MapOptions(
-              // ... (MapOptions bleiben unverändert)
               initialCenter: selectedLocationFromUI?.initialCenter ??
                   fallbackInitialCenter,
               initialZoom: 17.0,
@@ -302,9 +294,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   if (endFocusNode.hasFocus) {
                     endFocusNode.unfocus();
                   }
-                  if (routePolyline != null &&
-                      !startFocusNode.hasFocus &&
-                      !endFocusNode.hasFocus) {
+                  if (routePolyline != null) {
                     setStateIfMounted(() {
                       isRouteActiveForCardSwitch = true;
                     });
@@ -312,9 +302,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 }
               },
               onMapReady: () {
-                if (!mounted) {
-                  return;
-                }
+                if (!mounted) return;
                 if (kDebugMode) {
                   print(
                       "[MapScreen.onMapReady] Karte ist bereit. isMapReady=true");
@@ -343,31 +331,26 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
             ),
             children: [
-              // --- KARTENLAYER WIRD AUSGETAUSCHT ---
-              if (isUiReady && stylePath != null)
+              if (isUiReady)
                 VectorTileLayer(
-                  theme: vtr.ProvidedThemes.light(
-                    // Lese den Stil aus der gecachten Datei
-                    uri: Uri.file(stylePath).toString(),
-                  ),
+                  theme: mapTheme, // KORREKTUR
                   fileCacheTtl: const Duration(days: 7),
-                  // Kachel-Provider für Vektor-Kacheln
-                  tileProviders: TileProviders(
-                      {'maptiler': MaptilerTileProvider(apiKey: apiKey ?? '')}),
+                  tileProviders: TileProviders({
+                    // KORREKTUR: 'MaptilerVectorTileProvider'
+                    'maptiler':
+                        MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
+                  }),
                 )
               else
-                // Fallback, während geladen wird
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 ),
-
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
           ),
-          // Die restlichen UI-Elemente (Suchkarten, Ladeanzeige etc.) bleiben unverändert
           Positioned(
             top: kSearchCardTopPadding,
             left: kSearchCardHorizontalMargin,
@@ -467,7 +450,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         ],
       ),
       floatingActionButton: Column(
-        // ... (FloatingActionButtons bleiben unverändert)
         mainAxisAlignment: MainAxisAlignment.end,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -520,9 +502,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   // Hier alle anderen Methoden von MapScreenState einfügen (sind unverändert)
   void _onStartSearchChanged() {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final query = startSearchController.text.toLowerCase().trim();
@@ -535,9 +515,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _onEndSearchChanged() {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final query = endSearchController.text.toLowerCase().trim();
@@ -560,9 +538,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _onStartFocusChanged() {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     final bool hasFocus = startFocusNode.hasFocus;
     setStateIfMounted(() {
       if (hasFocus) {
@@ -589,9 +565,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _onEndFocusChanged() {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     final bool hasFocus = endFocusNode.hasFocus;
     setStateIfMounted(() {
       if (hasFocus) {
@@ -617,17 +591,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
-    if (newLocationParam == null) {
-      return;
-    }
+    if (newLocationParam == null) return;
     Provider.of<LocationProvider>(context, listen: false)
         .selectLocation(newLocationParam);
   }
 
   void _handleLocationChangeUIUpdates(LocationInfo newLocation) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     final bool isActualChange = lastProcessedLocation != null &&
         lastProcessedLocation!.id != newLocation.id;
     setState(() {
@@ -670,9 +640,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _toggleMockLocation() {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     final currentLocationInfo =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
     setState(() {
@@ -778,15 +746,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _performInitialMapMove() {
-    if (!mounted || !isMapReady) {
-      return;
-    }
+    if (!mounted || !isMapReady) return;
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final location = locationProvider.selectedLocation;
-    if (location == null) {
-      return;
-    }
+    if (location == null) return;
 
     LatLng? targetToMoveToNullSafe;
     if (useMockLocation) {
@@ -825,9 +789,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       print(
           "[MapScreen.selectFeatureAndSetPoint] Feature ${feature.name} für Feld $activeSearchField ausgewählt.");
     }
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     TextEditingController? controllerToUpdate;
     FocusNode focusToUnset;
@@ -900,9 +862,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       print(
           "[MapScreen._initializeGpsReal] GPS Initialisierung für ${location.name}");
     }
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     late LocationPermission permission;
     bool serviceEnabled;
@@ -951,9 +911,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         distanceFilter: 2,
       ),
     ).listen((Position position) {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       final bool isFirstFix = currentGpsPosition == null;
       LatLng newGpsPos = LatLng(position.latitude, position.longitude);
 
@@ -1176,9 +1134,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         !isLoadingData && currentGraphValue != null;
     final selectedLocationFromProvider = locationProvider.selectedLocation;
 
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     setStateIfMounted(() {
       routePolyline = null;
@@ -1263,9 +1219,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       } else {
         final List<LatLng>? routePointsResult = await RoutingService.findPath(
             currentGraphValue, foundStartNode, foundEndNode);
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
         setStateIfMounted(() {
           if (routePointsResult != null && routePointsResult.isNotEmpty) {
             routePolyline = Polyline(
@@ -1419,9 +1373,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       print(
           "[MapScreen._handleMapTap] Tap bei: ${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}. Aktives Feld vor Tap: $activeSearchField");
     }
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setStateIfMounted(() {
       followGps = false;
       _isInRouteOverviewMode = false;
@@ -1440,9 +1392,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         showSearchResults = false;
       });
     }
-    if (routePolyline != null &&
-        !startFocusNode.hasFocus &&
-        !endFocusNode.hasFocus) {
+    if (routePolyline != null) {
       setStateIfMounted(() {
         isRouteActiveForCardSwitch = true;
       });
@@ -1549,9 +1499,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           "[MapScreen.clearRoute] Aufgerufen mit showConfirmation: $showConfirmation, clearMarkers: $clearMarkers");
     }
     void doClearAction() {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setStateIfMounted(() {
         routePolyline = null;
         routeDistance = null;
@@ -1613,9 +1561,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _centerOnGps() {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     final selectedLocationFromProvider =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
 
@@ -1794,9 +1740,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   double _distanceToSegment(
       LatLng p, LatLng a, LatLng b, Distance distanceCalc) {
     final double l2 = pow(distanceCalc(a, b), 2).toDouble();
-    if (l2 == 0.0) {
-      return distanceCalc(p, a);
-    }
+    if (l2 == 0.0) return distanceCalc(p, a);
 
     final double distAP = distanceCalc(p, a);
     final double distBP = distanceCalc(p, b);
@@ -1811,12 +1755,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) /
         (2 * distBP * distAB);
 
-    if (cosPAB < 0) {
-      return distAP;
-    }
-    if (cosPBA < 0) {
-      return distBP;
-    }
+    if (cosPAB < 0) return distAP;
+    if (cosPBA < 0) return distBP;
 
     final double s = (distAP + distBP + distAB) / 2;
     final double areaArgCandidate =
@@ -1828,9 +1768,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   double _calculateDistanceToPolyline(LatLng p, List<LatLng> polyline) {
     if (polyline.isEmpty) return double.infinity;
-    if (polyline.length == 1) {
+    if (polyline.length == 1)
       return distanceCalculatorInstance(p, polyline.first);
-    }
 
     double minDistance = double.infinity;
     for (int i = 0; i < polyline.length - 1; i++) {
