@@ -1,6 +1,6 @@
 // lib/providers/location_provider.dart
-import 'dart:convert'; // NEU für jsonDecode, falls styleJson selbst nochmals geparsed werden muss
-import 'dart:io'; // NEU für File-Operationen
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -86,17 +86,19 @@ class LocationProvider with ChangeNotifier {
         final styleFile = File(stylePath);
         if (await styleFile.exists()) {
           final String styleJsonContent = await styleFile.readAsString();
-          // Die base URI ist wichtig, damit relative Pfade innerhalb des Stylesheets (z.B. für Sprites, Fonts) korrekt aufgelöst werden,
-          // falls der Caching Service diese nicht bereits absolut oder korrekt relativ gemacht hat.
-          // Da unser StyleCachingService die Pfade bereits relativ zum Style-Ordner macht,
-          // sollte die URI des Style-Files selbst als Basis dienen.
-          _mapTheme = await vtr.ThemeReader(
-                  styleJson: jsonDecode(
-                      styleJsonContent), // styleJson erwartet ein Map<String,dynamic>
-                  uri: Uri.file(
-                      stylePath) // Basis-URI für relative Pfade im Stil
-                  )
-              .read();
+          final Map<String, dynamic> styleJsonMap =
+              jsonDecode(styleJsonContent);
+
+          // KORREKTE ThemeReader-Nutzung
+          final logger = vtr.LoggerContext(
+              // Optional: Konfiguriere den Logger bei Bedarf,
+              // hier wird der Standard-Logger verwendet
+              );
+          final themeReader = vtr.ThemeReader(logger);
+          // 'read' ist die asynchrone Methode, die das Theme-Objekt zurückgibt
+          _mapTheme = await themeReader.read(styleJsonMap,
+              baseUri: Uri.file(stylePath));
+
           if (kDebugMode) {
             print(
                 "[LocationProvider] Vector-Theme erfolgreich geladen von: $stylePath");
