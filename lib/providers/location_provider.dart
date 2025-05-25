@@ -95,16 +95,13 @@ class LocationProvider with ChangeNotifier {
         final styleFile = File(stylePath);
         if (await styleFile.exists()) {
           final String styleJsonContent = await styleFile.readAsString();
-          // Expliziter Cast zu Map<String, dynamic>
           final Map<String, dynamic> styleJsonMap =
               jsonDecode(styleJsonContent) as Map<String, dynamic>;
 
           final themeReaderLogger = Logger('VTRThemeReader');
-          // Logging für den ThemeReader-Logger ggf. separat konfigurieren oder Level anpassen
-          // themeReaderLogger.level = Level.FINER;
-          final themeReader = vtr.ThemeReader(themeReaderLogger);
+          // KORREKTUR: logger ist ein benannter Parameter
+          final themeReader = vtr.ThemeReader(logger: themeReaderLogger);
 
-          // Signatur: Future<Theme> read(Map<String, dynamic> style, {Uri? uri})
           _mapTheme =
               await themeReader.read(styleJsonMap, uri: Uri.file(stylePath));
 
