@@ -1,14 +1,19 @@
 // lib/screens/map_screen.dart
 import 'dart:async';
 import 'dart:math';
+import 'dart:io'; // NEU
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // HINZUGEFÜGT
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// --- NEUE IMPORTE für Vektor-Karten ---
+import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
+// --- ENDE NEUE IMPORTE ---
 
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -35,6 +40,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   final MapController mapController = MapController();
   late TtsService ttsService;
 
+  // ... (der Rest der Variablen bleibt gleich)
   Polyline? routePolyline;
   Marker? currentLocationMarker;
   Marker? startMarker;
@@ -60,11 +66,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   List<Maneuver> currentManeuvers = [];
   Maneuver? currentDisplayedManeuver;
   bool followGps = false;
-  static const double _followGpsZoomLevel = 17.5; // Zoom für Navigationsansicht
-  static const double _navigationStartZoomDelaySeconds =
-      2.5; // Verzögerung für Zoom zum Start
+  static const double _followGpsZoomLevel = 17.5;
+  static const double _navigationStartZoomDelaySeconds = 2.5;
 
-  // NEUE Zustandsvariable für den Ansichtsmodus
   bool _isInRouteOverviewMode = false;
 
   static const LatLng fallbackInitialCenter =
@@ -155,6 +159,366 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     super.dispose();
   }
 
+  // Alle anderen Methoden (_onStartSearchChanged, calculateAndDisplayRoute, etc.) bleiben unverändert.
+  // Hier nur der relevante build-Teil:
+
+  @override
+  Widget build(BuildContext context) {
+    final locationProvider = Provider.of<LocationProvider>(context);
+    final selectedLocationFromUI = locationProvider.selectedLocation;
+    final availableLocationsFromUI = locationProvider.availableLocations;
+
+    final bool isLoading = locationProvider.isLoadingLocationData;
+    final String? stylePath = locationProvider.cachedStylePath;
+    final bool isUiReady = !isLoading &&
+        locationProvider.currentRoutingGraph != null &&
+        stylePath != null;
+
+    final apiKey = dotenv.env['MAPTILER_API_KEY'];
+
+    List<Marker> activeMarkers = [];
+    final localCurrentLocationMarker = currentLocationMarker;
+    if (localCurrentLocationMarker != null) {
+      activeMarkers.add(localCurrentLocationMarker);
+    }
+    if (startMarker != null) {
+      activeMarkers.add(startMarker!);
+    }
+    if (endMarker != null) {
+      activeMarkers.add(endMarker!);
+    }
+
+    double currentSearchCardHeight = isRouteActiveForCardSwitch
+        ? kCompactCardHeight
+        : fullSearchCardHeight > 0
+            ? fullSearchCardHeight
+            : (kSearchInputRowHeight * 2) +
+                kDividerAndSwapButtonHeight +
+                (kCardInternalVerticalPadding * 2) +
+                (routeDistance != null ? kRouteInfoHeight : 0);
+
+    double instructionCardTop = kSearchCardTopPadding +
+        currentSearchCardHeight +
+        kInstructionCardSpacing;
+
+    double searchResultsTopPosition = instructionCardTop;
+    bool instructionCardVisible = currentDisplayedManeuver != null &&
+        currentDisplayedManeuver!.turnType != TurnType.depart &&
+        !(currentManeuvers.length <= 2 &&
+            currentDisplayedManeuver!.turnType == TurnType.arrive);
+
+    if (instructionCardVisible) {
+      searchResultsTopPosition += 65.0 + kInstructionCardSpacing;
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        // ... (AppBar bleibt unverändert)
+        title: const Text("Campground Navigator"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.volume_up),
+            tooltip: 'Test TTS',
+            onPressed: isUiReady
+                ? () {
+                    ttsService.testSpeak();
+                  }
+                : null,
+          ),
+          if (availableLocationsFromUI.isNotEmpty &&
+              selectedLocationFromUI != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<LocationInfo>(
+                  value: selectedLocationFromUI,
+                  icon: const Icon(Icons.public, color: Colors.white),
+                  dropdownColor: Colors.deepOrange[700],
+                  style: const TextStyle(color: Colors.white),
+                  items: availableLocationsFromUI
+                      .map<DropdownMenuItem<LocationInfo>>(
+                          (LocationInfo location) =>
+                              DropdownMenuItem<LocationInfo>(
+                                value: location,
+                                child: Text(location.name,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 14),
+                                    overflow: TextOverflow.ellipsis),
+                              ))
+                      .toList(),
+                  onChanged: isUiReady ? _onLocationSelectedFromDropdown : null,
+                  hint: const Text("Standort wählen",
+                      style: TextStyle(color: Colors.white70)),
+                ),
+              ),
+            ),
+          Tooltip(
+            message: useMockLocation
+                ? "Echtes GPS aktivieren"
+                : "Mock-Position aktivieren",
+            child: IconButton(
+              icon: Icon(
+                  useMockLocation ? Icons.location_on : Icons.location_off),
+              color: useMockLocation ? Colors.orangeAccent : Colors.white,
+              onPressed: isUiReady ? _toggleMockLocation : null,
+            ),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          FlutterMap(
+            mapController: mapController,
+            options: MapOptions(
+              // ... (MapOptions bleiben unverändert)
+              initialCenter: selectedLocationFromUI?.initialCenter ??
+                  fallbackInitialCenter,
+              initialZoom: 17.0,
+              minZoom: 13.0,
+              maxZoom: 19.0,
+              onTap: isUiReady ? _handleMapTap : null,
+              onMapEvent: (MapEvent mapEvent) {
+                if (mapEvent is MapEventMove &&
+                    (mapEvent.source == MapEventSource.dragStart ||
+                        mapEvent.source ==
+                            MapEventSource.flingAnimationController)) {
+                  if (followGps) {
+                    setStateIfMounted(() {
+                      followGps = false;
+                      showSnackbar("Follow-GPS Modus deaktiviert.",
+                          durationSeconds: 2);
+                    });
+                  }
+                }
+
+                if (mapEvent is MapEventMove &&
+                    (mapEvent.source == MapEventSource.dragStart ||
+                        mapEvent.source ==
+                            MapEventSource.flingAnimationController) &&
+                    (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
+                  if (startFocusNode.hasFocus) {
+                    startFocusNode.unfocus();
+                  }
+                  if (endFocusNode.hasFocus) {
+                    endFocusNode.unfocus();
+                  }
+                  if (routePolyline != null &&
+                      !startFocusNode.hasFocus &&
+                      !endFocusNode.hasFocus) {
+                    setStateIfMounted(() {
+                      isRouteActiveForCardSwitch = true;
+                    });
+                  }
+                }
+              },
+              onMapReady: () {
+                if (!mounted) {
+                  return;
+                }
+                if (kDebugMode) {
+                  print(
+                      "[MapScreen.onMapReady] Karte ist bereit. isMapReady=true");
+                }
+                setState(() => isMapReady = true);
+                final locationProvider =
+                    Provider.of<LocationProvider>(context, listen: false);
+                if (locationProvider.selectedLocation != null &&
+                    currentGpsPosition == null) {
+                  _initializeGpsOrMock(locationProvider.selectedLocation!);
+                } else {
+                  _performInitialMapMove();
+                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && fullSearchCardKey.currentContext != null) {
+                    final RenderBox? renderBox =
+                        fullSearchCardKey.currentContext!.findRenderObject()
+                            as RenderBox?;
+                    if (renderBox != null && renderBox.hasSize) {
+                      setStateIfMounted(() {
+                        fullSearchCardHeight = renderBox.size.height;
+                      });
+                    }
+                  }
+                });
+              },
+            ),
+            children: [
+              // --- KARTENLAYER WIRD AUSGETAUSCHT ---
+              if (isUiReady && stylePath != null)
+                VectorTileLayer(
+                  theme: vtr.ProvidedThemes.light(
+                    // Lese den Stil aus der gecachten Datei
+                    uri: Uri.file(stylePath).toString(),
+                  ),
+                  fileCacheTtl: const Duration(days: 7),
+                  // Kachel-Provider für Vektor-Kacheln
+                  tileProviders: TileProviders(
+                      {'maptiler': MaptilerTileProvider(apiKey: apiKey ?? '')}),
+                )
+              else
+                // Fallback, während geladen wird
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                ),
+
+              if (isUiReady && routePolyline != null)
+                PolylineLayer(polylines: [routePolyline!]),
+              if (isUiReady && activeMarkers.isNotEmpty)
+                MarkerLayer(markers: activeMarkers),
+            ],
+          ),
+          // Die restlichen UI-Elemente (Suchkarten, Ladeanzeige etc.) bleiben unverändert
+          Positioned(
+            top: kSearchCardTopPadding,
+            left: kSearchCardHorizontalMargin,
+            right: kSearchCardHorizontalMargin,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1.0,
+                    child: child,
+                  );
+                },
+                child: isRouteActiveForCardSwitch && isUiReady
+                    ? buildCompactRouteInfoCard(
+                        key: const ValueKey('compactCard'))
+                    : buildSearchInputCard(
+                        key: const ValueKey('searchInputCard')),
+              ),
+            ),
+          ),
+          if (instructionCardVisible && isUiReady && !_isInRouteOverviewMode)
+            Positioned(
+                top: instructionCardTop,
+                left: kSearchCardHorizontalMargin,
+                right: kSearchCardHorizontalMargin,
+                child: Center(
+                  child: TurnInstructionCard(
+                    maneuver: currentDisplayedManeuver!,
+                    maxWidth: kSearchCardMaxWidth + 50,
+                  ),
+                )),
+          if (showSearchResults &&
+              searchResults.isNotEmpty &&
+              isUiReady &&
+              !isRouteActiveForCardSwitch)
+            Positioned(
+              top: searchResultsTopPosition,
+              left: kSearchCardHorizontalMargin,
+              right: kSearchCardHorizontalMargin,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  constraints:
+                      const BoxConstraints(maxWidth: kSearchCardMaxWidth),
+                  child: Card(
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.0)),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.3),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: searchResults.length,
+                        itemBuilder: (context, index) {
+                          final feature = searchResults[index];
+                          return ListTile(
+                            leading: Icon(getIconForFeatureType(feature.type)),
+                            title: Text(feature.name),
+                            subtitle: Text("Typ: ${feature.type}"),
+                            onTap: () => selectFeatureAndSetPoint(feature),
+                            dense: true,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (isCalculatingRoute && isUiReady)
+            Positioned.fill(
+                child: Container(
+                    color: Colors.black.withAlpha(70),
+                    child: const Center(
+                        child:
+                            CircularProgressIndicator(color: Colors.white)))),
+          if (isLoading)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withAlpha(180),
+                child: Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const CircularProgressIndicator(color: Colors.white),
+                  const SizedBox(height: 16),
+                  Text(
+                      "Lade Kartendaten für ${selectedLocationFromUI?.name ?? '...'}...",
+                      textAlign: TextAlign.center,
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 16)),
+                ])),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: Column(
+        // ... (FloatingActionButtons bleiben unverändert)
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (isUiReady && routePolyline != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: FloatingActionButton.small(
+                heroTag: "toggleOverviewBtn",
+                onPressed: _toggleRouteOverview,
+                tooltip: _isInRouteOverviewMode
+                    ? 'Zur Navigationsansicht wechseln'
+                    : 'Routenübersicht anzeigen',
+                child: Icon(_isInRouteOverviewMode
+                    ? Icons.zoom_in_map
+                    : Icons.map_outlined),
+              ),
+            ),
+          if (isUiReady &&
+              (routePolyline != null ||
+                  startMarker != null ||
+                  endMarker != null))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: FloatingActionButton.small(
+                heroTag: "clearAllBtn",
+                onPressed: () =>
+                    clearRoute(showConfirmation: true, clearMarkers: true),
+                tooltip: 'Route, Start & Ziel löschen',
+                child: const Icon(Icons.delete_forever_outlined),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: FloatingActionButton.small(
+              heroTag: "centerBtn",
+              onPressed: isUiReady ? _centerOnGps : null,
+              tooltip: followGps && !_isInRouteOverviewMode
+                  ? 'Follow-GPS Modus aktiv'
+                  : 'Follow-GPS Modus aktivieren',
+              backgroundColor:
+                  followGps ? Colors.greenAccent[700] : Colors.deepOrangeAccent,
+              child: Icon(followGps ? Icons.navigation : Icons.my_location),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    );
+  }
+
+  // Hier alle anderen Methoden von MapScreenState einfügen (sind unverändert)
   void _onStartSearchChanged() {
     if (!mounted) {
       return;
@@ -204,7 +568,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       if (hasFocus) {
         activeSearchField = ActiveSearchField.start;
         isRouteActiveForCardSwitch = false;
-        _isInRouteOverviewMode = false; // Bei Eingabe immer Detailansicht
+        _isInRouteOverviewMode = false;
         showSearchResults =
             startSearchController.text.isNotEmpty && searchResults.isNotEmpty;
       } else {
@@ -216,7 +580,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               showSearchResults = false;
               if (!endFocusNode.hasFocus && routePolyline != null) {
                 isRouteActiveForCardSwitch = true;
-                // _isInRouteOverviewMode bleibt unverändert, da der Fokusverlust nicht unbedingt einen Ansichtswechsel bedeutet
               }
             });
           }
@@ -245,7 +608,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               showSearchResults = false;
               if (!startFocusNode.hasFocus && routePolyline != null) {
                 isRouteActiveForCardSwitch = true;
-                // _isInRouteOverviewMode bleibt unverändert
               }
             });
           }
@@ -318,7 +680,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       followGps = !useMockLocation && routePolyline != null;
       if (followGps) {
         _isInRouteOverviewMode = false;
-      } // Bei Aktivierung von echtem GPS Follow -> Navigationsansicht
+      }
 
       if (!useMockLocation &&
           startSearchController.text.toLowerCase().contains("mock position")) {
@@ -332,7 +694,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         remainingRouteTimeMinutes = null;
         currentManeuvers = [];
         currentDisplayedManeuver = null;
-        // followGps wurde oben schon gesetzt
         isRouteActiveForCardSwitch = false;
         _isInRouteOverviewMode = false;
       }
@@ -360,8 +721,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (useMockLocation) {
       setStateIfMounted(() {
         followGps = false;
-        _isInRouteOverviewMode =
-            routePolyline != null; // Wenn Route da ist, ggf. Übersicht zeigen
+        _isInRouteOverviewMode = routePolyline != null;
       });
       if (kDebugMode) {
         print(
@@ -395,10 +755,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             remainingRouteTimeMinutes =
                 RoutingService.estimateWalkingTimeMinutes(
                     remainingRouteDistance!);
-            if (kDebugMode) {
-              print(
-                  "[MapScreen._initializeGpsOrMock] Mock-Modus: Restdistanz aktualisiert: ${remainingRouteDistance?.toStringAsFixed(1)}m");
-            }
           }
         });
         if (isMapReady && mounted) {
@@ -497,10 +853,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             "Ziel: ${feature.name}");
       });
     } else {
-      if (kDebugMode) {
-        print(
-            "[MapScreen.selectFeatureAndSetPoint] Kein aktives Suchfeld für Auswahl!");
-      }
       return;
     }
 
@@ -513,10 +865,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setStateIfMounted(() {
       showSearchResults = false;
       searchResults = [];
-      followGps =
-          false; // Follow GPS wird erst nach Routenberechnung ggf. aktiv
-      _isInRouteOverviewMode =
-          false; // Nach Auswahl zurück in Detailansicht/Eingabe
+      followGps = false;
+      _isInRouteOverviewMode = false;
     });
 
     focusToUnset.unfocus();
@@ -524,7 +874,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (nextFocus != null) {
       FocusScope.of(context).requestFocus(nextFocus);
       setStateIfMounted(() {
-        isRouteActiveForCardSwitch = false; // Bleibe im Eingabemodus
+        isRouteActiveForCardSwitch = false;
       });
     } else {
       activeSearchField = ActiveSearchField.none;
@@ -538,7 +888,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (startLatLng != null && endLatLng != null) {
       calculateAndDisplayRoute();
     } else if (isMapReady && mounted) {
-      // Wenn nur ein Punkt gesetzt, auf diesen zentrieren
       LatLng? pointToCenter = startLatLng ?? endLatLng;
       if (pointToCenter != null) {
         mapController.move(pointToCenter, 18.0);
@@ -599,7 +948,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 2, // Meter
+        distanceFilter: 2,
       ),
     ).listen((Position position) {
       if (!mounted) {
@@ -614,10 +963,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             _significantGpsChangeThreshold) {
           significantPositionChange = false;
         }
-      }
-
-      if (kDebugMode && significantPositionChange) {
-        // print("[MapScreen._initializeGpsReal] GPS Update: ${newGpsPos.latitude.toStringAsFixed(6)},${newGpsPos.longitude.toStringAsFixed(6)}. Signifikant: $significantPositionChange");
       }
 
       if (significantPositionChange) {
@@ -640,15 +985,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             remainingRouteTimeMinutes =
                 RoutingService.estimateWalkingTimeMinutes(
                     remainingRouteDistance!);
-            if (kDebugMode) {
-              // print("[MapScreen._initializeGpsReal] GPS-Modus: Restdistanz aktualisiert: ${remainingRouteDistance?.toStringAsFixed(1)}m");
-            }
           }
         });
       }
 
       if (followGps &&
-          !_isInRouteOverviewMode && // Nur folgen, wenn nicht in Übersicht
+          !_isInRouteOverviewMode &&
           isMapReady &&
           mounted &&
           currentGpsPosition != null &&
@@ -663,10 +1005,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             currentGpsPosition!, centerForDistanceCheck);
         if (meters <= centerOnGpsMaxDistanceMeters) {
           if (!_isInRouteOverviewMode && followGps) {
-            // Nur zoomen wenn Follow aktiv und nicht in Übersicht
             mapController.move(currentGpsPosition!, _followGpsZoomLevel);
           } else if (!_isInRouteOverviewMode && !followGps) {
-            // Wenn kein Follow, aber erste Position, zentrieren
             mapController.move(currentGpsPosition!, 17.0);
           }
         } else {
@@ -721,19 +1061,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    // Guard clause for empty maneuvers or missing route
     if (currentManeuvers.isEmpty ||
         routePolyline == null ||
         routePolyline!.points.isEmpty) {
       return;
     }
 
-    // Initialize currentDisplayedManeuver if it's null and maneuvers exist
     if (currentDisplayedManeuver == null) {
-      if (kDebugMode) {
-        print(
-            "[MapScreen._updateCurrentManeuverOnGpsUpdate] currentDisplayedManeuver ist null. Setze auf erstes/zweites Manöver.");
-      }
       Maneuver initialManeuver = currentManeuvers.first;
       if (currentManeuvers.length > 1 &&
           initialManeuver.turnType == TurnType.depart) {
@@ -745,28 +1079,16 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           initialManeuver = currentManeuvers[1];
         }
       }
-      // KORREKTUR: unnecessary_null_comparison - Fehler entfernt durch Logikänderung
-      // Die Bedingung `if (currentDisplayedManeuver != initialManeuver)` wurde entfernt,
-      // da currentDisplayedManeuver hier immer null ist. Es wird direkt gesetzt.
       setStateIfMounted(() {
         currentDisplayedManeuver = initialManeuver;
-        if (kDebugMode) {
-          print(
-              "[MapScreen._updateCurrentManeuverOnGpsUpdate] Initiales Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
-        }
         if (currentDisplayedManeuver?.instructionText != null) {
           ttsService.speak(currentDisplayedManeuver!.instructionText!);
         }
       });
-      // currentDisplayedManeuver wurde gerade gesetzt, es kann nicht null sein, wenn currentManeuvers nicht leer war
-      // Wenn es immer noch null ist, dann war currentManeuvers leer, was der erste Guard abfängt.
       if (currentDisplayedManeuver == null) return;
     }
 
     if (currentDisplayedManeuver!.turnType == TurnType.arrive) {
-      if (kDebugMode) {
-        // print("[MapScreen._updateCurrentManeuverOnGpsUpdate] Ziel bereits erreicht (Typ Arrive). Keine weitere Aktualisierung.");
-      }
       return;
     }
 
@@ -774,11 +1096,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         currentManeuvers.indexOf(currentDisplayedManeuver!);
 
     if (displayedManeuverIndex == -1) {
-      // KORREKTUR: avoid_print (Zeile 736)
-      if (kDebugMode) {
-        print(
-            "[MapScreen] Fehler: currentDisplayedManeuver nicht in currentManeuvers gefunden.");
-      }
       if (currentManeuvers.isNotEmpty) {
         Maneuver newFallbackManeuver = currentManeuvers.first;
         if (currentManeuvers.length > 1 &&
@@ -794,10 +1111,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         if (currentDisplayedManeuver != newFallbackManeuver) {
           setStateIfMounted(() {
             currentDisplayedManeuver = newFallbackManeuver;
-            if (kDebugMode) {
-              print(
-                  "[MapScreen._updateCurrentManeuverOnGpsUpdate] Fallback-Manöver gesetzt: ${currentDisplayedManeuver?.instructionText}");
-            }
             if (currentDisplayedManeuver?.instructionText != null) {
               ttsService.speak(currentDisplayedManeuver!.instructionText!);
             }
@@ -812,24 +1125,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       currentDisplayedManeuver!.point,
     );
 
-    if (kDebugMode) {
-      String gpsPosStr =
-          "GPS:(${currentPosition.latitude.toStringAsFixed(6)},${currentPosition.longitude.toStringAsFixed(6)})";
-      String maneuverPosStr =
-          "Maneuver(${currentDisplayedManeuver!.turnType}):(${currentDisplayedManeuver!.point.latitude.toStringAsFixed(6)},${currentDisplayedManeuver!.point.longitude.toStringAsFixed(6)})";
-      print(
-          "[MapScreen._updateCurrentManeuverOnGpsUpdate] $gpsPosStr | $maneuverPosStr | Dist: ${distanceToDisplayedManeuverPoint.toStringAsFixed(1)}m (Threshold: $_maneuverReachedThreshold) | AktIdx: $displayedManeuverIndex | Instr: '${currentDisplayedManeuver!.instructionText}'");
-    }
-
     if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) {
       final int nextManeuverIndex = displayedManeuverIndex + 1;
 
       if (nextManeuverIndex < currentManeuvers.length) {
         Maneuver newPotentialManeuver = currentManeuvers[nextManeuverIndex];
-        if (kDebugMode) {
-          print(
-              "[MapScreen._updateCurrentManeuverOnGpsUpdate] Manöver erreicht. Nächstes potenzielles Manöver (Index $nextManeuverIndex): ${newPotentialManeuver.instructionText}");
-        }
 
         if (newPotentialManeuver.turnType == TurnType.arrive) {
           if (routePolyline != null && routePolyline!.points.isNotEmpty) {
@@ -844,47 +1144,23 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               if (newPotentialManeuver != currentDisplayedManeuver) {
                 setStateIfMounted(() {
                   currentDisplayedManeuver = newPotentialManeuver;
-                  if (kDebugMode) {
-                    print(
-                        "[MapScreen] Ziel erreicht und Ankunfts-Manöver gesetzt: ${currentDisplayedManeuver!.instructionText}");
-                  }
                   if (currentDisplayedManeuver?.instructionText != null) {
                     ttsService
                         .speak(currentDisplayedManeuver!.instructionText!);
                   }
                 });
               }
-            } else {
-              if (kDebugMode) {
-                print(
-                    "[MapScreen] Vorletztes Manöver erreicht, aber Ziel (${distanceToActualDestination.toStringAsFixed(1)}m) noch nicht nah genug für 'Ankunft'. Aktuelles Manöver bleibt: ${currentDisplayedManeuver?.instructionText}");
-              }
-            }
-          } else {
-            if (kDebugMode) {
-              print(
-                  "[MapScreen] Warnung: 'Ankunft'-Manöver wird geprüft, aber routePolyline ist null oder leer.");
             }
           }
         } else {
           if (newPotentialManeuver != currentDisplayedManeuver) {
             setStateIfMounted(() {
               currentDisplayedManeuver = newPotentialManeuver;
-              if (kDebugMode) {
-                print(
-                    "[MapScreen] Nächstes reguläres Manöver gesetzt: ${currentDisplayedManeuver!.instructionText}");
-              }
               if (currentDisplayedManeuver?.instructionText != null) {
                 ttsService.speak(currentDisplayedManeuver!.instructionText!);
               }
             });
           }
-        }
-      } else if (displayedManeuverIndex == currentManeuvers.length - 1 &&
-          currentDisplayedManeuver!.turnType != TurnType.arrive) {
-        if (kDebugMode) {
-          print(
-              "[MapScreen] Letztes Manöver der Liste erreicht, aber es war nicht 'Arrive'. Aktuell angezeigt: ${currentDisplayedManeuver!.instructionText}");
         }
       }
     }
@@ -900,10 +1176,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         !isLoadingData && currentGraphValue != null;
     final selectedLocationFromProvider = locationProvider.selectedLocation;
 
-    if (kDebugMode) {
-      print(
-          "[MapScreen.calculateAndDisplayRoute] Start: $startLatLng, Ziel: $endLatLng. _maneuverReachedThreshold: $_maneuverReachedThreshold. Winkel-Schwellenwerte (RoutingService): slight=${RoutingService.slightTurnThreshold}, normal=${RoutingService.normalTurnThreshold}, sharp=${RoutingService.sharpTurnThreshold}, uTurn=${RoutingService.uTurnAngleThreshold}");
-    }
     if (!mounted) {
       return;
     }
@@ -917,7 +1189,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       currentManeuvers = [];
       currentDisplayedManeuver = null;
       isRouteActiveForCardSwitch = false;
-      _isInRouteOverviewMode = false; // Start in Navigationsansicht
+      _isInRouteOverviewMode = false;
     });
 
     if (!isDataReadyForRouting) {
@@ -1011,14 +1283,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
             currentManeuvers =
                 RoutingService.analyzeRouteForTurns(routePointsResult);
-            if (kDebugMode) {
-              print(
-                  "[MapScreen.calculateAndDisplayRoute] Berechnete Manöver (${currentManeuvers.length}):");
-              for (var maneuver in currentManeuvers) {
-                print(
-                    "  - ${maneuver.instructionText} @ ${maneuver.point.latitude.toStringAsFixed(6)},${maneuver.point.longitude.toStringAsFixed(6)} (${maneuver.turnType})");
-              }
-            }
 
             if (currentManeuvers.isNotEmpty) {
               currentDisplayedManeuver = currentManeuvers.first;
@@ -1040,20 +1304,15 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   ttsService.speak(currentDisplayedManeuver!.instructionText!);
                 }
               }
-              if (kDebugMode) {
-                print(
-                    "[MapScreen.calculateAndDisplayRoute] Initial angezeigtes Manöver: ${currentDisplayedManeuver?.instructionText}");
-              }
             } else {
               currentDisplayedManeuver = null;
             }
 
-            isRouteActiveForCardSwitch = true; // Kompakte Karte anzeigen
-            _isInRouteOverviewMode = true; // Zuerst Übersicht anzeigen
+            isRouteActiveForCardSwitch = true;
+            _isInRouteOverviewMode = true;
 
             if (!useMockLocation) {
-              followGps =
-                  true; // Follow GPS aktivieren, wenn echte Position genutzt wird
+              followGps = true;
             } else {
               followGps = false;
               if (currentGpsPosition != null && endLatLng != null) {
@@ -1062,10 +1321,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 remainingRouteTimeMinutes =
                     RoutingService.estimateWalkingTimeMinutes(
                         remainingRouteDistance!);
-                if (kDebugMode) {
-                  print(
-                      "[MapScreen.calculateAndDisplayRoute] Mock-Modus nach Routenberechnung: Restdistanz aktualisiert: ${remainingRouteDistance?.toStringAsFixed(1)}m");
-                }
               }
             }
 
@@ -1085,7 +1340,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   endFocusNode.unfocus();
                 }
 
-                // Zuerst Gesamtübersicht zeigen
                 mapController.fitCamera(
                   CameraFit.bounds(
                     bounds: LatLngBounds.fromPoints(pointsForBounds),
@@ -1097,15 +1351,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   ),
                 );
 
-                // Nach kurzer Verzögerung zum Startpunkt zoomen (Navigationsansicht)
                 Future.delayed(
                     Duration(seconds: _navigationStartZoomDelaySeconds.toInt()),
                     () {
                   if (mounted && routePolyline != null) {
-                    // Nur wenn Route noch aktiv ist
                     setStateIfMounted(() {
-                      _isInRouteOverviewMode =
-                          false; // In Navigationsansicht wechseln
+                      _isInRouteOverviewMode = false;
                     });
                     LatLng targetZoomPoint;
                     if (!useMockLocation && currentGpsPosition != null) {
@@ -1117,7 +1368,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     }
                     mapController.move(targetZoomPoint, _followGpsZoomLevel);
                     if (!useMockLocation) {
-                      // Sicherstellen, dass followGps aktiv ist, wenn nicht im Mock-Modus
                       setStateIfMounted(() {
                         followGps = true;
                       });
@@ -1174,7 +1424,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
     setStateIfMounted(() {
       followGps = false;
-      _isInRouteOverviewMode = false; // Bei Kartentipp immer Detail/Eingabe
+      _isInRouteOverviewMode = false;
     });
 
     bool hadFocus = startFocusNode.hasFocus || endFocusNode.hasFocus;
@@ -1378,7 +1628,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       if (centerTarget != null && isMapReady) {
         mapController.move(centerTarget, _followGpsZoomLevel);
         setStateIfMounted(() {
-          // Auch im Mock-Modus ggf. Übersicht beenden
           _isInRouteOverviewMode = false;
         });
       }
@@ -1389,8 +1638,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       setStateIfMounted(() {
         followGps = !followGps;
         if (followGps) {
-          _isInRouteOverviewMode =
-              false; // Bei Aktivierung von Follow GPS -> Navigationsansicht
+          _isInRouteOverviewMode = false;
         }
       });
       if (kDebugMode) {
@@ -1404,8 +1652,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       } else if (!followGps) {
         showSnackbar("Follow-GPS Modus deaktiviert.", durationSeconds: 2);
       } else if (_isInRouteOverviewMode) {
-        // Wenn Follow GPS schon an war, aber man in der Übersicht ist und erneut klickt,
-        // dann zur Navigationsansicht wechseln.
         setStateIfMounted(() {
           _isInRouteOverviewMode = false;
         });
@@ -1423,7 +1669,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
   }
 
-  // NEUE Methode zum Umschalten der Routenansicht
   void _toggleRouteOverview() {
     if (!mounted || routePolyline == null) {
       showSnackbar("Keine aktive Route zur Ansicht vorhanden.",
@@ -1434,14 +1679,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setStateIfMounted(() {
       _isInRouteOverviewMode = !_isInRouteOverviewMode;
       if (_isInRouteOverviewMode) {
-        followGps = false; // In der Übersicht kein Follow
+        followGps = false;
         _showRouteOverview();
       } else {
-        // Zurück zur Navigationsansicht (Startpunkt oder aktuelle Position)
         LatLng targetZoomPoint;
         if (!useMockLocation && currentGpsPosition != null) {
           targetZoomPoint = currentGpsPosition!;
-          followGps = true; // Follow GPS wieder aktivieren, wenn möglich
+          followGps = true;
         } else if (startLatLng != null) {
           targetZoomPoint = startLatLng!;
         } else {
@@ -1469,7 +1713,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         mounted) {
       List<LatLng> pointsForBounds = List.from(routePolyline!.points);
       if (currentGpsPosition != null && startLatLng == currentGpsPosition) {
-        // Optional: Aktuelle Position einbeziehen
         pointsForBounds.add(currentGpsPosition!);
       }
       mapController.fitCamera(
@@ -1600,364 +1843,5 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     }
     return minDistance;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final locationProvider = Provider.of<LocationProvider>(context);
-    final selectedLocationFromUI = locationProvider.selectedLocation;
-    final availableLocationsFromUI = locationProvider.availableLocations;
-
-    final bool isLoading = locationProvider.isLoadingLocationData;
-    final RoutingGraph? currentGraph = locationProvider.currentRoutingGraph;
-    final bool isUiReady = !isLoading && currentGraph != null;
-
-    // HIER WIRD DER API SCHLÜSSEL GELADEN
-    final apiKey = dotenv.env['MAPTILER_API_KEY'];
-
-    List<Marker> activeMarkers = [];
-    final localCurrentLocationMarker = currentLocationMarker;
-    if (localCurrentLocationMarker != null) {
-      activeMarkers.add(localCurrentLocationMarker);
-    }
-    if (startMarker != null) {
-      activeMarkers.add(startMarker!);
-    }
-    if (endMarker != null) {
-      activeMarkers.add(endMarker!);
-    }
-
-    double currentSearchCardHeight = isRouteActiveForCardSwitch
-        ? kCompactCardHeight
-        : fullSearchCardHeight > 0
-            ? fullSearchCardHeight
-            : (kSearchInputRowHeight * 2) +
-                kDividerAndSwapButtonHeight +
-                (kCardInternalVerticalPadding * 2) +
-                (routeDistance != null ? kRouteInfoHeight : 0);
-
-    double instructionCardTop = kSearchCardTopPadding +
-        currentSearchCardHeight +
-        kInstructionCardSpacing;
-
-    double searchResultsTopPosition = instructionCardTop;
-    bool instructionCardVisible = currentDisplayedManeuver != null &&
-        currentDisplayedManeuver!.turnType != TurnType.depart &&
-        !(currentManeuvers.length <= 2 &&
-            currentDisplayedManeuver!.turnType == TurnType.arrive);
-
-    if (instructionCardVisible) {
-      searchResultsTopPosition += 65.0 + kInstructionCardSpacing;
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Campground Navigator"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.volume_up),
-            tooltip: 'Test TTS',
-            onPressed: isUiReady
-                ? () {
-                    ttsService.testSpeak();
-                  }
-                : null,
-          ),
-          if (availableLocationsFromUI.isNotEmpty &&
-              selectedLocationFromUI != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<LocationInfo>(
-                  value: selectedLocationFromUI,
-                  icon: const Icon(Icons.public, color: Colors.white),
-                  dropdownColor: Colors.deepOrange[700],
-                  style: const TextStyle(color: Colors.white),
-                  items: availableLocationsFromUI
-                      .map<DropdownMenuItem<LocationInfo>>(
-                          (LocationInfo location) =>
-                              DropdownMenuItem<LocationInfo>(
-                                value: location,
-                                child: Text(location.name,
-                                    style: const TextStyle(
-                                        color: Colors.white, fontSize: 14),
-                                    overflow: TextOverflow.ellipsis),
-                              ))
-                      .toList(),
-                  onChanged: isUiReady ? _onLocationSelectedFromDropdown : null,
-                  hint: const Text("Standort wählen",
-                      style: TextStyle(color: Colors.white70)),
-                ),
-              ),
-            ),
-          Tooltip(
-            message: useMockLocation
-                ? "Echtes GPS aktivieren"
-                : "Mock-Position aktivieren",
-            child: IconButton(
-              icon: Icon(
-                  useMockLocation ? Icons.location_on : Icons.location_off),
-              color: useMockLocation ? Colors.orangeAccent : Colors.white,
-              onPressed: isUiReady ? _toggleMockLocation : null,
-            ),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          FlutterMap(
-            mapController: mapController,
-            options: MapOptions(
-              initialCenter: selectedLocationFromUI?.initialCenter ??
-                  fallbackInitialCenter,
-              initialZoom: 17.0,
-              minZoom: 13.0,
-              maxZoom: 19.0,
-              onTap: isUiReady ? _handleMapTap : null,
-              onMapEvent: (MapEvent mapEvent) {
-                if (mapEvent is MapEventMove &&
-                    (mapEvent.source == MapEventSource.dragStart ||
-                        mapEvent.source ==
-                            MapEventSource.flingAnimationController)) {
-                  if (followGps) {
-                    setStateIfMounted(() {
-                      followGps = false;
-                      showSnackbar("Follow-GPS Modus deaktiviert.",
-                          durationSeconds: 2);
-                    });
-                  }
-                  // Wenn manuell bewegt wird und wir in der Routenübersicht waren,
-                  // bleiben wir dort, bis der Nutzer explizit umschaltet.
-                  // Wenn wir in der Navigationsansicht waren, bleiben wir auch dort (Zoom wird angepasst).
-                }
-
-                if (mapEvent is MapEventMove &&
-                    (mapEvent.source == MapEventSource.dragStart ||
-                        mapEvent.source ==
-                            MapEventSource.flingAnimationController) &&
-                    (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
-                  if (startFocusNode.hasFocus) {
-                    startFocusNode.unfocus();
-                  }
-                  if (endFocusNode.hasFocus) {
-                    endFocusNode.unfocus();
-                  }
-                  if (routePolyline != null &&
-                      !startFocusNode.hasFocus &&
-                      !endFocusNode.hasFocus) {
-                    setStateIfMounted(() {
-                      isRouteActiveForCardSwitch = true;
-                    });
-                  }
-                }
-              },
-              onMapReady: () {
-                if (!mounted) {
-                  return;
-                }
-                if (kDebugMode) {
-                  print(
-                      "[MapScreen.onMapReady] Karte ist bereit. isMapReady=true");
-                }
-                setState(() => isMapReady = true);
-                final locationProvider =
-                    Provider.of<LocationProvider>(context, listen: false);
-                if (locationProvider.selectedLocation != null &&
-                    currentGpsPosition == null) {
-                  _initializeGpsOrMock(locationProvider.selectedLocation!);
-                } else {
-                  _performInitialMapMove();
-                }
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted && fullSearchCardKey.currentContext != null) {
-                    final RenderBox? renderBox =
-                        fullSearchCardKey.currentContext!.findRenderObject()
-                            as RenderBox?;
-                    if (renderBox != null && renderBox.hasSize) {
-                      setStateIfMounted(() {
-                        fullSearchCardHeight = renderBox.size.height;
-                      });
-                    }
-                  }
-                });
-              },
-            ),
-            children: [
-              if (apiKey != null)
-                TileLayer(
-                  // *** KORREKTUR START ***
-                  urlTemplate:
-                      "https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}{r}.png?key={apiKey}",
-                  retinaMode: true, // Hinzugefügt
-                  // *** KORREKTUR ENDE ***
-                  additionalOptions: {
-                    'apiKey': apiKey,
-                  },
-                  userAgentPackageName: 'dev.tom52538.campsitenav.app',
-                  tileProvider: CancellableNetworkTileProvider(),
-                )
-              else
-                TileLayer(
-                  urlTemplate:
-                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: 'dev.tom52538.campsitenav.app',
-                  tileProvider: CancellableNetworkTileProvider(),
-                ),
-              if (isUiReady && routePolyline != null)
-                PolylineLayer(polylines: [routePolyline!]),
-              if (isUiReady && activeMarkers.isNotEmpty)
-                MarkerLayer(markers: activeMarkers),
-            ],
-          ),
-          Positioned(
-            top: kSearchCardTopPadding,
-            left: kSearchCardHorizontalMargin,
-            right: kSearchCardHorizontalMargin,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return SizeTransition(
-                    sizeFactor: animation,
-                    axisAlignment: -1.0,
-                    child: child,
-                  );
-                },
-                child: isRouteActiveForCardSwitch && isUiReady
-                    ? buildCompactRouteInfoCard(
-                        key: const ValueKey('compactCard'))
-                    : buildSearchInputCard(
-                        key: const ValueKey('searchInputCard')),
-              ),
-            ),
-          ),
-          if (instructionCardVisible &&
-              isUiReady &&
-              !_isInRouteOverviewMode) // Nur in Navigationsansicht zeigen
-            Positioned(
-                top: instructionCardTop,
-                left: kSearchCardHorizontalMargin,
-                right: kSearchCardHorizontalMargin,
-                child: Center(
-                  child: TurnInstructionCard(
-                    maneuver: currentDisplayedManeuver!,
-                    maxWidth: kSearchCardMaxWidth + 50,
-                  ),
-                )),
-          if (showSearchResults &&
-              searchResults.isNotEmpty &&
-              isUiReady &&
-              !isRouteActiveForCardSwitch) // Nur zeigen, wenn große Karte aktiv
-            Positioned(
-              top: searchResultsTopPosition,
-              left: kSearchCardHorizontalMargin,
-              right: kSearchCardHorizontalMargin,
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: Container(
-                  constraints:
-                      const BoxConstraints(maxWidth: kSearchCardMaxWidth),
-                  child: Card(
-                    elevation: 4.0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0)),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                          maxHeight: MediaQuery.of(context).size.height * 0.3),
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: searchResults.length,
-                        itemBuilder: (context, index) {
-                          final feature = searchResults[index];
-                          return ListTile(
-                            leading: Icon(getIconForFeatureType(feature.type)),
-                            title: Text(feature.name),
-                            subtitle: Text("Typ: ${feature.type}"),
-                            onTap: () => selectFeatureAndSetPoint(feature),
-                            dense: true,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (isCalculatingRoute && isUiReady)
-            Positioned.fill(
-                child: Container(
-                    color: Colors.black.withAlpha(70),
-                    child: const Center(
-                        child:
-                            CircularProgressIndicator(color: Colors.white)))),
-          if (isLoading)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black.withAlpha(180),
-                child: Center(
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const CircularProgressIndicator(color: Colors.white),
-                  const SizedBox(height: 16),
-                  Text(
-                      "Lade Kartendaten für ${selectedLocationFromUI?.name ?? '...'}...",
-                      textAlign: TextAlign.center,
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 16)),
-                ])),
-              ),
-            ),
-        ],
-      ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (isUiReady && routePolyline != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: FloatingActionButton.small(
-                heroTag: "toggleOverviewBtn",
-                onPressed: _toggleRouteOverview,
-                tooltip: _isInRouteOverviewMode
-                    ? 'Zur Navigationsansicht wechseln'
-                    : 'Routenübersicht anzeigen',
-                child: Icon(_isInRouteOverviewMode
-                    ? Icons.zoom_in_map
-                    : Icons.map_outlined),
-              ),
-            ),
-          if (isUiReady &&
-              (routePolyline != null ||
-                  startMarker != null ||
-                  endMarker != null))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: FloatingActionButton.small(
-                heroTag: "clearAllBtn",
-                onPressed: () =>
-                    clearRoute(showConfirmation: true, clearMarkers: true),
-                tooltip: 'Route, Start & Ziel löschen',
-                child: const Icon(Icons.delete_forever_outlined),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: FloatingActionButton.small(
-              heroTag: "centerBtn",
-              onPressed: isUiReady ? _centerOnGps : null,
-              tooltip: followGps && !_isInRouteOverviewMode
-                  ? 'Follow-GPS Modus aktiv'
-                  : 'Follow-GPS Modus aktivieren',
-              backgroundColor:
-                  followGps ? Colors.greenAccent[700] : Colors.deepOrangeAccent,
-              child: Icon(followGps ? Icons.navigation : Icons.my_location),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-    );
   }
 }
