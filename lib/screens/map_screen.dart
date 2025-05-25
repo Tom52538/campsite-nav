@@ -293,7 +293,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   if (endFocusNode.hasFocus) {
                     endFocusNode.unfocus();
                   }
-                  // KORREKTUR: curly_braces_in_flow_control_structures
                   if (routePolyline != null) {
                     setStateIfMounted(() {
                       isRouteActiveForCardSwitch = true;
@@ -336,14 +335,16 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   theme: mapTheme,
                   fileCacheTtl: const Duration(days: 7),
                   tileProviders: TileProviders({
-                    // KORREKTUR: Korrekter Klassenname
+                    // KORREKTER Klassenname
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
                   }),
                 )
               else
                 TileLayer(
+                  // Fallback oder Ladeanzeige
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  // Hier könntest du auch ein einfaches Container-Widget mit einem Ladeindikator zeigen
                 ),
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
@@ -499,11 +500,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
-
-  // --- Die restlichen Methoden bleiben hier ---
-  // (Methoden wie _onStartSearchChanged, _onEndSearchChanged, _updateSearchResults, etc.
-  //  sind identisch zum vorherigen Stand und werden hier der Kürze halber nicht wiederholt,
-  //  sollten aber im vollständigen Code vorhanden sein.)
 
   void _onStartSearchChanged() {
     if (!mounted) return;
@@ -1162,7 +1158,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    // KORREKTUR: unnecessary_null_comparison
     if (currentGraphValue == null || currentGraphValue.nodes.isEmpty) {
       showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
@@ -1397,7 +1392,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         showSearchResults = false;
       });
     }
-    // KORREKTUR: curly_braces_in_flow_control_structures
     if (routePolyline != null) {
       setStateIfMounted(() {
         isRouteActiveForCardSwitch = true;
