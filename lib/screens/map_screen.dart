@@ -9,11 +9,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// Korrekte Imports für Vektor-Karten
-// Stellt sicher, dass MaptilerVectorTileProvider hier verfügbar ist
-import 'package:vector_map_tiles/vector_map_tiles.dart';
+// Importe für Vektor-Karten
+import 'package:vector_map_tiles/vector_map_tiles.dart'; // Stellt MaptilerVectorTileProvider bereit
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
+// Eigene Projekt-Importe
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
@@ -250,8 +250,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               initialCenter: selectedLocationFromUI?.initialCenter ??
                   fallbackInitialCenter,
               initialZoom: 17.0,
-              minZoom: 13.0,
-              maxZoom: 19.0,
+              minZoom: 13.0, // Kann angepasst werden
+              maxZoom: 20.0, // Vektor-Kacheln erlauben oft tieferen Zoom
               onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
                 if (mapEvent is MapEventMove &&
@@ -314,17 +314,17 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               if (isUiReady)
                 VectorTileLayer(
                   theme: mapTheme,
-                  fileCacheTtl:
-                      const Duration(days: 7), // Cache für Vektor-Kacheln
+                  fileCacheTtl: const Duration(days: 7),
                   tileProviders: TileProviders({
-                    // KORREKTER Klassenname und Import
+                    // Sicherstellen, dass dies exakt mit der Klasse im Paket übereinstimmt
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
                   }),
+                  // Wichtig: Maximale Zoomstufe für den TileProvider festlegen
+                  maximumZoom: 20, // Synchronisiere dies mit MapOptions.maxZoom
                 )
               else
                 TileLayer(
-                  // Fallback oder Ladeanzeige
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 ),
               if (isUiReady && routePolyline != null)
@@ -482,7 +482,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
   }
 
-  // --- Die restlichen Methoden von MapScreenState bleiben hier ---
+  // --- Platzhalter für die restlichen Methoden von MapScreenState ---
   // (Diese sind identisch zur vorherigen Version und werden hier nicht wiederholt)
   void _onStartSearchChanged() {
     if (!mounted) return;
@@ -1123,6 +1123,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
+    // Die unnötige null-Prüfung wird vom Analyzer hier angemerkt (kann aber bleiben)
     if (currentGraphValue == null || currentGraphValue.nodes.isEmpty) {
       showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
@@ -1294,10 +1295,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   }
                 });
               } catch (e) {
-                // ignore: avoid_print
-                if (kDebugMode)
+                if (kDebugMode) {
+                  // ignore: avoid_print
                   print(
                       "[MapScreen.calculateAndDisplayRoute] Fehler beim Anpassen der Kartenansicht an die Route: $e");
+                }
                 if (endLatLng != null) {
                   mapController.move(endLatLng!, mapController.camera.zoom);
                 }
@@ -1314,13 +1316,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         });
       }
     } catch (e, stacktrace) {
-      // ignore: avoid_print
-      if (kDebugMode)
+      if (kDebugMode) {
+        // ignore: avoid_print
         print(
             "[MapScreen.calculateAndDisplayRoute] FEHLER bei Routenberechnung: $e");
-      // ignore: avoid_print
-      if (kDebugMode)
+        // ignore: avoid_print
         print("[MapScreen.calculateAndDisplayRoute] Stacktrace: $stacktrace");
+      }
       showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() {
         routePolyline = null;
