@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
-import 'package:logging/logging.dart';
+import 'package:logging/logging.dart'; // Dieser Import muss jetzt funktionieren.
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -23,15 +23,20 @@ class LocationProvider with ChangeNotifier {
 
   final StyleCachingService _styleCachingService = StyleCachingService();
   vtr.Theme? _mapTheme;
+  // Logger-Instanz für diese Klasse
   final Logger _logger = Logger('LocationProvider');
 
   LocationProvider() {
+    // Grundlegendes Logging-Setup, kann global in main.dart erfolgen
     if (kDebugMode) {
-      Logger.root.level = Level.INFO; 
+      Logger.root.level = Level.ALL; // Zeige alle Logs im Debug-Modus
       Logger.root.onRecord.listen((record) {
         // ignore: avoid_print
-        print('${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+        print(
+            '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
       });
+    } else {
+      Logger.root.level = Level.WARNING; // Weniger Logs im Release-Modus
     }
 
     if (_availableLocations.isNotEmpty) {
@@ -40,6 +45,7 @@ class LocationProvider with ChangeNotifier {
     }
   }
 
+  // Getter bleiben unverändert
   List<LocationInfo> get availableLocations => _availableLocations;
   LocationInfo? get selectedLocation => _selectedLocation;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
@@ -58,6 +64,7 @@ class LocationProvider with ChangeNotifier {
 
   Future<void> loadDataForSelectedLocation() async {
     if (_selectedLocation == null) {
+      // ... (Code zum Zurücksetzen bleibt gleich)
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
       _mapTheme = null;
@@ -94,16 +101,54 @@ class LocationProvider with ChangeNotifier {
         final styleFile = File(stylePath);
         if (await styleFile.exists()) {
           final String styleJsonContent = await styleFile.readAsString();
-          final Map<String, dynamic> styleJsonMap = jsonDecode(styleJsonContent) as Map<String, dynamic>; 
-          
-          final themeReaderLogger = Logger('VTRThemeReader');
-          final themeReader = vtr.ThemeReader(logger: themeReaderLogger); // Korrekt: benannter Parameter
-          
-          // Korrekter Aufruf von read:
-          // 1. positional argument: styleJsonMap
-          // benannter argument: uri
-          _mapTheme = await themeReader.read(styleJsonMap, uri: Uri.file(stylePath)); 
+          final Map<String, dynamic> styleJsonMap =
+              jsonDecode(styleJsonContent) as Map<String, dynamic>;
+
+          // Erstelle eine Logger-Instanz spezifisch für den ThemeReader
+          // Der Name ist frei wählbar, hilft aber beim Debuggen der Logs
+          final themeReaderSpecificLogger = Logger('VTRThemeReader');
+
+          // KORREKTER Konstruktor: `logger` ist ein benannter Parameter
+          final themeReader =
+              vtr.ThemeReader(logger: themeReaderSpecificLogger);
+
+          // KORREKTER Aufruf von read:
+          // 1. positional argument: styleJsonMap (die geparste JSON-Map)
+          // benannter argument: uri (die Basis-URI für relative Pfade innerhalb des Stils)
+          _mapTheme =
+              await themeReader.read(styleJsonMap, uri: Uri.file(stylePath));
 
           _logger.info("Vector-Theme erfolgreich geladen von: $stylePath");
         } else {
-           _logger.warning("Fehler: Gecachte Style-Datei
+          _logger.warning(
+              "Fehler: Gecachte Style-Datei nicht gefunden unter $stylePath");
+          _mapTheme = null;
+        }
+      } else {
+        _logger.warning("Fehler: Style-Pfad konnte nicht ermittelt werden.");
+        _mapTheme = null;
+      }
+
+      _logger.info("GeoJSON-String für ${_selectedLocation!.name} geladen.");
+
+      final parsedData =
+          GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString);
+      _currentRoutingGraph = parsedData.graph;
+      _currentSearchableFeatures = parsedData.features;
+
+      _logger.info(
+          "Daten für ${_selectedLocation!.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}");
+    } catch (e, stacktrace) {
+      _logger.severe(
+          "Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e",
+          e,
+          stacktrace);
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _mapTheme = null;
+    }
+
+    _isLoadingLocationData = false;
+    notifyListeners();
+  }
+}
