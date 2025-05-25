@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
+import 'package:logging/logging.dart'; // NEU
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -22,8 +23,27 @@ class LocationProvider with ChangeNotifier {
 
   final StyleCachingService _styleCachingService = StyleCachingService();
   vtr.Theme? _mapTheme;
+  // Erstelle einen Logger für diese Klasse
+  final Logger _logger = Logger('LocationProvider');
 
   LocationProvider() {
+    // Optional: Logging-Level konfigurieren (z.B. nur im Debug-Modus)
+    if (kDebugMode) {
+      Logger.root.level = Level.ALL; // Aktiviere alle Logs
+      Logger.root.onRecord.listen((record) {
+        // ignore: avoid_print
+        print(
+            '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+      });
+    } else {
+      Logger.root.level = Level.INFO; // Im Release-Modus weniger gesprächig
+      Logger.root.onRecord.listen((record) {
+        // ignore: avoid_print
+        print(
+            '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+      });
+    }
+
     if (_availableLocations.isNotEmpty) {
       _selectedLocation = _availableLocations.first;
       loadDataForSelectedLocation();
@@ -41,9 +61,7 @@ class LocationProvider with ChangeNotifier {
   void selectLocation(LocationInfo? newLocation) {
     if (newLocation != null && newLocation != _selectedLocation) {
       _selectedLocation = newLocation;
-      if (kDebugMode) {
-        print("[LocationProvider] Standort gewechselt zu: ${newLocation.name}");
-      }
+      _logger.info("Standort gewechselt zu: ${newLocation.name}");
       loadDataForSelectedLocation();
     }
   }
@@ -89,55 +107,36 @@ class LocationProvider with ChangeNotifier {
           final Map<String, dynamic> styleJsonMap =
               jsonDecode(styleJsonContent);
 
-          // KORREKTE ThemeReader-Nutzung
-          final logger = vtr.LoggerContext(
-              // Optional: Konfiguriere den Logger bei Bedarf,
-              // hier wird der Standard-Logger verwendet
-              );
-          final themeReader = vtr.ThemeReader(logger);
-          // 'read' ist die asynchrone Methode, die das Theme-Objekt zurückgibt
-          _mapTheme = await themeReader.read(styleJsonMap,
-              baseUri: Uri.file(stylePath));
+          final themeReader = vtr.ThemeReader(_logger); // Logger übergeben
+          // KORREKTER AUFRUF: read(Map json, {Uri? uri})
+          _mapTheme =
+              await themeReader.read(styleJsonMap, uri: Uri.file(stylePath));
 
-          if (kDebugMode) {
-            print(
-                "[LocationProvider] Vector-Theme erfolgreich geladen von: $stylePath");
-          }
+          _logger.info("Vector-Theme erfolgreich geladen von: $stylePath");
         } else {
-          if (kDebugMode) {
-            print(
-                "[LocationProvider] Fehler: Gecachte Style-Datei nicht gefunden unter $stylePath");
-          }
+          _logger.warning(
+              "Fehler: Gecachte Style-Datei nicht gefunden unter $stylePath");
           _mapTheme = null;
         }
       } else {
-        if (kDebugMode) {
-          print(
-              "[LocationProvider] Fehler: Style-Pfad konnte nicht ermittelt werden.");
-        }
+        _logger.warning("Fehler: Style-Pfad konnte nicht ermittelt werden.");
         _mapTheme = null;
       }
 
-      if (kDebugMode) {
-        print(
-            "[LocationProvider] GeoJSON-String für ${_selectedLocation!.name} geladen.");
-      }
+      _logger.info("GeoJSON-String für ${_selectedLocation!.name} geladen.");
 
       final parsedData =
           GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString);
       _currentRoutingGraph = parsedData.graph;
       _currentSearchableFeatures = parsedData.features;
 
-      if (kDebugMode) {
-        print(
-            "[LocationProvider] Daten für ${_selectedLocation!.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}");
-      }
+      _logger.info(
+          "Daten für ${_selectedLocation!.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}");
     } catch (e, stacktrace) {
-      if (kDebugMode) {
-        print(
-            "[LocationProvider] Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e");
-        print("[LocationProvider] Stacktrace: $stacktrace");
-      }
+      _logger.severe(
+          "Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e",
+          e,
+          stacktrace);
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
       _mapTheme = null;
