@@ -9,13 +9,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// Importe für Vektor-Karten
-// Stelle sicher, dass NetworkVectorTileProvider hier verfügbar ist oder importiere es direkt,
-// falls es nicht über den Hauptimport von vector_map_tiles kommt (was in v7.3.1 der Fall sein sollte)
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
-// Eigene Projekt-Importe
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
@@ -105,16 +101,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
-      // Handle missing API key, maybe show an error or use a fallback
       if (kDebugMode) {
         print("WARNUNG: MAPTILER_API_KEY nicht in .env gefunden!");
       }
-      // Set a placeholder or handle error appropriately
-      _maptilerUrlTemplate =
-          'https://tile.openstreetmap.org/{z}/{x}/{y}.png'; // Fallback
+      _maptilerUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     } else {
-      // Verwende den Style "dataviz", da dieser in LocationInfo auch verwendet wird.
-      // Du kannst dies anpassen, wenn du einen anderen MapTiler-Stil bevorzugst.
       _maptilerUrlTemplate =
           'https://api.maptiler.com/maps/dataviz/{z}/{x}/{y}.pbf?key=$apiKey';
     }
@@ -176,8 +167,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final bool isUiReady = !isLoading &&
         locationProvider.currentRoutingGraph != null &&
         mapTheme != null;
-
-    // API Key wird jetzt in initState geholt und in _maptilerUrlTemplate gespeichert
 
     List<Marker> activeMarkers = [];
     if (currentLocationMarker != null) {
@@ -333,32 +322,23 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             children: [
               if (isUiReady &&
                   _maptilerUrlTemplate.isNotEmpty &&
-                  _maptilerUrlTemplate
-                      .contains('key=')) // Nur wenn API Key da ist
+                  _maptilerUrlTemplate.contains('key='))
                 VectorTileLayer(
-                  theme:
-                      mapTheme!, // mapTheme sollte hier nicht null sein, wenn isUiReady true ist
+                  theme: mapTheme!,
                   fileCacheTtl: const Duration(days: 7),
                   tileProviders: TileProviders({
-                    // TileProviders ist eine Klasse in vector_map_tiles
-                    'maptiler': NetworkVectorTileProvider(
-                      // <- Ersetzt
+                    // KORREKTUR: Der Schlüssel hier MUSS mit dem Source-Namen im Theme übereinstimmen.
+                    'maptiler_planet': NetworkVectorTileProvider(
                       urlTemplate: _maptilerUrlTemplate,
-                      maximumZoom:
-                          14, // MapTiler Vektor Kacheln gehen oft nur bis Zoom 14
-                      // Die Darstellung darüber hinaus erfolgt durch Über-Zoomen
-                      // der Kacheln von Zoom 14. Dies ist Standardverhalten
-                      // von vector_map_tiles.
-                      // httpHeaders: Optional, falls benötigt
+                      maximumZoom: 14,
                     ),
                   }),
                   maximumZoom: 20,
                 )
-              else // Fallback auf OpenStreetMap Rasterkacheln, wenn kein API-Key oder UI nicht bereit
+              else
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName:
-                      'com.example.camping_osm_navi', // Empfohlen
+                  userAgentPackageName: 'com.example.camping_osm_navi',
                 ),
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
@@ -514,10 +494,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
-
-  // --- Rest der Methoden von MapScreenState bleibt unverändert ---
-  // (Hier nur _onStartSearchChanged als Beispiel, alle anderen Methoden sind identisch
-  //  zur Version, die ich dir bereits zur Verfügung gestellt habe)
 
   void _onStartSearchChanged() {
     if (!mounted) return;
