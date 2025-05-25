@@ -1,38 +1,41 @@
 // lib/providers/location_provider.dart
-
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart'; // Für rootBundle
-import 'dart:async'; // Für Future
+import 'package:flutter/services.dart';
+import 'dart:async';
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/services/geojson_parser_service.dart';
+import 'package:camping_osm_navi/services/style_caching_service.dart'; // NEU
 
 class LocationProvider with ChangeNotifier {
-  final List<LocationInfo> _availableLocations =
-      appLocations; // Aus location_info.dart
+  final List<LocationInfo> _availableLocations = appLocations;
   LocationInfo? _selectedLocation;
 
   RoutingGraph? _currentRoutingGraph;
   List<SearchableFeature> _currentSearchableFeatures = [];
   bool _isLoadingLocationData = false;
 
+  // --- NEUE FELDER ---
+  final StyleCachingService _styleCachingService = StyleCachingService();
+  String? _cachedStylePath;
+  // --- ENDE NEUE FELDER ---
+
   LocationProvider() {
     if (_availableLocations.isNotEmpty) {
       _selectedLocation = _availableLocations.first;
-      // Daten für den initialen Standort laden
       loadDataForSelectedLocation();
     }
   }
 
   List<LocationInfo> get availableLocations => _availableLocations;
   LocationInfo? get selectedLocation => _selectedLocation;
-
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
   List<SearchableFeature> get currentSearchableFeatures =>
       _currentSearchableFeatures;
   bool get isLoadingLocationData => _isLoadingLocationData;
+  String? get cachedStylePath => _cachedStylePath; // NEU
 
   void selectLocation(LocationInfo? newLocation) {
     if (newLocation != null && newLocation != _selectedLocation) {
@@ -40,50 +43,45 @@ class LocationProvider with ChangeNotifier {
       if (kDebugMode) {
         print("[LocationProvider] Standort gewechselt zu: ${newLocation.name}");
       }
-      // Daten für den neu ausgewählten Standort laden
       loadDataForSelectedLocation();
     }
   }
 
   Future<void> loadDataForSelectedLocation() async {
     if (_selectedLocation == null) {
-      if (kDebugMode) {
-        print(
-            "[LocationProvider] Kein Standort ausgewählt, Laden abgebrochen.");
-      }
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
+      _cachedStylePath = null; // NEU
       _isLoadingLocationData = false;
-      // Da dies auch den Zustand ändert, ggf. auch in Future.microtask verpacken,
-      // aber meist ist es unkritischer, wenn es keine UI-Aktualisierung direkt im Build-Zyklus auslöst.
-      // Für Konsistenz könnte man es tun.
       Future.microtask(() {
         notifyListeners();
       });
       return;
     }
 
-    if (kDebugMode) {
-      print(
-          "[LocationProvider] Starte Laden der Daten für: ${_selectedLocation!.name}");
-    }
-
-    // KORREKTUR: Verzögere den ersten notifyListeners-Aufruf
     Future.microtask(() {
       _isLoadingLocationData = true;
-      _currentRoutingGraph = null; // Alte Daten vor dem Laden löschen
-      _currentSearchableFeatures = []; // Alte Daten vor dem Laden löschen
-      notifyListeners(); // UI informieren, dass Ladevorgang startet
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _cachedStylePath = null; // NEU
+      notifyListeners();
     });
 
-    // await Future.delayed(Duration.zero); // Alternative kleine Verzögerung, falls microtask nicht reicht
-
     try {
-      final String geoJsonString =
-          await rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
+      // Parallel das Caching und das Parsen der GeoJSON-Daten ausführen
+      final results = await Future.wait([
+        _styleCachingService.ensureStyleIsCached(
+            styleUrl: _selectedLocation!.styleUrl,
+            styleId: _selectedLocation!.styleId),
+        rootBundle.loadString(_selectedLocation!.geojsonAssetPath),
+      ]);
+
+      _cachedStylePath = results[0] as String?;
+      final String geoJsonString = results[1] as String;
+
       if (kDebugMode) {
         print(
-            "[LocationProvider] GeoJSON-String für ${_selectedLocation!.name} geladen (${geoJsonString.length} Zeichen).");
+            "[LocationProvider] GeoJSON-String für ${_selectedLocation!.name} geladen.");
       }
 
       final parsedData =
@@ -93,26 +91,20 @@ class LocationProvider with ChangeNotifier {
 
       if (kDebugMode) {
         print(
-            "[LocationProvider] Daten für ${_selectedLocation!.name} erfolgreich geparst und zugewiesen. Graph-Knoten: ${_currentRoutingGraph?.nodes.length ?? 0}, Features: ${_currentSearchableFeatures.length}");
+            "[LocationProvider] Daten für ${_selectedLocation!.name} erfolgreich verarbeitet. Style-Pfad: $_cachedStylePath");
       }
     } catch (e, stacktrace) {
       if (kDebugMode) {
         print(
-            "[LocationProvider] Fehler beim Laden oder Parsen der Daten für ${_selectedLocation!.name}: $e");
+            "[LocationProvider] Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e");
         print("[LocationProvider] Stacktrace: $stacktrace");
       }
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
+      _cachedStylePath = null;
     }
 
     _isLoadingLocationData = false;
-    // Der finale notifyListeners kann oft direkt erfolgen, da die asynchronen Operationen (await)
-    // den synchronen Build-Flow bereits unterbrochen haben.
     notifyListeners();
-
-    if (kDebugMode) {
-      print(
-          "[LocationProvider] Laden der Daten für ${_selectedLocation!.name} abgeschlossen (nach try-catch). Graph vorhanden: ${_currentRoutingGraph != null}, Features vorhanden: ${_currentSearchableFeatures.isNotEmpty}");
-    }
   }
 }
