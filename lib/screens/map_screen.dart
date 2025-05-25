@@ -9,9 +9,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+// Importe für Vektor-Karten
 import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
+// Eigene Projekt-Importe
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
@@ -311,14 +313,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             children: [
               if (isUiReady)
                 VectorTileLayer(
-                  theme: mapTheme,
+                  theme: mapTheme!,
                   fileCacheTtl: const Duration(days: 7),
-                  // KORREKTUR: 'TileProviders' entfernt, da es ein typedef und kein Konstruktor ist.
-                  // Es wird direkt eine Map an 'tileProviders' übergeben.
-                  tileProviders: {
+                  // KORREKTUR: Die TileProviders-Klasse wird hier korrekt verwendet.
+                  tileProviders: TileProviders({
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
-                  },
+                  }),
                   maximumZoom: 20,
                 )
               else
