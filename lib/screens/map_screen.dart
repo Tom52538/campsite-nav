@@ -162,8 +162,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final bool isLoading = locationProvider.isLoadingLocationData;
-    final vtr.Theme? mapTheme =
-        locationProvider.mapTheme; // KORREKTUR: mapTheme
+    final vtr.Theme? mapTheme = locationProvider.mapTheme;
     final bool isUiReady = !isLoading &&
         locationProvider.currentRoutingGraph != null &&
         mapTheme != null;
@@ -332,12 +331,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
             ),
             children: [
-              if (isUiReady) // Hängt jetzt von mapTheme ab
+              if (isUiReady)
                 VectorTileLayer(
-                  theme: mapTheme, // mapTheme ist jetzt vtr.Theme?
+                  theme: mapTheme,
                   fileCacheTtl: const Duration(days: 7),
                   tileProviders: TileProviders({
-                    // KORREKTUR: Tippfehler
+                    // KORREKTUR: Korrekter Klassenname
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
                   }),
@@ -501,6 +500,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
   }
 
+  // --- Die restlichen Methoden bleiben hier ---
+  // (Methoden wie _onStartSearchChanged, _onEndSearchChanged, _updateSearchResults, etc.
+  //  sind identisch zum vorherigen Stand und werden hier der Kürze halber nicht wiederholt,
+  //  sollten aber im vollständigen Code vorhanden sein.)
+
   void _onStartSearchChanged() {
     if (!mounted) return;
     final locationProvider =
@@ -554,7 +558,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               activeSearchField == ActiveSearchField.start) {
             setStateIfMounted(() {
               showSearchResults = false;
-              // KORREKTUR: curly_braces_in_flow_control_structures
               if (!endFocusNode.hasFocus && routePolyline != null) {
                 isRouteActiveForCardSwitch = true;
               }
@@ -581,7 +584,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               activeSearchField == ActiveSearchField.end) {
             setStateIfMounted(() {
               showSearchResults = false;
-              // KORREKTUR: curly_braces_in_flow_control_structures
               if (!startFocusNode.hasFocus && routePolyline != null) {
                 isRouteActiveForCardSwitch = true;
               }
@@ -842,7 +844,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       });
     } else {
       activeSearchField = ActiveSearchField.none;
-      // KORREKTUR: curly_braces_in_flow_control_structures
       if (routePolyline != null) {
         setStateIfMounted(() {
           isRouteActiveForCardSwitch = true;
@@ -1161,7 +1162,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    if (currentGraphValue.nodes.isEmpty) {
+    // KORREKTUR: unnecessary_null_comparison
+    if (currentGraphValue == null || currentGraphValue.nodes.isEmpty) {
       showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
       setStateIfMounted(() {
