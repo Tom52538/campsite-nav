@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
-import 'package:logging/logging.dart'; // Dieser Import muss jetzt funktionieren.
+import 'package:logging/logging.dart';
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -23,20 +23,18 @@ class LocationProvider with ChangeNotifier {
 
   final StyleCachingService _styleCachingService = StyleCachingService();
   vtr.Theme? _mapTheme;
-  // Logger-Instanz für diese Klasse
   final Logger _logger = Logger('LocationProvider');
 
   LocationProvider() {
-    // Grundlegendes Logging-Setup, kann global in main.dart erfolgen
     if (kDebugMode) {
-      Logger.root.level = Level.ALL; // Zeige alle Logs im Debug-Modus
+      Logger.root.level = Level.ALL;
       Logger.root.onRecord.listen((record) {
         // ignore: avoid_print
         print(
             '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
       });
     } else {
-      Logger.root.level = Level.WARNING; // Weniger Logs im Release-Modus
+      Logger.root.level = Level.WARNING;
     }
 
     if (_availableLocations.isNotEmpty) {
@@ -45,7 +43,6 @@ class LocationProvider with ChangeNotifier {
     }
   }
 
-  // Getter bleiben unverändert
   List<LocationInfo> get availableLocations => _availableLocations;
   LocationInfo? get selectedLocation => _selectedLocation;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
@@ -64,7 +61,6 @@ class LocationProvider with ChangeNotifier {
 
   Future<void> loadDataForSelectedLocation() async {
     if (_selectedLocation == null) {
-      // ... (Code zum Zurücksetzen bleibt gleich)
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
       _mapTheme = null;
@@ -104,19 +100,15 @@ class LocationProvider with ChangeNotifier {
           final Map<String, dynamic> styleJsonMap =
               jsonDecode(styleJsonContent) as Map<String, dynamic>;
 
-          // Erstelle eine Logger-Instanz spezifisch für den ThemeReader
-          // Der Name ist frei wählbar, hilft aber beim Debuggen der Logs
           final themeReaderSpecificLogger = Logger('VTRThemeReader');
 
-          // KORREKTER Konstruktor: `logger` ist ein benannter Parameter
+          // KORREKTUR: ThemeReader mit benanntem Parameter 'logger' initialisiert.
           final themeReader =
               vtr.ThemeReader(logger: themeReaderSpecificLogger);
 
-          // KORREKTER Aufruf von read:
-          // 1. positional argument: styleJsonMap (die geparste JSON-Map)
-          // benannter argument: uri (die Basis-URI für relative Pfade innerhalb des Stils)
-          _mapTheme =
-              await themeReader.read(styleJsonMap, uri: Uri.file(stylePath));
+          // KORREKTUR: 'await' entfernt und 'read' synchron aufgerufen, wie es die Fehleranalyse nahelegt.
+          // Der 'uri' Parameter wird als benannter Parameter übergeben.
+          _mapTheme = themeReader.read(styleJsonMap, uri: Uri.file(stylePath));
 
           _logger.info("Vector-Theme erfolgreich geladen von: $stylePath");
         } else {
