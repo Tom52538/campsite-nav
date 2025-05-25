@@ -1783,21 +1783,20 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
             ),
             children: [
-              // HIER WIRD DER TILELAYER GEÄNDERT
-              if (apiKey !=
-                  null) // Nur anzeigen, wenn ein Schlüssel vorhanden ist
+              if (apiKey != null)
                 TileLayer(
-                  // Neue URL für MapTiler
+                  // *** KORREKTUR START ***
                   urlTemplate:
-                      "https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key={apiKey}",
-                  // Der API-Schlüssel wird hier übergeben
+                      "https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}{r}.png?key={apiKey}",
+                  retinaMode: true, // Hinzugefügt
+                  // *** KORREKTUR ENDE ***
                   additionalOptions: {
                     'apiKey': apiKey,
                   },
                   userAgentPackageName: 'dev.tom52538.campsitenav.app',
                   tileProvider: CancellableNetworkTileProvider(),
                 )
-              else // Fallback, falls der Schlüssel nicht geladen werden kann
+              else
                 TileLayer(
                   urlTemplate:
                       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -1805,7 +1804,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   userAgentPackageName: 'dev.tom52538.campsitenav.app',
                   tileProvider: CancellableNetworkTileProvider(),
                 ),
-
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
