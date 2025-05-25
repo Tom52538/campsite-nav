@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
-import 'package:logging/logging.dart';
+// Import für den Logger aus package:logging, falls anderweitig in dieser Datei benötigt
+import 'package:logging/logging.dart'
+    as ext_logging; // Alias hinzugefügt zur Unterscheidung
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -23,18 +25,19 @@ class LocationProvider with ChangeNotifier {
 
   final StyleCachingService _styleCachingService = StyleCachingService();
   vtr.Theme? _mapTheme;
-  final Logger _logger = Logger('LocationProvider');
+  // Logger für diese Klasse (aus package:logging)
+  final ext_logging.Logger _logger = ext_logging.Logger('LocationProvider');
 
   LocationProvider() {
     if (kDebugMode) {
-      Logger.root.level = Level.ALL;
-      Logger.root.onRecord.listen((record) {
+      ext_logging.Logger.root.level = ext_logging.Level.ALL;
+      ext_logging.Logger.root.onRecord.listen((record) {
         // ignore: avoid_print
         print(
             '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
       });
     } else {
-      Logger.root.level = Level.WARNING;
+      ext_logging.Logger.root.level = ext_logging.Level.WARNING;
     }
 
     if (_availableLocations.isNotEmpty) {
@@ -100,12 +103,10 @@ class LocationProvider with ChangeNotifier {
           final Map<String, dynamic> styleJsonMap =
               jsonDecode(styleJsonContent) as Map<String, dynamic>;
 
-          final themeReaderSpecificLogger = Logger('VTRThemeReader');
+          // KORREKTUR: Der ThemeReader wird ohne expliziten Logger initialisiert.
+          // Er verwendet dann seinen internen Logger.noop().
+          final themeReader = vtr.ThemeReader();
 
-          final themeReader =
-              vtr.ThemeReader(logger: themeReaderSpecificLogger);
-
-          // KORREKTUR: Die 'read'-Methode wird jetzt ohne 'await' und ohne 'uri'-Parameter aufgerufen.
           _mapTheme = themeReader.read(styleJsonMap);
 
           _logger.info("Vector-Theme erfolgreich geladen von: $stylePath");
