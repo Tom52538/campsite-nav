@@ -9,11 +9,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// Importe für Vektor-Karten
-import 'package:vector_map_tiles/vector_map_tiles.dart'; // Stellt MaptilerVectorTileProvider bereit
+import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
-// Eigene Projekt-Importe
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
@@ -250,8 +248,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               initialCenter: selectedLocationFromUI?.initialCenter ??
                   fallbackInitialCenter,
               initialZoom: 17.0,
-              minZoom: 13.0, // Kann angepasst werden
-              maxZoom: 20.0, // Vektor-Kacheln erlauben oft tieferen Zoom
+              minZoom: 13.0,
+              maxZoom: 20.0,
               onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
                 if (mapEvent is MapEventMove &&
@@ -315,13 +313,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 VectorTileLayer(
                   theme: mapTheme,
                   fileCacheTtl: const Duration(days: 7),
-                  tileProviders: TileProviders({
-                    // Sicherstellen, dass dies exakt mit der Klasse im Paket übereinstimmt
+                  // KORREKTUR: 'TileProviders' entfernt, da es ein typedef und kein Konstruktor ist.
+                  // Es wird direkt eine Map an 'tileProviders' übergeben.
+                  tileProviders: {
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
-                  }),
-                  // Wichtig: Maximale Zoomstufe für den TileProvider festlegen
-                  maximumZoom: 20, // Synchronisiere dies mit MapOptions.maxZoom
+                  },
+                  maximumZoom: 20,
                 )
               else
                 TileLayer(
@@ -482,8 +480,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
   }
 
-  // --- Platzhalter für die restlichen Methoden von MapScreenState ---
-  // (Diese sind identisch zur vorherigen Version und werden hier nicht wiederholt)
   void _onStartSearchChanged() {
     if (!mounted) return;
     final locationProvider =
@@ -1123,7 +1119,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    // Die unnötige null-Prüfung wird vom Analyzer hier angemerkt (kann aber bleiben)
     if (currentGraphValue == null || currentGraphValue.nodes.isEmpty) {
       showErrorDialog(
           "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
