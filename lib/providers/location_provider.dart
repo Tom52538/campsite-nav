@@ -1,8 +1,10 @@
 // lib/providers/location_provider.dart
+import 'dart:convert'; // NEU für jsonDecode, falls styleJson selbst nochmals geparsed werden muss
+import 'dart:io'; // NEU für File-Operationen
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr; // NEU
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -19,7 +21,7 @@ class LocationProvider with ChangeNotifier {
   bool _isLoadingLocationData = false;
 
   final StyleCachingService _styleCachingService = StyleCachingService();
-  vtr.Theme? _mapTheme; // NEU: Theme-Objekt statt Pfad
+  vtr.Theme? _mapTheme;
 
   LocationProvider() {
     if (_availableLocations.isNotEmpty) {
@@ -34,7 +36,7 @@ class LocationProvider with ChangeNotifier {
   List<SearchableFeature> get currentSearchableFeatures =>
       _currentSearchableFeatures;
   bool get isLoadingLocationData => _isLoadingLocationData;
-  vtr.Theme? get mapTheme => _mapTheme; // NEU
+  vtr.Theme? get mapTheme => _mapTheme;
 
   void selectLocation(LocationInfo? newLocation) {
     if (newLocation != null && newLocation != _selectedLocation) {
@@ -50,7 +52,7 @@ class LocationProvider with ChangeNotifier {
     if (_selectedLocation == null) {
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
-      _mapTheme = null; // NEU
+      _mapTheme = null;
       _isLoadingLocationData = false;
       Future.microtask(() {
         notifyListeners();
@@ -62,7 +64,7 @@ class LocationProvider with ChangeNotifier {
       _isLoadingLocationData = true;
       _currentRoutingGraph = null;
       _currentSearchableFeatures = [];
-      _mapTheme = null; // NEU
+      _mapTheme = null;
       notifyListeners();
     });
 
@@ -81,10 +83,37 @@ class LocationProvider with ChangeNotifier {
       final geoJsonString = results[1] as String;
 
       if (stylePath != null) {
-        _mapTheme = await vtr.ThemeReader(uri: Uri.parse(stylePath)).read();
-        if (kDebugMode) {
-          print("[LocationProvider] Vector-Theme erfolgreich geladen.");
+        final styleFile = File(stylePath);
+        if (await styleFile.exists()) {
+          final String styleJsonContent = await styleFile.readAsString();
+          // Die base URI ist wichtig, damit relative Pfade innerhalb des Stylesheets (z.B. für Sprites, Fonts) korrekt aufgelöst werden,
+          // falls der Caching Service diese nicht bereits absolut oder korrekt relativ gemacht hat.
+          // Da unser StyleCachingService die Pfade bereits relativ zum Style-Ordner macht,
+          // sollte die URI des Style-Files selbst als Basis dienen.
+          _mapTheme = await vtr.ThemeReader(
+                  styleJson: jsonDecode(
+                      styleJsonContent), // styleJson erwartet ein Map<String,dynamic>
+                  uri: Uri.file(
+                      stylePath) // Basis-URI für relative Pfade im Stil
+                  )
+              .read();
+          if (kDebugMode) {
+            print(
+                "[LocationProvider] Vector-Theme erfolgreich geladen von: $stylePath");
+          }
+        } else {
+          if (kDebugMode) {
+            print(
+                "[LocationProvider] Fehler: Gecachte Style-Datei nicht gefunden unter $stylePath");
+          }
+          _mapTheme = null;
         }
+      } else {
+        if (kDebugMode) {
+          print(
+              "[LocationProvider] Fehler: Style-Pfad konnte nicht ermittelt werden.");
+        }
+        _mapTheme = null;
       }
 
       if (kDebugMode) {
