@@ -102,13 +102,11 @@ class LocationProvider with ChangeNotifier {
 
           final themeReaderSpecificLogger = Logger('VTRThemeReader');
 
-          // KORREKTUR: ThemeReader mit benanntem Parameter 'logger' initialisiert.
           final themeReader =
               vtr.ThemeReader(logger: themeReaderSpecificLogger);
 
-          // KORREKTUR: 'await' entfernt und 'read' synchron aufgerufen, wie es die Fehleranalyse nahelegt.
-          // Der 'uri' Parameter wird als benannter Parameter übergeben.
-          _mapTheme = themeReader.read(styleJsonMap, uri: Uri.file(stylePath));
+          // KORREKTUR: Die 'read'-Methode wird jetzt ohne 'await' und ohne 'uri'-Parameter aufgerufen.
+          _mapTheme = themeReader.read(styleJsonMap);
 
           _logger.info("Vector-Theme erfolgreich geladen von: $stylePath");
         } else {
