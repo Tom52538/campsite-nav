@@ -9,7 +9,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart'; // Stellt MaptilerVectorTileProvider bereit
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
 import 'package:camping_osm_navi/models/searchable_feature.dart';
@@ -108,11 +108,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
     });
-
-    if (kDebugMode) {
-      print(
-          "[MapScreen.initState] MapScreenState initialisiert. lastProcessedLocation: ${lastProcessedLocation?.name}, isMapReady: $isMapReady. _maneuverReachedThreshold: $_maneuverReachedThreshold");
-    }
   }
 
   @override
@@ -125,10 +120,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (newLocationInfo != null &&
         (lastProcessedLocation == null ||
             newLocationInfo.id != lastProcessedLocation!.id)) {
-      if (kDebugMode) {
-        print(
-            "[MapScreen.didChangeDependencies] Standortwechsel/Initialisierung für ${newLocationInfo.name}. Vorheriger: ${lastProcessedLocation?.name}");
-      }
       _handleLocationChangeUIUpdates(newLocationInfo);
       lastProcessedLocation = newLocationInfo;
     }
@@ -136,9 +127,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   @override
   void dispose() {
-    if (kDebugMode) {
-      print("[MapScreen.dispose] MapScreen wird zerstört.");
-    }
     mapController.dispose();
     positionStreamSubscription?.cancel();
     ttsService.stop();
@@ -170,9 +158,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
 
     List<Marker> activeMarkers = [];
-    final localCurrentLocationMarker = currentLocationMarker;
-    if (localCurrentLocationMarker != null) {
-      activeMarkers.add(localCurrentLocationMarker);
+    if (currentLocationMarker != null) {
+      activeMarkers.add(currentLocationMarker!);
     }
     if (startMarker != null) {
       activeMarkers.add(startMarker!);
@@ -211,11 +198,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           IconButton(
             icon: const Icon(Icons.volume_up),
             tooltip: 'Test TTS',
-            onPressed: isUiReady
-                ? () {
-                    ttsService.testSpeak();
-                  }
-                : null,
+            onPressed: isUiReady ? ttsService.testSpeak : null,
           ),
           if (availableLocationsFromUI.isNotEmpty &&
               selectedLocationFromUI != null)
@@ -293,6 +276,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   if (endFocusNode.hasFocus) {
                     endFocusNode.unfocus();
                   }
+                  // KORREKTUR: curly_braces_in_flow_control_structures
                   if (routePolyline != null) {
                     setStateIfMounted(() {
                       isRouteActiveForCardSwitch = true;
@@ -302,10 +286,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
               onMapReady: () {
                 if (!mounted) return;
-                if (kDebugMode) {
-                  print(
-                      "[MapScreen.onMapReady] Karte ist bereit. isMapReady=true");
-                }
                 setState(() => isMapReady = true);
                 final locationProvider =
                     Provider.of<LocationProvider>(context, listen: false);
@@ -335,16 +315,14 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   theme: mapTheme,
                   fileCacheTtl: const Duration(days: 7),
                   tileProviders: TileProviders({
-                    // KORREKTER Klassenname
+                    // KORREKTER Klassenname und Import (package:vector_map_tiles/vector_map_tiles.dart)
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
                   }),
                 )
               else
                 TileLayer(
-                  // Fallback oder Ladeanzeige
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  // Hier könntest du auch ein einfaches Container-Widget mit einem Ladeindikator zeigen
                 ),
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
@@ -500,6 +478,19 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
+
+  // --- Platzhalter für die restlichen Methoden von MapScreenState ---
+  // (Diese sind identisch zur vorherigen Version und werden hier nicht wiederholt,
+  //  sollten aber im vollständigen Code vorhanden sein:
+  // _onStartSearchChanged, _onEndSearchChanged, _updateSearchResults,
+  // _onStartFocusChanged, _onEndFocusChanged, _onLocationSelectedFromDropdown,
+  // _handleLocationChangeUIUpdates, _toggleMockLocation, _initializeGpsOrMock,
+  // _performInitialMapMove, setStateIfMounted, selectFeatureAndSetPoint,
+  // _initializeGpsReal, _updateCurrentManeuverOnGpsUpdate,
+  // calculateAndDisplayRoute, _handleMapTap, _setPointFromMapTap, clearRoute,
+  // _centerOnGps, _toggleRouteOverview, _showRouteOverview, swapStartAndEnd,
+  // _distanceToSegment, _calculateDistanceToPolyline
+  // )
 
   void _onStartSearchChanged() {
     if (!mounted) return;
