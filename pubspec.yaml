@@ -15,7 +15,7 @@ dependencies:
   flutter_map: ^6.1.0
   flutter_map_cancellable_tile_provider: ^2.0.0
   vector_map_tiles: ^7.3.1
-  vector_tile_renderer: ^3.3.2
+  vector_tile_renderer: ^5.2.1
   http: ^1.2.1
   latlong2: ^0.9.1
   collection: ^1.18.0
@@ -42,3 +42,4 @@ flutter:
     - assets/data/export.geojson
     - assets/data/export_kamperland.geojson
     - assets/data/zuhause_umgebung.geojson
+    

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
-import 'package:logging/logging.dart'; // NEU
+import 'package:logging/logging.dart';
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -23,20 +23,11 @@ class LocationProvider with ChangeNotifier {
 
   final StyleCachingService _styleCachingService = StyleCachingService();
   vtr.Theme? _mapTheme;
-  // Erstelle einen Logger für diese Klasse
   final Logger _logger = Logger('LocationProvider');
 
   LocationProvider() {
-    // Optional: Logging-Level konfigurieren (z.B. nur im Debug-Modus)
     if (kDebugMode) {
-      Logger.root.level = Level.ALL; // Aktiviere alle Logs
-      Logger.root.onRecord.listen((record) {
-        // ignore: avoid_print
-        print(
-            '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
-      });
-    } else {
-      Logger.root.level = Level.INFO; // Im Release-Modus weniger gesprächig
+      Logger.root.level = Level.INFO;
       Logger.root.onRecord.listen((record) {
         // ignore: avoid_print
         print(
@@ -104,11 +95,16 @@ class LocationProvider with ChangeNotifier {
         final styleFile = File(stylePath);
         if (await styleFile.exists()) {
           final String styleJsonContent = await styleFile.readAsString();
+          // Expliziter Cast zu Map<String, dynamic>
           final Map<String, dynamic> styleJsonMap =
-              jsonDecode(styleJsonContent);
+              jsonDecode(styleJsonContent) as Map<String, dynamic>;
 
-          final themeReader = vtr.ThemeReader(_logger); // Logger übergeben
-          // KORREKTER AUFRUF: read(Map json, {Uri? uri})
+          final themeReaderLogger = Logger('VTRThemeReader');
+          // Logging für den ThemeReader-Logger ggf. separat konfigurieren oder Level anpassen
+          // themeReaderLogger.level = Level.FINER;
+          final themeReader = vtr.ThemeReader(themeReaderLogger);
+
+          // Signatur: Future<Theme> read(Map<String, dynamic> style, {Uri? uri})
           _mapTheme =
               await themeReader.read(styleJsonMap, uri: Uri.file(stylePath));
 
