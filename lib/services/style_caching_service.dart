@@ -82,10 +82,10 @@ class StyleCachingService {
         }
         // Sprite JSON
         await _downloadAndSave(
-            '${resourceUrl}.json', styleDir, '${localBaseName}.json');
+            '$resourceUrl.json', styleDir, '$localBaseName.json');
         // Sprite PNG
         await _downloadAndSave(
-            '${resourceUrl}.png', styleDir, '${localBaseName}.png');
+            '$resourceUrl.png', styleDir, '$localBaseName.png');
 
         // Pfad in der style.json auf den relativen, lokalen Pfad aktualisieren
         styleJson[key] = './$localBaseName';
@@ -94,7 +94,7 @@ class StyleCachingService {
           print("[StyleCachingService] Passe Glyphen-Pfad an.");
         }
         // Bei Glyphen ist der Pfad eine Vorlage, die wir nur auf relativ ändern
-        // z.B. "maptiler://fonts/{fontstack}/{range}.pbf" -> "./{fontstack}/{range}.pbf"
+        // z.B. "maptiler://fonts/{fontstack}/{range}.pbf" -> "./fonts/{fontstack}/{range}.pbf"
         styleJson[key] = './fonts/{fontstack}/{range}.pbf';
       }
     }
