@@ -9,7 +9,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'package:vector_map_tiles/vector_map_tiles.dart'; // Stellt MaptilerVectorTileProvider bereit
+// Korrekte Imports für Vektor-Karten
+// Stellt sicher, dass MaptilerVectorTileProvider hier verfügbar ist
+import 'package:vector_map_tiles/vector_map_tiles.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
 import 'package:camping_osm_navi/models/searchable_feature.dart';
@@ -276,7 +278,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   if (endFocusNode.hasFocus) {
                     endFocusNode.unfocus();
                   }
-                  // KORREKTUR: curly_braces_in_flow_control_structures
                   if (routePolyline != null) {
                     setStateIfMounted(() {
                       isRouteActiveForCardSwitch = true;
@@ -313,15 +314,17 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               if (isUiReady)
                 VectorTileLayer(
                   theme: mapTheme,
-                  fileCacheTtl: const Duration(days: 7),
+                  fileCacheTtl:
+                      const Duration(days: 7), // Cache für Vektor-Kacheln
                   tileProviders: TileProviders({
-                    // KORREKTER Klassenname und Import (package:vector_map_tiles/vector_map_tiles.dart)
+                    // KORREKTER Klassenname und Import
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
                   }),
                 )
               else
                 TileLayer(
+                  // Fallback oder Ladeanzeige
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 ),
               if (isUiReady && routePolyline != null)
@@ -479,19 +482,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
   }
 
-  // --- Platzhalter für die restlichen Methoden von MapScreenState ---
-  // (Diese sind identisch zur vorherigen Version und werden hier nicht wiederholt,
-  //  sollten aber im vollständigen Code vorhanden sein:
-  // _onStartSearchChanged, _onEndSearchChanged, _updateSearchResults,
-  // _onStartFocusChanged, _onEndFocusChanged, _onLocationSelectedFromDropdown,
-  // _handleLocationChangeUIUpdates, _toggleMockLocation, _initializeGpsOrMock,
-  // _performInitialMapMove, setStateIfMounted, selectFeatureAndSetPoint,
-  // _initializeGpsReal, _updateCurrentManeuverOnGpsUpdate,
-  // calculateAndDisplayRoute, _handleMapTap, _setPointFromMapTap, clearRoute,
-  // _centerOnGps, _toggleRouteOverview, _showRouteOverview, swapStartAndEnd,
-  // _distanceToSegment, _calculateDistanceToPolyline
-  // )
-
+  // --- Die restlichen Methoden von MapScreenState bleiben hier ---
+  // (Diese sind identisch zur vorherigen Version und werden hier nicht wiederholt)
   void _onStartSearchChanged() {
     if (!mounted) return;
     final locationProvider =
@@ -623,10 +615,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       });
     }
-    if (kDebugMode) {
-      print(
-          "[MapScreen._handleLocationChangeUIUpdates] Standort UI Updates für ${newLocation.name}. GeoJSON: ${newLocation.geojsonAssetPath}");
-    }
     _initializeGpsOrMock(newLocation);
   }
 
@@ -682,10 +670,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         followGps = false;
         _isInRouteOverviewMode = routePolyline != null;
       });
-      if (kDebugMode) {
-        print(
-            "[MapScreen._initializeGpsOrMock] Mock-Modus AKTIV. Setze Position auf initialCenter von ${location.name}: $activeInitialCenterForMock.");
-      }
       if (mounted) {
         setState(() {
           currentGpsPosition = activeInitialCenterForMock;
@@ -728,10 +712,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       }
     } else {
-      if (kDebugMode) {
-        print(
-            "[MapScreen._initializeGpsOrMock] Echtes GPS AKTIV. Starte Initialisierung für ${location.name}...");
-      }
       _initializeGpsReal(location);
     }
   }
@@ -776,10 +756,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void selectFeatureAndSetPoint(SearchableFeature feature) {
-    if (kDebugMode) {
-      print(
-          "[MapScreen.selectFeatureAndSetPoint] Feature ${feature.name} für Feld $activeSearchField ausgewählt.");
-    }
     if (!mounted) return;
 
     TextEditingController? controllerToUpdate;
@@ -849,10 +825,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   Future<void> _initializeGpsReal(LocationInfo location) async {
-    if (kDebugMode) {
-      print(
-          "[MapScreen._initializeGpsReal] GPS Initialisierung für ${location.name}");
-    }
     if (!mounted) return;
 
     late LocationPermission permission;
@@ -981,6 +953,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             currentGpsPosition!, routePolyline!.points);
         if (distanceToRoute > _offRouteThreshold) {
           if (kDebugMode) {
+            // ignore: avoid_print
             print(
                 "[MapScreen._initializeGpsReal] VON ROUTE ABGEKOMMEN! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
           }
@@ -1000,6 +973,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     }, onError: (error) {
       if (kDebugMode) {
+        // ignore: avoid_print
         print("[MapScreen._initializeGpsReal] Fehler GPS-Empfang: $error");
       }
       showErrorDialog("Fehler GPS-Empfang: $error");
@@ -1320,12 +1294,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   }
                 });
               } catch (e) {
-                if (kDebugMode) {
+                // ignore: avoid_print
+                if (kDebugMode)
                   print(
                       "[MapScreen.calculateAndDisplayRoute] Fehler beim Anpassen der Kartenansicht an die Route: $e");
-                  if (endLatLng != null) {
-                    mapController.move(endLatLng!, mapController.camera.zoom);
-                  }
+                if (endLatLng != null) {
+                  mapController.move(endLatLng!, mapController.camera.zoom);
                 }
               }
             }
@@ -1340,11 +1314,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         });
       }
     } catch (e, stacktrace) {
-      if (kDebugMode) {
+      // ignore: avoid_print
+      if (kDebugMode)
         print(
             "[MapScreen.calculateAndDisplayRoute] FEHLER bei Routenberechnung: $e");
+      // ignore: avoid_print
+      if (kDebugMode)
         print("[MapScreen.calculateAndDisplayRoute] Stacktrace: $stacktrace");
-      }
       showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() {
         routePolyline = null;
@@ -1360,10 +1336,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
-    if (kDebugMode) {
-      print(
-          "[MapScreen._handleMapTap] Tap bei: ${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}. Aktives Feld vor Tap: $activeSearchField");
-    }
     if (!mounted) return;
     setStateIfMounted(() {
       followGps = false;
@@ -1411,10 +1383,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         fieldToSetByTapDecision = ActiveSearchField.end;
       }
     }
-    if (kDebugMode) {
-      print(
-          "[MapScreen._handleMapTap] Feld, das durch Tap gesetzt wird: $fieldToSetByTapDecision");
-    }
     setStateIfMounted(() {
       isRouteActiveForCardSwitch = false;
     });
@@ -1430,11 +1398,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         (fieldToSet == ActiveSearchField.start)
             ? startSearchController
             : endSearchController;
-
-    if (kDebugMode) {
-      print(
-          "[MapScreen._setPointFromMapTap] Setze Punkt für $fieldToSet: ${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}");
-    }
 
     void performUpdateAndRoute() {
       if (!mounted) return;
@@ -1485,10 +1448,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
-    if (kDebugMode) {
-      print(
-          "[MapScreen.clearRoute] Aufgerufen mit showConfirmation: $showConfirmation, clearMarkers: $clearMarkers");
-    }
     void doClearAction() {
       if (!mounted) return;
       setStateIfMounted(() {
@@ -1511,14 +1470,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           endSearchController.clear();
           activeSearchField = ActiveSearchField.none;
           showSearchResults = false;
-          if (kDebugMode) {
-            print("[MapScreen.clearRoute] Alle Marker und Suchfelder geleert.");
-          }
-        } else {
-          if (kDebugMode) {
-            print(
-                "[MapScreen.clearRoute] Nur Route gelöscht, Marker und Suchfelder beibehalten.");
-          }
         }
       });
       showSnackbar(
@@ -1544,10 +1495,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           doClearAction);
     } else if (somethingToDelete) {
       doClearAction();
-    } else {
-      if (kDebugMode) {
-        print("[MapScreen.clearRoute] Nichts zu löschen.");
-      }
     }
   }
 
@@ -1578,10 +1525,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           _isInRouteOverviewMode = false;
         }
       });
-      if (kDebugMode) {
-        print(
-            "[MapScreen._centerOnGps] Follow-GPS Modus umgeschaltet auf: $followGps");
-      }
 
       if (followGps && !_isInRouteOverviewMode) {
         mapController.move(currentGpsPosition!, _followGpsZoomLevel);
@@ -1599,10 +1542,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       showSnackbar(
           "Aktuelle GPS-Position nicht verfügbar oder Karte nicht bereit.",
           durationSeconds: 3);
-      if (kDebugMode) {
-        print(
-            "[MapScreen._centerOnGps] Follow-GPS nicht möglich. currentGpsPosition: $currentGpsPosition, isMapReady: $isMapReady");
-      }
     }
   }
 
@@ -1667,9 +1606,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   void swapStartAndEnd() {
     if (!mounted) return;
-    if (kDebugMode) {
-      print("[MapScreen.swapStartAndEnd] Tausche Start und Ziel.");
-    }
 
     if (startLatLng == null && endLatLng == null) {
       showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
