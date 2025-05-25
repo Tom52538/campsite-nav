@@ -1,7 +1,6 @@
 // lib/screens/map_screen.dart
 import 'dart:async';
 import 'dart:math';
-// import 'dart:io'; // ungenutzt, entfernt
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -163,7 +162,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final bool isLoading = locationProvider.isLoadingLocationData;
-    final vtr.Theme? mapTheme = locationProvider.mapTheme;
+    final vtr.Theme? mapTheme =
+        locationProvider.mapTheme; // KORREKTUR: mapTheme
     final bool isUiReady = !isLoading &&
         locationProvider.currentRoutingGraph != null &&
         mapTheme != null;
@@ -294,6 +294,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                   if (endFocusNode.hasFocus) {
                     endFocusNode.unfocus();
                   }
+                  // KORREKTUR: curly_braces_in_flow_control_structures
                   if (routePolyline != null) {
                     setStateIfMounted(() {
                       isRouteActiveForCardSwitch = true;
@@ -331,12 +332,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
             ),
             children: [
-              if (isUiReady)
+              if (isUiReady) // Hängt jetzt von mapTheme ab
                 VectorTileLayer(
-                  theme: mapTheme, // KORREKTUR
+                  theme: mapTheme, // mapTheme ist jetzt vtr.Theme?
                   fileCacheTtl: const Duration(days: 7),
                   tileProviders: TileProviders({
-                    // KORREKTUR: 'MaptilerVectorTileProvider'
+                    // KORREKTUR: Tippfehler
                     'maptiler':
                         MaptilerVectorTileProvider(apiKey: apiKey ?? ''),
                   }),
@@ -500,7 +501,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
   }
 
-  // Hier alle anderen Methoden von MapScreenState einfügen (sind unverändert)
   void _onStartSearchChanged() {
     if (!mounted) return;
     final locationProvider =
@@ -554,6 +554,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               activeSearchField == ActiveSearchField.start) {
             setStateIfMounted(() {
               showSearchResults = false;
+              // KORREKTUR: curly_braces_in_flow_control_structures
               if (!endFocusNode.hasFocus && routePolyline != null) {
                 isRouteActiveForCardSwitch = true;
               }
@@ -580,6 +581,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               activeSearchField == ActiveSearchField.end) {
             setStateIfMounted(() {
               showSearchResults = false;
+              // KORREKTUR: curly_braces_in_flow_control_structures
               if (!startFocusNode.hasFocus && routePolyline != null) {
                 isRouteActiveForCardSwitch = true;
               }
@@ -840,6 +842,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       });
     } else {
       activeSearchField = ActiveSearchField.none;
+      // KORREKTUR: curly_braces_in_flow_control_structures
       if (routePolyline != null) {
         setStateIfMounted(() {
           isRouteActiveForCardSwitch = true;
@@ -1392,6 +1395,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         showSearchResults = false;
       });
     }
+    // KORREKTUR: curly_braces_in_flow_control_structures
     if (routePolyline != null) {
       setStateIfMounted(() {
         isRouteActiveForCardSwitch = true;
