@@ -1,167 +1,145 @@
-// lib/services/style_caching_service.dart
+// lib/providers/location_provider.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
+import 'package:flutter/services.dart';
+import 'dart:async';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
+// Import für den Logger aus package:logging, falls anderweitig in dieser Datei benötigt
+import 'package:logging/logging.dart'
+    as ext_logging; // Alias hinzugefügt zur Unterscheidung
 
-class StyleCachingService {
-  // --- NEUE METHODE FÜR WEB ---
-  /// Fetches the style JSON directly for the web platform, without caching.
-  Future<Map<String, dynamic>?> getStyleJsonForWeb(
-      {required String styleUrl}) async {
-    if (!kIsWeb) {
-      // Diese Methode ist nur für das Web gedacht.
-      if (kDebugMode) {
+import 'package:camping_osm_navi/models/location_info.dart';
+import 'package:camping_osm_navi/models/routing_graph.dart';
+import 'package:camping_osm_navi/models/searchable_feature.dart';
+import 'package:camping_osm_navi/services/geojson_parser_service.dart';
+import 'package:camping_osm_navi/services/style_caching_service.dart';
+
+class LocationProvider with ChangeNotifier {
+  final List<LocationInfo> _availableLocations = appLocations;
+  LocationInfo? _selectedLocation;
+
+  RoutingGraph? _currentRoutingGraph;
+  List<SearchableFeature> _currentSearchableFeatures = [];
+  bool _isLoadingLocationData = false;
+
+  final StyleCachingService _styleCachingService = StyleCachingService();
+  vtr.Theme? _mapTheme;
+  // Logger für diese Klasse (aus package:logging)
+  final ext_logging.Logger _logger = ext_logging.Logger('LocationProvider');
+
+  LocationProvider() {
+    if (kDebugMode) {
+      ext_logging.Logger.root.level = ext_logging.Level.ALL;
+      ext_logging.Logger.root.onRecord.listen((record) {
+        // ignore: avoid_print
         print(
-            "[StyleCachingService] getStyleJsonForWeb wurde auf einer Nicht-Web-Plattform aufgerufen. Das ist nicht vorgesehen.");
-      }
-      return null;
+            '${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+      });
+    } else {
+      ext_logging.Logger.root.level = ext_logging.Level.WARNING;
     }
+
+    if (_availableLocations.isNotEmpty) {
+      _selectedLocation = _availableLocations.first;
+      loadDataForSelectedLocation();
+    }
+  }
+
+  List<LocationInfo> get availableLocations => _availableLocations;
+  LocationInfo? get selectedLocation => _selectedLocation;
+  RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
+  List<SearchableFeature> get currentSearchableFeatures =>
+      _currentSearchableFeatures;
+  bool get isLoadingLocationData => _isLoadingLocationData;
+  vtr.Theme? get mapTheme => _mapTheme;
+
+  void selectLocation(LocationInfo? newLocation) {
+    if (newLocation != null && newLocation != _selectedLocation) {
+      _selectedLocation = newLocation;
+      _logger.info("Standort gewechselt zu: ${newLocation.name}");
+      loadDataForSelectedLocation();
+    }
+  }
+
+  Future<void> loadDataForSelectedLocation() async {
+    if (_selectedLocation == null) {
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _mapTheme = null;
+      _isLoadingLocationData = false;
+      Future.microtask(() {
+        notifyListeners();
+      });
+      return;
+    }
+
+    Future.microtask(() {
+      _isLoadingLocationData = true;
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _mapTheme = null;
+      notifyListeners();
+    });
+
     try {
-      if (kDebugMode) {
-        print("[StyleCachingService] Lade Stil für Web direkt von: $styleUrl");
-      }
-      final response = await http.get(Uri.parse(styleUrl));
-      if (response.statusCode == 200) {
-        // Für Web müssen die Pfade zu Sprites/Glyphs absolut sein.
-        // Die von MapTiler bereitgestellte style.json enthält bereits korrekte URLs.
-        return jsonDecode(response.body) as Map<String, dynamic>;
+      final stylePathFuture = _styleCachingService.ensureStyleIsCached(
+          styleUrl: _selectedLocation!.styleUrl,
+          styleId: _selectedLocation!.styleId);
+
+      final geoJsonStringFuture =
+          rootBundle.loadString(_selectedLocation!.geojsonAssetPath);
+
+      final List<Object?> results =
+          await Future.wait([stylePathFuture, geoJsonStringFuture]);
+
+      final stylePath = results[0] as String?;
+      final geoJsonString = results[1] as String;
+
+      if (stylePath != null) {
+        final styleFile = File(stylePath);
+        if (await styleFile.exists()) {
+          final String styleJsonContent = await styleFile.readAsString();
+          final Map<String, dynamic> styleJsonMap =
+              jsonDecode(styleJsonContent) as Map<String, dynamic>;
+
+          // KORREKTUR: Der ThemeReader wird ohne expliziten Logger initialisiert.
+          // Er verwendet dann seinen internen Logger.noop().
+          final themeReader = vtr.ThemeReader();
+
+          _mapTheme = themeReader.read(styleJsonMap);
+
+          _logger.info("Vector-Theme erfolgreich geladen von: $stylePath");
+        } else {
+          _logger.warning(
+              "Fehler: Gecachte Style-Datei nicht gefunden unter $stylePath");
+          _mapTheme = null;
+        }
       } else {
-        throw Exception(
-            'Fehler beim Laden der style.json für Web: ${response.statusCode}');
+        _logger.warning("Fehler: Style-Pfad konnte nicht ermittelt werden.");
+        _mapTheme = null;
       }
+
+      _logger.info("GeoJSON-String für ${_selectedLocation!.name} geladen.");
+
+      final parsedData =
+          GeojsonParserService.parseGeoJsonToGraphAndFeatures(geoJsonString);
+      _currentRoutingGraph = parsedData.graph;
+      _currentSearchableFeatures = parsedData.features;
+
+      _logger.info(
+          "Daten für ${_selectedLocation!.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}");
     } catch (e, stacktrace) {
-      if (kDebugMode) {
-        print("[StyleCachingService] Fehler beim Laden des Stils für Web: $e");
-        print("[StyleCachingService] Stacktrace: $stacktrace");
-      }
-      return null;
+      _logger.severe(
+          "Fehler beim Laden der Daten für ${_selectedLocation!.name}: $e",
+          e,
+          stacktrace);
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures = [];
+      _mapTheme = null;
     }
-  }
 
-  // --- BESTEHENDE METHODE FÜR MOBILE ---
-  /// Ensures the style and its resources are cached on the device.
-  /// Returns the local file path to the main style.json.
-  /// This should only be used on mobile platforms (iOS/Android).
-  Future<String?> ensureStyleIsCached(
-      {required String styleUrl, required String styleId}) async {
-    if (kIsWeb) {
-      if (kDebugMode) {
-        print(
-            "[StyleCachingService] ensureStyleIsCached sollte nicht auf der Web-Plattform aufgerufen werden.");
-      }
-      return null;
-    }
-    try {
-      final cacheDir = await getApplicationCacheDirectory();
-      final styleDir = Directory(p.join(cacheDir.path, 'map_styles', styleId));
-      final styleFile = File(p.join(styleDir.path, 'style.json'));
-
-      // Wenn der Stil bereits gecached ist, den lokalen Pfad zurückgeben.
-      if (await styleFile.exists()) {
-        if (kDebugMode) {
-          print(
-              "[StyleCachingService] Stil '$styleId' aus Cache geladen: ${styleFile.path}");
-        }
-        return styleFile.path;
-      }
-
-      if (kDebugMode) {
-        print(
-            "[StyleCachingService] Stil '$styleId' nicht im Cache. Lade von: $styleUrl");
-      }
-
-      // Haupt-Stil-Datei herunterladen
-      final response = await http.get(Uri.parse(styleUrl));
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Fehler beim Laden der style.json: ${response.statusCode}');
-      }
-
-      // Verzeichnis erstellen, falls nicht vorhanden
-      await styleDir.create(recursive: true);
-
-      // Stil-JSON verarbeiten, um relative Pfade zu Ressourcen zu finden und herunterzuladen
-      final styleJson = jsonDecode(response.body) as Map<String, dynamic>;
-      final baseUrl = Uri.parse(styleUrl);
-
-      // Ressourcen (Sprites, Glyphs) herunterladen und Pfade in JSON anpassen
-      await _downloadStyleResource(styleJson, 'sprite', baseUrl, styleDir);
-      await _downloadStyleResource(styleJson, 'glyphs', baseUrl, styleDir);
-
-      // Die bearbeitete style.json Datei lokal speichern
-      await styleFile.writeAsString(jsonEncode(styleJson));
-
-      if (kDebugMode) {
-        print(
-            "[StyleCachingService] Stil '$styleId' erfolgreich heruntergeladen und im Cache gespeichert.");
-      }
-      return styleFile.path;
-    } catch (e, stacktrace) {
-      if (kDebugMode) {
-        print("[StyleCachingService] Fehler beim Cachen des Stils: $e");
-        print("[StyleCachingService] Stacktrace: $stacktrace");
-      }
-      return null;
-    }
-  }
-
-  Future<void> _downloadStyleResource(Map<String, dynamic> styleJson,
-      String key, Uri baseUrl, Directory styleDir) async {
-    if (styleJson.containsKey(key)) {
-      String resourceUrl = styleJson[key].toString();
-
-      // Komplette URL erstellen, falls der Pfad relativ ist
-      if (!resourceUrl.startsWith('http')) {
-        resourceUrl = baseUrl.resolve(resourceUrl).toString();
-      }
-
-      final localBaseName = p.basename(resourceUrl.split('?').first);
-
-      // Sprite-Dateien (.json und .png) haben oft keinen Dateinamen im Pfad
-      if (key == 'sprite') {
-        if (kDebugMode) {
-          print("[StyleCachingService] Lade Sprite-Ressource: $localBaseName");
-        }
-        // Sprite JSON
-        await _downloadAndSave(
-            '$resourceUrl.json', styleDir, '$localBaseName.json');
-        // Sprite PNG
-        await _downloadAndSave(
-            '$resourceUrl.png', styleDir, '$localBaseName.png');
-
-        // Pfad in der style.json auf den relativen, lokalen Pfad aktualisieren
-        styleJson[key] = './$localBaseName';
-      } else if (key == 'glyphs') {
-        if (kDebugMode) {
-          print("[StyleCachingService] Passe Glyphen-Pfad an.");
-        }
-        // Bei Glyphen ist der Pfad eine Vorlage, die wir nur auf relativ ändern
-        // z.B. "maptiler://fonts/{fontstack}/{range}.pbf" -> "./fonts/{fontstack}/{range}.pbf"
-        styleJson[key] = './fonts/{fontstack}/{range}.pbf';
-      }
-    }
-  }
-
-  Future<void> _downloadAndSave(
-      String url, Directory targetDir, String fileName) async {
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final file = File(p.join(targetDir.path, fileName));
-        await file.writeAsBytes(response.bodyBytes);
-      } else {
-        if (kDebugMode) {
-          print(
-              "[StyleCachingService] Fehler beim Download von $url: ${response.statusCode}");
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print("[StyleCachingService] Fehler beim Speichern von $fileName: $e");
-      }
-    }
+    _isLoadingLocationData = false;
+    notifyListeners();
   }
 }
