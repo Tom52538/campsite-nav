@@ -89,15 +89,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   double fullSearchCardHeight = 0;
 
   String _maptilerUrlTemplate = '';
-  String _debugMapStatus = "Initialisiere...";
 
   @override
   void initState() {
     super.initState();
-    _debugMapStatus = "initState: Start";
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen initState: Start");
-    }
     ttsService = TtsService();
     startSearchController.addListener(_onStartSearchChanged);
     endSearchController.addListener(_onEndSearchChanged);
@@ -107,18 +102,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
       if (kDebugMode) {
-        print("[DIAGNOSE] WARNUNG: MAPTILER_API_KEY nicht in .env gefunden!");
+        print("WARNUNG: MAPTILER_API_KEY nicht in .env gefunden!");
       }
-      _maptilerUrlTemplate = '';
-      setStateIfMounted(() => _debugMapStatus = "initState: KEIN API KEY!");
+      _maptilerUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     } else {
       _maptilerUrlTemplate =
           'https://api.maptiler.com/maps/dataviz/{z}/{x}/{y}.pbf?key=$apiKey';
-      setStateIfMounted(() => _debugMapStatus = "initState: API Key geladen.");
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen initState: Maptiler URL Template gesetzt: $_maptilerUrlTemplate");
-      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -131,22 +120,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           });
         }
       }
-      _debugMapStatus = "initState: PostFrameCallback beendet.";
-      if (kDebugMode) {
-        print("[DIAGNOSE] MapScreen initState: PostFrameCallback beendet.");
-      }
     });
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen initState: Ende");
-    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen didChangeDependencies: Start");
-    }
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final newLocationInfo = locationProvider.selectedLocation;
@@ -154,23 +133,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (newLocationInfo != null &&
         (lastProcessedLocation == null ||
             newLocationInfo.id != lastProcessedLocation!.id)) {
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen didChangeDependencies: Standortwechsel erkannt zu ${newLocationInfo.name}");
-      }
       _handleLocationChangeUIUpdates(newLocationInfo);
       lastProcessedLocation = newLocationInfo;
-    }
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen didChangeDependencies: Ende");
     }
   }
 
   @override
   void dispose() {
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen dispose");
-    }
     mapController.dispose();
     positionStreamSubscription?.cancel();
     ttsService.stop();
@@ -189,36 +158,18 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen build: Start");
-    }
     final locationProvider = Provider.of<LocationProvider>(context);
     final selectedLocationFromUI = locationProvider.selectedLocation;
     final availableLocationsFromUI = locationProvider.availableLocations;
 
-    final bool isLoadingDataFromProvider =
-        locationProvider.isLoadingLocationData;
-    final vtr.Theme? mapThemeFromProvider = locationProvider.mapTheme;
-    final bool isGraphReady = locationProvider.currentRoutingGraph != null;
+    final isLoading = locationProvider.isLoadingLocationData;
+    final mapThemeFromProvider = locationProvider.mapTheme;
+    final isGraphReady = locationProvider.currentRoutingGraph != null;
 
-    final bool isUiReady = !isLoadingDataFromProvider &&
-        isGraphReady &&
-        mapThemeFromProvider != null;
+    final isUiReady =
+        !isLoading && isGraphReady && mapThemeFromProvider != null;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {
-          _debugMapStatus =
-              "Build: isLoading: $isLoadingDataFromProvider, isGraphReady: $isGraphReady, mapTheme: ${mapThemeFromProvider != null}, isUiReady: $isUiReady, apiKeyOK: ${_maptilerUrlTemplate.contains('key=')}";
-        });
-      }
-    });
-    if (kDebugMode) {
-      print(
-          "[DIAGNOSE] MapScreen build: isLoading: $isLoadingDataFromProvider, isGraphReady: $isGraphReady, mapTheme: ${mapThemeFromProvider != null}, isUiReady: $isUiReady, template: $_maptilerUrlTemplate");
-    }
-
-    List<Marker> activeMarkers = [];
+    final List<Marker> activeMarkers = [];
     if (currentLocationMarker != null) {
       activeMarkers.add(currentLocationMarker!);
     }
@@ -229,7 +180,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       activeMarkers.add(endMarker!);
     }
 
-    double currentSearchCardHeight = isRouteActiveForCardSwitch
+    final double currentSearchCardHeight = isRouteActiveForCardSwitch
         ? kCompactCardHeight
         : fullSearchCardHeight > 0
             ? fullSearchCardHeight
@@ -238,12 +189,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 (kCardInternalVerticalPadding * 2) +
                 (routeDistance != null ? kRouteInfoHeight : 0);
 
-    double instructionCardTop = kSearchCardTopPadding +
+    final double instructionCardTop = kSearchCardTopPadding +
         currentSearchCardHeight +
         kInstructionCardSpacing;
 
     double searchResultsTopPosition = instructionCardTop;
-    bool instructionCardVisible = currentDisplayedManeuver != null &&
+    final bool instructionCardVisible = currentDisplayedManeuver != null &&
         currentDisplayedManeuver!.turnType != TurnType.depart &&
         !(currentManeuvers.length <= 2 &&
             currentDisplayedManeuver!.turnType == TurnType.arrive);
@@ -252,45 +203,38 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       searchResultsTopPosition += 65.0 + kInstructionCardSpacing;
     }
 
+    // *** KORREKTUR: Die Logik wird nun dynamisch gesteuert ***
     Widget mapLayerWidget;
-    // ===== DIAGNOSTISCHE ÄNDERUNG: VectorTileLayer auskommentiert, TileLayer immer aktiv =====
-    // if (isUiReady &&
-    //     _maptilerUrlTemplate.isNotEmpty &&
-    //     _maptilerUrlTemplate.contains('key=')) {
-    //   if (kDebugMode) {
-    //     print(
-    //         "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}' mit theme: ${mapThemeFromProvider != null}");
-    //   }
-    //   mapLayerWidget = VectorTileLayer(
-    //     theme: mapThemeFromProvider!,
-    //     fileCacheTtl: const Duration(days: 7),
-    //     tileProviders: TileProviders({
-    //       'maptiler_planet': NetworkVectorTileProvider(
-    //         urlTemplate: _maptilerUrlTemplate,
-    //         maximumZoom: 14,
-    //       ),
-    //     }),
-    //     maximumZoom: 20,
-    //   );
-    // } else {
-    //   if (kDebugMode) {
-    //     print(
-    //         "[DIAGNOSE] MapScreen build: Erzeuge Fallback TileLayer (OSM). Grund: isUiReady=$isUiReady, template='$_maptilerUrlTemplate'");
-    //   }
-    //   mapLayerWidget = TileLayer(
-    //     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    //     userAgentPackageName: 'com.example.camping_osm_navi',
-    //   );
-    // }
-    if (kDebugMode) {
-      print(
-          "[DIAGNOSE] MapScreen build: Forciere Fallback TileLayer (OSM) für Testzwecke.");
+    final bool vectorConditionsMet = isUiReady &&
+        _maptilerUrlTemplate.isNotEmpty &&
+        _maptilerUrlTemplate.contains('key=');
+
+    if (vectorConditionsMet) {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
+      }
+      mapLayerWidget = VectorTileLayer(
+        theme: mapThemeFromProvider,
+        fileCacheTtl: const Duration(days: 7),
+        tileProviders: TileProviders({
+          'maptiler_planet': NetworkVectorTileProvider(
+            urlTemplate: _maptilerUrlTemplate,
+            maximumZoom: 14,
+          ),
+        }),
+        maximumZoom: 20,
+      );
+    } else {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen build: Bedingungen für VectorTileLayer nicht erfüllt, erzeuge Fallback TileLayer (OSM). isUiReady=$isUiReady, template='$_maptilerUrlTemplate', themeNull=${mapThemeFromProvider == null}");
+      }
+      mapLayerWidget = TileLayer(
+        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        userAgentPackageName: 'com.example.camping_osm_navi',
+      );
     }
-    mapLayerWidget = TileLayer(
-      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      userAgentPackageName: 'com.example.camping_osm_navi',
-    );
-    // ===== ENDE DIAGNOSTISCHE ÄNDERUNG =====
 
     return Scaffold(
       appBar: AppBar(
@@ -322,9 +266,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                                     overflow: TextOverflow.ellipsis),
                               ))
                       .toList(),
-                  onChanged: isUiReady && !isLoadingDataFromProvider
-                      ? _onLocationSelectedFromDropdown
-                      : null,
+                  onChanged:
+                      !isLoading ? _onLocationSelectedFromDropdown : null,
                   hint: const Text("Standort wählen",
                       style: TextStyle(color: Colors.white70)),
                 ),
@@ -338,9 +281,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               icon: Icon(
                   useMockLocation ? Icons.location_on : Icons.location_off),
               color: useMockLocation ? Colors.orangeAccent : Colors.white,
-              onPressed: isUiReady && !isLoadingDataFromProvider
-                  ? _toggleMockLocation
-                  : null,
+              onPressed: !isLoading ? _toggleMockLocation : null,
             ),
           ),
         ],
@@ -355,9 +296,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               initialZoom: 17.0,
               minZoom: 13.0,
               maxZoom: 20.0,
-              onTap: isUiReady && !isLoadingDataFromProvider
-                  ? _handleMapTap
-                  : null,
+              onTap: isUiReady ? _handleMapTap : null,
               onMapEvent: (MapEvent mapEvent) {
                 if (mapEvent is MapEventMove &&
                     (mapEvent.source == MapEventSource.dragStart ||
@@ -377,24 +316,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                         mapEvent.source ==
                             MapEventSource.flingAnimationController) &&
                     (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
-                  if (startFocusNode.hasFocus) {
-                    startFocusNode.unfocus();
-                  }
-                  if (endFocusNode.hasFocus) {
-                    endFocusNode.unfocus();
-                  }
-                  if (routePolyline != null) {
-                    setStateIfMounted(() {
-                      isRouteActiveForCardSwitch = true;
-                    });
-                  }
+                  _unfocusSearchFieldsAndCollapse();
                 }
               },
               onMapReady: () {
                 if (!mounted) return;
-                if (kDebugMode) {
-                  print("[DIAGNOSE] MapScreen onMapReady: Karte ist bereit.");
-                }
                 setState(() => isMapReady = true);
                 final locationProvider =
                     Provider.of<LocationProvider>(context, listen: false);
@@ -425,19 +351,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               if (isUiReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
-          ),
-          Positioned(
-            bottom: 80,
-            left: 10,
-            right: 10,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.black.withOpacity(0.7),
-              child: Text(
-                "Debug: $_debugMapStatus",
-                style: const TextStyle(color: Colors.white, fontSize: 10),
-              ),
-            ),
           ),
           Positioned(
             top: kSearchCardTopPadding,
@@ -519,7 +432,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     child: const Center(
                         child:
                             CircularProgressIndicator(color: Colors.white)))),
-          if (isLoadingDataFromProvider)
+          if (isLoading)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withAlpha(180),
@@ -547,354 +460,38 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               child: FloatingActionButton.small(
                 heroTag: "toggleOverviewBtn",
                 onPressed: _toggleRouteOverview,
-                tooltip: _isInRouteOverviewMode
-                    ? 'Zur Navigationsansicht wechseln'
-                    : 'Routenübersicht anzeigen',
+                tooltip: "Ganze Route anzeigen",
                 child: Icon(_isInRouteOverviewMode
-                    ? Icons.zoom_in_map
-                    : Icons.map_outlined),
+                    ? Icons.my_location
+                    : Icons.zoom_out_map),
               ),
             ),
-          if (isUiReady &&
-              (routePolyline != null ||
-                  startMarker != null ||
-                  endMarker != null))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: FloatingActionButton.small(
-                heroTag: "clearAllBtn",
-                onPressed: () =>
-                    clearRoute(showConfirmation: true, clearMarkers: true),
-                tooltip: 'Route, Start & Ziel löschen',
-                child: const Icon(Icons.delete_forever_outlined),
+          if (isUiReady)
+            FloatingActionButton(
+              heroTag: "centerGpsBtn",
+              onPressed: _centerOnGps,
+              tooltip: 'Auf GPS zentrieren',
+              child: Icon(
+                followGps ? Icons.navigation : Icons.near_me,
+                color: followGps ? Colors.blue : Colors.black,
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: FloatingActionButton.small(
-              heroTag: "centerBtn",
-              onPressed:
-                  isUiReady && !isLoadingDataFromProvider ? _centerOnGps : null,
-              tooltip: followGps && !_isInRouteOverviewMode
-                  ? 'Follow-GPS Modus aktiv'
-                  : 'Follow-GPS Modus aktivieren',
-              backgroundColor:
-                  followGps ? Colors.greenAccent[700] : Colors.deepOrangeAccent,
-              child: Icon(followGps ? Icons.navigation : Icons.my_location),
-            ),
-          ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
-  // --- Rest der Methoden von MapScreenState bleibt unverändert ---
-  // (Hier nur _onStartSearchChanged als Beispiel, alle anderen Methoden sind identisch
-  //  zur Version, die ich dir bereits zur Verfügung gestellt habe)
-
-  void _onStartSearchChanged() {
-    if (!mounted) return;
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final query = startSearchController.text.toLowerCase().trim();
-    _updateSearchResults(query, locationProvider.currentSearchableFeatures);
-    setStateIfMounted(() {
-      showSearchResults = startFocusNode.hasFocus &&
-          query.isNotEmpty &&
-          searchResults.isNotEmpty;
-    });
-  }
-
-  void _onEndSearchChanged() {
-    if (!mounted) return;
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final query = endSearchController.text.toLowerCase().trim();
-    _updateSearchResults(query, locationProvider.currentSearchableFeatures);
-    setStateIfMounted(() {
-      showSearchResults =
-          endFocusNode.hasFocus && query.isNotEmpty && searchResults.isNotEmpty;
-    });
-  }
-
-  void _updateSearchResults(String query, List<SearchableFeature> features) {
-    if (query.isNotEmpty && features.isNotEmpty) {
-      searchResults = features.where((feature) {
-        return feature.name.toLowerCase().contains(query) ||
-            feature.type.toLowerCase().contains(query);
-      }).toList();
-    } else {
-      searchResults = [];
+  void _unfocusSearchFieldsAndCollapse() {
+    if (startFocusNode.hasFocus) {
+      startFocusNode.unfocus();
     }
-  }
-
-  void _onStartFocusChanged() {
-    if (!mounted) return;
-    final bool hasFocus = startFocusNode.hasFocus;
-    setStateIfMounted(() {
-      if (hasFocus) {
-        activeSearchField = ActiveSearchField.start;
-        isRouteActiveForCardSwitch = false;
-        _isInRouteOverviewMode = false;
-        showSearchResults =
-            startSearchController.text.isNotEmpty && searchResults.isNotEmpty;
-      } else {
-        Future.delayed(const Duration(milliseconds: 150), () {
-          if (mounted &&
-              !startFocusNode.hasFocus &&
-              activeSearchField == ActiveSearchField.start) {
-            setStateIfMounted(() {
-              showSearchResults = false;
-              if (!endFocusNode.hasFocus && routePolyline != null) {
-                isRouteActiveForCardSwitch = true;
-              }
-            });
-          }
-        });
-      }
-    });
-  }
-
-  void _onEndFocusChanged() {
-    if (!mounted) return;
-    final bool hasFocus = endFocusNode.hasFocus;
-    setStateIfMounted(() {
-      if (hasFocus) {
-        activeSearchField = ActiveSearchField.end;
-        isRouteActiveForCardSwitch = false;
-        showSearchResults =
-            endSearchController.text.isNotEmpty && searchResults.isNotEmpty;
-      } else {
-        Future.delayed(const Duration(milliseconds: 150), () {
-          if (mounted &&
-              !endFocusNode.hasFocus &&
-              activeSearchField == ActiveSearchField.end) {
-            setStateIfMounted(() {
-              showSearchResults = false;
-              if (!startFocusNode.hasFocus && routePolyline != null) {
-                isRouteActiveForCardSwitch = true;
-              }
-            });
-          }
-        });
-      }
-    });
-  }
-
-  void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
-    if (newLocationParam == null) return;
-    if (kDebugMode) {
-      print(
-          "[DIAGNOSE] MapScreen _onLocationSelectedFromDropdown: ${newLocationParam.name}");
+    if (endFocusNode.hasFocus) {
+      endFocusNode.unfocus();
     }
-    Provider.of<LocationProvider>(context, listen: false)
-        .selectLocation(newLocationParam);
-  }
-
-  void _handleLocationChangeUIUpdates(LocationInfo newLocation) {
-    if (!mounted) return;
-    if (kDebugMode) {
-      print(
-          "[DIAGNOSE] MapScreen _handleLocationChangeUIUpdates for ${newLocation.name}");
-    }
-    final bool isActualChange = lastProcessedLocation != null &&
-        lastProcessedLocation!.id != newLocation.id;
-    setState(() {
-      routePolyline = null;
-      startMarker = null;
-      endMarker = null;
-      startLatLng = null;
-      endLatLng = null;
-      startSearchController.clear();
-      endSearchController.clear();
-      searchResults = [];
-      showSearchResults = false;
-      activeSearchField = ActiveSearchField.none;
-      routeDistance = null;
-      routeTimeMinutes = null;
-      remainingRouteDistance = null;
-      remainingRouteTimeMinutes = null;
-      currentManeuvers = [];
-      currentDisplayedManeuver = null;
-      followGps = false;
-      isRouteActiveForCardSwitch = false;
-      _isInRouteOverviewMode = false;
-    });
-    if (isMapReady && mounted) {
-      mapController.move(newLocation.initialCenter, 17.0);
-    }
-    if (isActualChange) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          showSnackbar("Standort geändert zu: ${newLocation.name}",
-              durationSeconds: 3);
-        }
-      });
-    }
-    _initializeGpsOrMock(newLocation);
-  }
-
-  void _toggleMockLocation() {
-    if (!mounted) return;
-    if (kDebugMode) {
-      print(
-          "[DIAGNOSE] MapScreen _toggleMockLocation. Aktuell useMockLocation: $useMockLocation");
-    }
-    final currentLocationInfo =
-        Provider.of<LocationProvider>(context, listen: false).selectedLocation;
-    setState(() {
-      useMockLocation = !useMockLocation;
-      followGps = !useMockLocation && routePolyline != null;
-      if (followGps) {
-        _isInRouteOverviewMode = false;
-      }
-
-      if (!useMockLocation &&
-          startSearchController.text.toLowerCase().contains("mock position")) {
-        startLatLng = null;
-        startMarker = null;
-        startSearchController.clear();
-        routePolyline = null;
-        routeDistance = null;
-        routeTimeMinutes = null;
-        remainingRouteDistance = null;
-        remainingRouteTimeMinutes = null;
-        currentManeuvers = [];
-        currentDisplayedManeuver = null;
-        isRouteActiveForCardSwitch = false;
-        _isInRouteOverviewMode = false;
-      }
-      if (currentLocationInfo != null) {
-        _initializeGpsOrMock(currentLocationInfo);
-      }
-    });
-    showSnackbar(
-        useMockLocation
-            ? "Mock-Position (${currentLocationInfo?.name ?? 'Fallback'}) aktiviert."
-            : "Echtes GPS aktiviert. Follow-Modus ${followGps ? "an" : "aus"}.",
-        durationSeconds: 4);
-  }
-
-  void _initializeGpsOrMock(LocationInfo location) {
-    if (kDebugMode) {
-      print(
-          "[DIAGNOSE] MapScreen _initializeGpsOrMock for ${location.name}. useMockLocation: $useMockLocation");
-    }
-    positionStreamSubscription?.cancel();
-    LatLng? oldGpsPos = currentGpsPosition;
-
-    setStateIfMounted(() {
-      currentGpsPosition = null;
-      currentLocationMarker = null;
-    });
-    final LatLng activeInitialCenterForMock = location.initialCenter;
-
-    if (useMockLocation) {
+    if (routePolyline != null) {
       setStateIfMounted(() {
-        followGps = false;
-        _isInRouteOverviewMode = routePolyline != null;
+        isRouteActiveForCardSwitch = true;
       });
-      if (mounted) {
-        setState(() {
-          currentGpsPosition = activeInitialCenterForMock;
-          currentLocationMarker = createMarker(
-              activeInitialCenterForMock,
-              Colors.orangeAccent,
-              Icons.pin_drop,
-              "Mock Position (${location.name})");
-          if (startSearchController.text == "Aktueller Standort" ||
-              (startSearchController.text
-                      .toLowerCase()
-                      .contains("mock position") &&
-                  oldGpsPos != currentGpsPosition)) {
-            startLatLng = activeInitialCenterForMock;
-            if (startLatLng != null) {
-              startMarker = createMarker(startLatLng!, Colors.green,
-                  Icons.flag_circle, "Start: Mock Position (${location.name})");
-            }
-            startSearchController.text = "Mock Position (${location.name})";
-          }
-          if (routePolyline != null &&
-              endLatLng != null &&
-              currentGpsPosition != null) {
-            remainingRouteDistance =
-                distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
-            remainingRouteTimeMinutes =
-                RoutingService.estimateWalkingTimeMinutes(
-                    remainingRouteDistance!);
-          }
-        });
-        if (isMapReady && mounted) {
-          if (_isInRouteOverviewMode && routePolyline != null) {
-            _showRouteOverview();
-          } else {
-            mapController.move(activeInitialCenterForMock, _followGpsZoomLevel);
-          }
-        }
-        if (startLatLng != null && endLatLng != null) {
-          calculateAndDisplayRoute();
-        }
-      }
-    } else {
-      _initializeGpsReal(location);
-    }
-  }
-
-  void _performInitialMapMove() {
-    if (!mounted || !isMapReady) {
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen _performInitialMapMove: Nicht bereit (mounted: $mounted, isMapReady: $isMapReady)");
-      }
-      return;
-    }
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen _performInitialMapMove: Start");
-    }
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final location = locationProvider.selectedLocation;
-    if (location == null) {
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen _performInitialMapMove: Keine Location ausgewählt.");
-      }
-      return;
-    }
-
-    LatLng? targetToMoveToNullSafe;
-    if (useMockLocation) {
-      targetToMoveToNullSafe = currentGpsPosition ?? location.initialCenter;
-    } else {
-      if (currentGpsPosition != null) {
-        const distance = Distance();
-        if (distance(currentGpsPosition!, location.initialCenter) <=
-            centerOnGpsMaxDistanceMeters) {
-          targetToMoveToNullSafe = currentGpsPosition;
-        } else {
-          targetToMoveToNullSafe = location.initialCenter;
-        }
-      } else {
-        targetToMoveToNullSafe = location.initialCenter;
-      }
-    }
-
-    if (mounted && targetToMoveToNullSafe != null) {
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen _performInitialMapMove: Bewege Karte zu $targetToMoveToNullSafe");
-      }
-      mapController.move(
-          targetToMoveToNullSafe,
-          (followGps && !useMockLocation && !_isInRouteOverviewMode)
-              ? _followGpsZoomLevel
-              : 17.0);
-    } else {
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen _performInitialMapMove: Kein Zielpunkt für Kartenbewegung.");
-      }
     }
   }
 
@@ -904,929 +501,559 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
   }
 
-  void selectFeatureAndSetPoint(SearchableFeature feature) {
-    if (!mounted) return;
-
-    TextEditingController? controllerToUpdate;
-    FocusNode focusToUnset;
-    FocusNode? nextFocus;
-    bool isStartField = activeSearchField == ActiveSearchField.start;
-
-    if (isStartField) {
-      controllerToUpdate = startSearchController;
-      focusToUnset = startFocusNode;
-      nextFocus = endSearchController.text.isEmpty ? endFocusNode : null;
-      setStateIfMounted(() {
-        startLatLng = feature.center;
-        startMarker = createMarker(feature.center, Colors.green,
-            Icons.flag_circle, "Start: ${feature.name}");
-      });
-    } else if (activeSearchField == ActiveSearchField.end) {
-      controllerToUpdate = endSearchController;
-      focusToUnset = endFocusNode;
-      nextFocus = startSearchController.text.isEmpty ? startFocusNode : null;
-      setStateIfMounted(() {
-        endLatLng = feature.center;
-        endMarker = createMarker(feature.center, Colors.red, Icons.flag_circle,
-            "Ziel: ${feature.name}");
-      });
-    } else {
-      return;
+  void _onLocationSelectedFromDropdown(LocationInfo? newLocation) {
+    if (newLocation != null) {
+      Provider.of<LocationProvider>(context, listen: false)
+          .selectLocation(newLocation);
     }
+  }
 
-    controllerToUpdate.value = TextEditingValue(
-      text: feature.name,
-      selection:
-          TextSelection.fromPosition(TextPosition(offset: feature.name.length)),
-    );
+  void showSnackbar(String message, {int durationSeconds = 3}) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(message),
+          duration: Duration(seconds: durationSeconds)));
+    }
+  }
 
+  void _handleLocationChangeUIUpdates(LocationInfo newLocation) {
+    _resetRouteAndNavigation();
+    _resetSearchFields();
+    _performInitialMapMove(newLocation: newLocation);
+    _initializeGpsOrMock(newLocation);
+  }
+
+  void _resetSearchFields() {
+    startSearchController.clear();
+    endSearchController.clear();
     setStateIfMounted(() {
+      searchResults.clear();
       showSearchResults = false;
-      searchResults = [];
-      followGps = false;
-      _isInRouteOverviewMode = false;
-    });
-
-    focusToUnset.unfocus();
-
-    if (nextFocus != null) {
-      FocusScope.of(context).requestFocus(nextFocus);
-      setStateIfMounted(() {
-        isRouteActiveForCardSwitch = false;
-      });
-    } else {
-      activeSearchField = ActiveSearchField.none;
-      if (routePolyline != null) {
-        setStateIfMounted(() {
-          isRouteActiveForCardSwitch = true;
-        });
-      }
-    }
-
-    if (startLatLng != null && endLatLng != null) {
-      calculateAndDisplayRoute();
-    } else if (isMapReady && mounted) {
-      LatLng? pointToCenter = startLatLng ?? endLatLng;
-      if (pointToCenter != null) {
-        mapController.move(pointToCenter, 18.0);
-      }
-    }
-  }
-
-  Future<void> _initializeGpsReal(LocationInfo location) async {
-    if (!mounted) return;
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen _initializeGpsReal for ${location.name}");
-    }
-
-    late LocationPermission permission;
-    bool serviceEnabled;
-
-    try {
-      serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          showErrorDialog("GPS ist deaktiviert.");
-          setStateIfMounted(() => followGps = false);
-        }
-        return;
-      }
-
-      permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (mounted) {
-            showErrorDialog("GPS-Berechtigung verweigert.");
-            setStateIfMounted(() => followGps = false);
-          }
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          showErrorDialog("GPS-Berechtigung dauerhaft verweigert.");
-          setStateIfMounted(() => followGps = false);
-        }
-        return;
-      }
-    } catch (e) {
-      if (mounted) {
-        showErrorDialog("Fehler GPS-Berechtigungen: $e");
-        setStateIfMounted(() => followGps = false);
-      }
-      return;
-    }
-
-    final LatLng centerForDistanceCheck = location.initialCenter;
-    positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 2,
-      ),
-    ).listen((Position position) {
-      if (!mounted) return;
-      final bool isFirstFix = currentGpsPosition == null;
-      LatLng newGpsPos = LatLng(position.latitude, position.longitude);
-
-      bool significantPositionChange = true;
-      if (currentGpsPosition != null) {
-        if (distanceCalculatorInstance(currentGpsPosition!, newGpsPos) <
-            _significantGpsChangeThreshold) {
-          significantPositionChange = false;
-        }
-      }
-
-      if (significantPositionChange) {
-        if (kDebugMode) {
-          print("[DIAGNOSE] MapScreen GPS Update: $newGpsPos");
-        }
-        currentGpsPosition = newGpsPos;
-        setStateIfMounted(() {
-          currentLocationMarker = createMarker(
-              newGpsPos, Colors.blueAccent, Icons.circle, "Meine Position");
-          if (startSearchController.text == "Aktueller Standort") {
-            startLatLng = currentGpsPosition;
-            if (startLatLng != null) {
-              startMarker = createMarker(startLatLng!, Colors.green,
-                  Icons.flag_circle, "Start: Aktueller Standort");
-            }
-          }
-          if (routePolyline != null &&
-              endLatLng != null &&
-              currentGpsPosition != null) {
-            remainingRouteDistance =
-                distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
-            remainingRouteTimeMinutes =
-                RoutingService.estimateWalkingTimeMinutes(
-                    remainingRouteDistance!);
-          }
-        });
-      }
-
-      if (followGps &&
-          !_isInRouteOverviewMode &&
-          isMapReady &&
-          mounted &&
-          currentGpsPosition != null &&
-          significantPositionChange) {
-        mapController.move(currentGpsPosition!, _followGpsZoomLevel);
-      } else if (isFirstFix &&
-          currentGpsPosition != null &&
-          isMapReady &&
-          mounted &&
-          significantPositionChange) {
-        final double meters = distanceCalculatorInstance(
-            currentGpsPosition!, centerForDistanceCheck);
-        if (meters <= centerOnGpsMaxDistanceMeters) {
-          if (!_isInRouteOverviewMode && followGps) {
-            mapController.move(currentGpsPosition!, _followGpsZoomLevel);
-          } else if (!_isInRouteOverviewMode && !followGps) {
-            mapController.move(currentGpsPosition!, 17.0);
-          }
-        } else {
-          showSnackbar(
-              "Echte GPS-Position zu weit entfernt vom aktuellen Standort.",
-              durationSeconds: 4);
-        }
-      }
-
-      if (routePolyline != null &&
-          currentManeuvers.isNotEmpty &&
-          significantPositionChange &&
-          currentGpsPosition != null) {
-        _updateCurrentManeuverOnGpsUpdate(currentGpsPosition!);
-      }
-
-      if (routePolyline != null &&
-          routePolyline!.points.isNotEmpty &&
-          !isCalculatingRoute &&
-          currentGpsPosition != null &&
-          significantPositionChange) {
-        final double distanceToRoute = _calculateDistanceToPolyline(
-            currentGpsPosition!, routePolyline!.points);
-        if (distanceToRoute > _offRouteThreshold) {
-          if (kDebugMode) {
-            print(
-                "[DIAGNOSE] VON ROUTE ABGEKOMMEN! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
-          }
-          showSnackbar("Von Route abgekommen. Neue Route wird berechnet...",
-              durationSeconds: 3);
-
-          startLatLng = currentGpsPosition;
-          startSearchController.text = "Aktueller Standort (neu)";
-          if (startLatLng != null) {
-            startMarker = createMarker(startLatLng!, Colors.green,
-                Icons.flag_circle, "Start: ${startSearchController.text}");
-          }
-          isRouteActiveForCardSwitch = false;
-          _isInRouteOverviewMode = false;
-          calculateAndDisplayRoute();
-        }
-      }
-    }, onError: (error) {
-      if (kDebugMode) {
-        print("[DIAGNOSE] Fehler GPS-Empfang: $error");
-      }
-      showErrorDialog("Fehler GPS-Empfang: $error");
-      if (mounted) {
-        setStateIfMounted(() => followGps = false);
-      }
+      startLatLng = null;
+      endLatLng = null;
+      startMarker = null;
+      endMarker = null;
     });
   }
 
-  void _updateCurrentManeuverOnGpsUpdate(LatLng currentPosition) {
-    if (currentManeuvers.isEmpty ||
-        routePolyline == null ||
-        routePolyline!.points.isEmpty) {
-      return;
-    }
-    if (kDebugMode) {
-      // print("[DIAGNOSE] MapScreen _updateCurrentManeuverOnGpsUpdate. Akt. Manöver: ${currentDisplayedManeuver?.turnType}");
-    }
-
-    if (currentDisplayedManeuver == null) {
-      Maneuver initialManeuver = currentManeuvers.first;
-      if (currentManeuvers.length > 1 &&
-          initialManeuver.turnType == TurnType.depart) {
-        if (currentManeuvers[1].turnType != TurnType.arrive ||
-            currentManeuvers.length == 2) {
-          initialManeuver = currentManeuvers[1];
-        } else if (currentManeuvers.length > 2 &&
-            currentManeuvers[1].turnType == TurnType.arrive) {
-          initialManeuver = currentManeuvers[1];
-        }
-      }
-      setStateIfMounted(() {
-        currentDisplayedManeuver = initialManeuver;
-        if (currentDisplayedManeuver?.instructionText != null) {
-          ttsService.speak(currentDisplayedManeuver!.instructionText!);
-        }
-      });
-      if (currentDisplayedManeuver == null) return;
-    }
-
-    if (currentDisplayedManeuver!.turnType == TurnType.arrive) {
-      return;
-    }
-
-    int displayedManeuverIndex =
-        currentManeuvers.indexOf(currentDisplayedManeuver!);
-
-    if (displayedManeuverIndex == -1) {
-      if (currentManeuvers.isNotEmpty) {
-        Maneuver newFallbackManeuver = currentManeuvers.first;
-        if (currentManeuvers.length > 1 &&
-            newFallbackManeuver.turnType == TurnType.depart) {
-          if (currentManeuvers[1].turnType != TurnType.arrive ||
-              currentManeuvers.length == 2) {
-            newFallbackManeuver = currentManeuvers[1];
-          } else if (currentManeuvers.length > 2 &&
-              currentManeuvers[1].turnType == TurnType.arrive) {
-            newFallbackManeuver = currentManeuvers[1];
-          }
-        }
-        if (currentDisplayedManeuver != newFallbackManeuver) {
-          setStateIfMounted(() {
-            currentDisplayedManeuver = newFallbackManeuver;
-            if (currentDisplayedManeuver?.instructionText != null) {
-              ttsService.speak(currentDisplayedManeuver!.instructionText!);
-            }
-          });
-        }
-      }
-      return;
-    }
-
-    final double distanceToDisplayedManeuverPoint = distanceCalculatorInstance(
-      currentPosition,
-      currentDisplayedManeuver!.point,
-    );
-
-    if (distanceToDisplayedManeuverPoint < _maneuverReachedThreshold) {
-      final int nextManeuverIndex = displayedManeuverIndex + 1;
-
-      if (nextManeuverIndex < currentManeuvers.length) {
-        Maneuver newPotentialManeuver = currentManeuvers[nextManeuverIndex];
-
-        if (newPotentialManeuver.turnType == TurnType.arrive) {
-          if (routePolyline != null && routePolyline!.points.isNotEmpty) {
-            final LatLng actualDestinationPoint = routePolyline!.points.last;
-            final double distanceToActualDestination =
-                distanceCalculatorInstance(
-              currentPosition,
-              actualDestinationPoint,
-            );
-
-            if (distanceToActualDestination < _maneuverReachedThreshold) {
-              if (newPotentialManeuver != currentDisplayedManeuver) {
-                setStateIfMounted(() {
-                  currentDisplayedManeuver = newPotentialManeuver;
-                  if (currentDisplayedManeuver?.instructionText != null) {
-                    ttsService
-                        .speak(currentDisplayedManeuver!.instructionText!);
-                  }
-                });
-              }
-            }
-          }
-        } else {
-          if (newPotentialManeuver != currentDisplayedManeuver) {
-            setStateIfMounted(() {
-              currentDisplayedManeuver = newPotentialManeuver;
-              if (currentDisplayedManeuver?.instructionText != null) {
-                ttsService.speak(currentDisplayedManeuver!.instructionText!);
-              }
-            });
-          }
-        }
-      }
-    }
-  }
-
-  Future<void> calculateAndDisplayRoute() async {
-    if (kDebugMode) {
-      print("[DIAGNOSE] MapScreen calculateAndDisplayRoute: Start");
-    }
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final RoutingGraph? currentGraphValue =
-        locationProvider.currentRoutingGraph;
-    final bool isLoadingData = locationProvider.isLoadingLocationData;
-    final bool isDataReadyForRouting =
-        !isLoadingData && currentGraphValue != null;
-    final selectedLocationFromProvider = locationProvider.selectedLocation;
-
-    if (!mounted) return;
-
+  void _resetRouteAndNavigation() {
     setStateIfMounted(() {
       routePolyline = null;
+      isCalculatingRoute = false;
+      currentManeuvers.clear();
+      currentDisplayedManeuver = null;
+      followGps = false;
       routeDistance = null;
       routeTimeMinutes = null;
       remainingRouteDistance = null;
       remainingRouteTimeMinutes = null;
-      currentManeuvers = [];
-      currentDisplayedManeuver = null;
-      isRouteActiveForCardSwitch = false;
-      _isInRouteOverviewMode = false;
-    });
-
-    if (!isDataReadyForRouting) {
-      showErrorDialog(
-          "Kartendaten für ${selectedLocationFromProvider?.name ?? ''} nicht bereit.");
-      setStateIfMounted(() {
-        isCalculatingRoute = false;
-        followGps = false;
-      });
-      return;
-    }
-
-    if (currentGraphValue == null || currentGraphValue.nodes.isEmpty) {
-      showErrorDialog(
-          "Routing-Daten für ${selectedLocationFromProvider?.name ?? ''} nicht verfügbar.");
-      setStateIfMounted(() {
-        isCalculatingRoute = false;
-        followGps = false;
-      });
-      return;
-    }
-
-    if (startLatLng == null || endLatLng == null) {
-      setStateIfMounted(() {
-        routePolyline = null;
-        isCalculatingRoute = false;
-        followGps = false;
-      });
-      return;
-    }
-
-    setStateIfMounted(() => isCalculatingRoute = true);
-
-    try {
-      currentGraphValue.resetAllNodeCosts();
-      final GraphNode? foundStartNode =
-          currentGraphValue.findNearestNode(startLatLng!);
-      final GraphNode? foundEndNode =
-          currentGraphValue.findNearestNode(endLatLng!);
-
-      if (foundStartNode == null || foundEndNode == null) {
-        showErrorDialog("Start/Ziel nicht auf Wegenetz gefunden.");
-        setStateIfMounted(() {
-          routePolyline = null;
-          followGps = false;
-          isRouteActiveForCardSwitch = false;
-        });
-      } else if (foundStartNode.id == foundEndNode.id) {
-        showSnackbar("Start- und Zielpunkt sind identisch.");
-        setStateIfMounted(() {
-          currentDisplayedManeuver = Maneuver(
-              point: startLatLng!,
-              turnType: TurnType.arrive,
-              instructionText: "Start- und Zielpunkt sind identisch.");
-          if (currentDisplayedManeuver?.instructionText != null) {
-            ttsService.speak(currentDisplayedManeuver!.instructionText!);
-          }
-          routeDistance = 0;
-          routeTimeMinutes = 0;
-          remainingRouteDistance = 0;
-          remainingRouteTimeMinutes = 0;
-          routePolyline = Polyline(
-              points: [startLatLng!, endLatLng!],
-              strokeWidth: 0.1,
-              color: Colors.transparent);
-          isRouteActiveForCardSwitch = true;
-        });
-        if (isMapReady && mounted) {
-          mapController.move(startLatLng!, mapController.camera.zoom);
-        }
-      } else {
-        final List<LatLng>? routePointsResult = await RoutingService.findPath(
-            currentGraphValue, foundStartNode, foundEndNode);
-        if (!mounted) return;
-        setStateIfMounted(() {
-          if (routePointsResult != null && routePointsResult.isNotEmpty) {
-            routePolyline = Polyline(
-                points: routePointsResult,
-                strokeWidth: 5.0,
-                color: Colors.deepPurpleAccent);
-
-            routeDistance =
-                RoutingService.calculateTotalDistance(routePointsResult);
-            routeTimeMinutes =
-                RoutingService.estimateWalkingTimeMinutes(routeDistance!);
-
-            remainingRouteDistance = routeDistance;
-            remainingRouteTimeMinutes = routeTimeMinutes;
-
-            currentManeuvers =
-                RoutingService.analyzeRouteForTurns(routePointsResult);
-
-            if (currentManeuvers.isNotEmpty) {
-              currentDisplayedManeuver = currentManeuvers.first;
-              if (currentManeuvers.length > 1 &&
-                  currentManeuvers.first.turnType == TurnType.depart) {
-                if (currentManeuvers[1].turnType != TurnType.arrive ||
-                    currentManeuvers.length == 2) {
-                  currentDisplayedManeuver = currentManeuvers[1];
-                } else if (currentManeuvers.length > 2 &&
-                    currentManeuvers[1].turnType == TurnType.arrive) {
-                  currentDisplayedManeuver = currentManeuvers[1];
-                }
-                if (currentManeuvers.first.instructionText != null) {
-                  ttsService.speak(currentManeuvers.first.instructionText!);
-                }
-              } else if (currentManeuvers.first.turnType != TurnType.depart) {
-                currentDisplayedManeuver = currentManeuvers.first;
-                if (currentDisplayedManeuver?.instructionText != null) {
-                  ttsService.speak(currentDisplayedManeuver!.instructionText!);
-                }
-              }
-            } else {
-              currentDisplayedManeuver = null;
-            }
-
-            isRouteActiveForCardSwitch = true;
-            _isInRouteOverviewMode = true;
-
-            if (!useMockLocation) {
-              followGps = true;
-            } else {
-              followGps = false;
-              if (currentGpsPosition != null && endLatLng != null) {
-                remainingRouteDistance =
-                    distanceCalculatorInstance(currentGpsPosition!, endLatLng!);
-                remainingRouteTimeMinutes =
-                    RoutingService.estimateWalkingTimeMinutes(
-                        remainingRouteDistance!);
-              }
-            }
-
-            showSnackbar("Route berechnet.", durationSeconds: 3);
-
-            if (isMapReady && mounted) {
-              try {
-                List<LatLng> pointsForBounds = List.from(routePointsResult);
-                if (currentGpsPosition != null &&
-                    startLatLng == currentGpsPosition) {
-                  pointsForBounds.add(currentGpsPosition!);
-                }
-                if (startFocusNode.hasFocus) {
-                  startFocusNode.unfocus();
-                }
-                if (endFocusNode.hasFocus) {
-                  endFocusNode.unfocus();
-                }
-
-                mapController.fitCamera(
-                  CameraFit.bounds(
-                    bounds: LatLngBounds.fromPoints(pointsForBounds),
-                    padding: const EdgeInsets.only(
-                        top: kCompactCardHeight + kSearchCardTopPadding + 20,
-                        bottom: 80.0,
-                        left: 30.0,
-                        right: 30.0),
-                  ),
-                );
-
-                Future.delayed(
-                    Duration(seconds: _navigationStartZoomDelaySeconds.toInt()),
-                    () {
-                  if (mounted && routePolyline != null) {
-                    setStateIfMounted(() {
-                      _isInRouteOverviewMode = false;
-                    });
-                    LatLng targetZoomPoint;
-                    if (!useMockLocation && currentGpsPosition != null) {
-                      targetZoomPoint = currentGpsPosition!;
-                    } else if (startLatLng != null) {
-                      targetZoomPoint = startLatLng!;
-                    } else {
-                      targetZoomPoint = routePointsResult.first;
-                    }
-                    mapController.move(targetZoomPoint, _followGpsZoomLevel);
-                    if (!useMockLocation) {
-                      setStateIfMounted(() {
-                        followGps = true;
-                      });
-                    }
-                  }
-                });
-              } catch (e) {
-                if (kDebugMode) {
-                  print(
-                      "[DIAGNOSE] MapScreen calculateAndDisplayRoute: Fehler beim Anpassen der Kartenansicht: $e");
-                }
-                if (endLatLng != null) {
-                  mapController.move(endLatLng!, mapController.camera.zoom);
-                }
-              }
-            }
-          } else {
-            routePolyline = null;
-            currentDisplayedManeuver = null;
-            followGps = false;
-            isRouteActiveForCardSwitch = false;
-            _isInRouteOverviewMode = false;
-            showErrorDialog("Keine Route gefunden.");
-          }
-        });
-      }
-    } catch (e, stacktrace) {
-      if (kDebugMode) {
-        print("[DIAGNOSE] MapScreen calculateAndDisplayRoute: FEHLER: $e");
-        print("[DIAGNOSE] Stacktrace: $stacktrace");
-      }
-      showErrorDialog("Fehler Routenberechnung: $e");
-      setStateIfMounted(() {
-        routePolyline = null;
-        followGps = false;
-        isRouteActiveForCardSwitch = false;
-        _isInRouteOverviewMode = false;
-      });
-    } finally {
-      if (mounted) {
-        setStateIfMounted(() => isCalculatingRoute = false);
-      }
-    }
-  }
-
-  void _handleMapTap(TapPosition tapPosition, LatLng latLng) {
-    if (!mounted) return;
-    setStateIfMounted(() {
-      followGps = false;
-      _isInRouteOverviewMode = false;
-    });
-
-    bool hadFocus = startFocusNode.hasFocus || endFocusNode.hasFocus;
-    if (startFocusNode.hasFocus) {
-      startFocusNode.unfocus();
-    }
-    if (endFocusNode.hasFocus) {
-      endFocusNode.unfocus();
-    }
-
-    if (hadFocus || showSearchResults) {
-      setStateIfMounted(() {
-        showSearchResults = false;
-      });
-    }
-    if (routePolyline != null) {
-      setStateIfMounted(() {
-        isRouteActiveForCardSwitch = true;
-      });
-    }
-
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    if (locationProvider.isLoadingLocationData ||
-        locationProvider.currentRoutingGraph == null) {
-      showSnackbar("Kartendaten werden noch geladen.", durationSeconds: 2);
-      return;
-    }
-    if (isCalculatingRoute) {
-      return;
-    }
-
-    ActiveSearchField fieldToSetByTapDecision = activeSearchField;
-
-    if (fieldToSetByTapDecision == ActiveSearchField.none) {
-      if (startLatLng == null && startSearchController.text.isEmpty) {
-        fieldToSetByTapDecision = ActiveSearchField.start;
-      } else if (endLatLng == null && endSearchController.text.isEmpty) {
-        fieldToSetByTapDecision = ActiveSearchField.end;
-      } else {
-        fieldToSetByTapDecision = ActiveSearchField.end;
-      }
-    }
-    setStateIfMounted(() {
       isRouteActiveForCardSwitch = false;
     });
-
-    _setPointFromMapTap(latLng, fieldToSetByTapDecision);
   }
 
-  void _setPointFromMapTap(LatLng latLng, ActiveSearchField fieldToSet) {
-    String pointName = (fieldToSet == ActiveSearchField.start)
-        ? "Start (Karte)"
-        : "Ziel (Karte)";
-    TextEditingController relevantController =
-        (fieldToSet == ActiveSearchField.start)
-            ? startSearchController
-            : endSearchController;
-
-    void performUpdateAndRoute() {
-      if (!mounted) return;
-      setStateIfMounted(() {
-        followGps = false;
-        _isInRouteOverviewMode = false;
-        if (fieldToSet == ActiveSearchField.start) {
-          startLatLng = latLng;
-          startMarker =
-              createMarker(latLng, Colors.green, Icons.flag_circle, pointName);
-          relevantController.text = pointName;
-        } else {
-          endLatLng = latLng;
-          endMarker =
-              createMarker(latLng, Colors.red, Icons.flag_circle, pointName);
-          relevantController.text = pointName;
-        }
-        routePolyline = null;
-        routeDistance = null;
-        routeTimeMinutes = null;
-        remainingRouteDistance = null;
-        remainingRouteTimeMinutes = null;
-        currentManeuvers = [];
-        currentDisplayedManeuver = null;
-        isRouteActiveForCardSwitch = false;
-      });
-
-      if (startLatLng != null && endLatLng != null) {
-        calculateAndDisplayRoute();
-      }
-    }
-
-    bool isOverwriting = (fieldToSet == ActiveSearchField.start &&
-            startLatLng != null &&
-            startSearchController.text.isNotEmpty) ||
-        (fieldToSet == ActiveSearchField.end &&
-            endLatLng != null &&
-            endSearchController.text.isNotEmpty);
-
-    if (isOverwriting) {
-      showConfirmationDialog(
-          "Neuen ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt setzen?",
-          "Aktuellen ${fieldToSet == ActiveSearchField.start ? 'Start' : 'Ziel'}punkt '${fieldToSet == ActiveSearchField.start ? startSearchController.text : endSearchController.text}' verwerfen und neuen Punkt auf Karte setzen?",
-          performUpdateAndRoute);
-    } else {
-      performUpdateAndRoute();
-    }
-  }
-
-  void clearRoute({bool showConfirmation = true, bool clearMarkers = true}) {
-    void doClearAction() {
-      if (!mounted) return;
-      setStateIfMounted(() {
-        routePolyline = null;
-        routeDistance = null;
-        routeTimeMinutes = null;
-        remainingRouteDistance = null;
-        remainingRouteTimeMinutes = null;
-        currentManeuvers = [];
-        currentDisplayedManeuver = null;
-        followGps = false;
-        isRouteActiveForCardSwitch = false;
-        _isInRouteOverviewMode = false;
-        if (clearMarkers) {
-          startMarker = null;
-          startLatLng = null;
-          startSearchController.clear();
-          endMarker = null;
-          endLatLng = null;
-          endSearchController.clear();
-          activeSearchField = ActiveSearchField.none;
-          showSearchResults = false;
-        }
-      });
-      showSnackbar(
-          clearMarkers
-              ? "Route, Start- und Zielpunkt gelöscht."
-              : "Route gelöscht.",
-          durationSeconds: 2);
-    }
-
-    final bool somethingToDelete = routePolyline != null ||
-        (clearMarkers &&
-            (startMarker != null ||
-                endMarker != null ||
-                startSearchController.text.isNotEmpty ||
-                endSearchController.text.isNotEmpty));
-
-    if (showConfirmation && somethingToDelete) {
-      showConfirmationDialog(
-          clearMarkers ? "Alles löschen?" : "Route löschen?",
-          clearMarkers
-              ? "Route, Start- und Zielpunkt wirklich löschen?"
-              : "Route wirklich löschen?",
-          doClearAction);
-    } else if (somethingToDelete) {
-      doClearAction();
-    }
-  }
-
-  void _centerOnGps() {
-    if (!mounted) return;
-    final selectedLocationFromProvider =
+  void _performInitialMapMove({LocationInfo? newLocation}) {
+    final locationToCenterOn = newLocation ??
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
-
-    if (useMockLocation) {
-      showSnackbar("Follow-Modus ist nur mit echtem GPS verfügbar.",
-          durationSeconds: 3);
-      LatLng? centerTarget = currentGpsPosition ??
-          selectedLocationFromProvider?.initialCenter ??
-          fallbackInitialCenter;
-      if (centerTarget != null && isMapReady) {
-        mapController.move(centerTarget, _followGpsZoomLevel);
-        setStateIfMounted(() {
-          _isInRouteOverviewMode = false;
-        });
-      }
-      return;
-    }
-
-    if (currentGpsPosition != null && isMapReady) {
-      setStateIfMounted(() {
-        followGps = !followGps;
-        if (followGps) {
-          _isInRouteOverviewMode = false;
-        }
-      });
-
-      if (followGps && !_isInRouteOverviewMode) {
-        mapController.move(currentGpsPosition!, _followGpsZoomLevel);
-        showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
-      } else if (!followGps) {
-        showSnackbar("Follow-GPS Modus deaktiviert.", durationSeconds: 2);
-      } else if (_isInRouteOverviewMode) {
-        setStateIfMounted(() {
-          _isInRouteOverviewMode = false;
-        });
-        mapController.move(currentGpsPosition!, _followGpsZoomLevel);
-        showSnackbar("Zur Navigationsansicht gewechselt.", durationSeconds: 2);
-      }
-    } else {
-      showSnackbar(
-          "Aktuelle GPS-Position nicht verfügbar oder Karte nicht bereit.",
-          durationSeconds: 3);
+    if (isMapReady && locationToCenterOn != null) {
+      mapController.move(locationToCenterOn.initialCenter, 17.0);
     }
   }
 
-  void _toggleRouteOverview() {
-    if (!mounted || routePolyline == null) {
-      showSnackbar("Keine aktive Route zur Ansicht vorhanden.",
-          durationSeconds: 2);
-      return;
+  void _initializeGpsOrMock(LocationInfo location) {
+    if (useMockLocation) {
+      _initializeMockGps(location);
+    } else {
+      _initializeGpsReal();
     }
+  }
 
+  void _initializeMockGps(LocationInfo location) {
+    positionStreamSubscription?.cancel();
     setStateIfMounted(() {
-      _isInRouteOverviewMode = !_isInRouteOverviewMode;
-      if (_isInRouteOverviewMode) {
-        followGps = false;
-        _showRouteOverview();
-      } else {
-        LatLng targetZoomPoint;
-        if (!useMockLocation && currentGpsPosition != null) {
-          targetZoomPoint = currentGpsPosition!;
-          followGps = true;
-        } else if (startLatLng != null) {
-          targetZoomPoint = startLatLng!;
-        } else {
-          targetZoomPoint = routePolyline!.points.first;
-        }
-        mapController.move(targetZoomPoint, _followGpsZoomLevel);
-        if (!useMockLocation && currentGpsPosition != null) {
-          setStateIfMounted(() {
-            followGps = true;
-          });
-        }
-      }
+      currentGpsPosition = location.mockGpsStartLocation;
+      _updateCurrentLocationMarker();
     });
-    showSnackbar(
-        _isInRouteOverviewMode
-            ? "Routenübersicht aktiviert."
-            : "Navigationsansicht aktiviert.",
+    showSnackbar("Mock-GPS aktiv an Position: ${location.name}",
         durationSeconds: 2);
   }
 
-  void _showRouteOverview() {
-    if (routePolyline != null &&
-        routePolyline!.points.isNotEmpty &&
-        isMapReady &&
-        mounted) {
-      List<LatLng> pointsForBounds = List.from(routePolyline!.points);
-      if (currentGpsPosition != null && startLatLng == currentGpsPosition) {
-        pointsForBounds.add(currentGpsPosition!);
-      }
-      mapController.fitCamera(
-        CameraFit.bounds(
-          bounds: LatLngBounds.fromPoints(pointsForBounds),
-          padding: const EdgeInsets.only(
-              top: kCompactCardHeight + kSearchCardTopPadding + 20,
-              bottom: 80.0,
-              left: 30.0,
-              right: 30.0),
-        ),
-      );
+  Future<void> _initializeGpsReal() async {
+    positionStreamSubscription?.cancel();
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      showSnackbar("Standortdienste sind deaktiviert.");
+      return;
     }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        showSnackbar("Standortberechtigung verweigert.");
+        return;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      showSnackbar("Standortberechtigung dauerhaft verweigert.");
+      return;
+    }
+
+    const LocationSettings locationSettings =
+        LocationSettings(accuracy: LocationAccuracy.bestForNavigation);
+
+    positionStreamSubscription =
+        Geolocator.getPositionStream(locationSettings: locationSettings).listen(
+            (Position newGpsPos) {
+      final newGpsLatLng = LatLng(newGpsPos.latitude, newGpsPos.longitude);
+      double distanceToCurrent = 0;
+      if (currentGpsPosition != null) {
+        distanceToCurrent = distanceCalculatorInstance.distance(
+            newGpsLatLng, currentGpsPosition!);
+      }
+
+      final bool significantPositionChange = currentGpsPosition == null ||
+          distanceToCurrent > _significantGpsChangeThreshold;
+
+      if (significantPositionChange) {
+        setStateIfMounted(() {
+          currentGpsPosition = newGpsLatLng;
+          _updateCurrentLocationMarker();
+        });
+
+        if (currentManeuvers.isNotEmpty) {
+          _updateCurrentManeuverOnGpsUpdate(newGpsLatLng);
+        }
+
+        if (followGps) {
+          mapController.move(newGpsLatLng, _followGpsZoomLevel);
+        }
+      }
+    }, onError: (error) {
+      showSnackbar("Fehler beim Empfangen des GPS-Signals.");
+    });
   }
 
-  void swapStartAndEnd() {
-    if (!mounted) return;
-
-    if (startLatLng == null && endLatLng == null) {
-      showSnackbar("Kein Start- oder Zielpunkt zum Tauschen vorhanden.",
-          durationSeconds: 3);
+  void _toggleMockLocation() {
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    final selectedLocation = locationProvider.selectedLocation;
+    if (selectedLocation == null) {
+      showSnackbar("Kein Standort ausgewählt, kann Modus nicht wechseln.");
       return;
     }
 
     setStateIfMounted(() {
-      final LatLng? tempLatLng = startLatLng;
-      startLatLng = endLatLng;
-      endLatLng = tempLatLng;
-
-      final String tempStartText = startSearchController.text;
-      startSearchController.text = endSearchController.text;
-      endSearchController.text = tempStartText;
-
-      if (startLatLng != null) {
-        startMarker = createMarker(
-          startLatLng!,
-          Colors.green,
-          Icons.flag_circle,
-          "Start: ${startSearchController.text.isNotEmpty ? startSearchController.text : 'Gesetzter Punkt'}",
-        );
-      } else {
-        startMarker = null;
-      }
-
-      if (endLatLng != null) {
-        endMarker = createMarker(
-          endLatLng!,
-          Colors.red,
-          Icons.flag_circle,
-          "Ziel: ${endSearchController.text.isNotEmpty ? endSearchController.text : 'Gesetzter Punkt'}",
-        );
-      } else {
-        endMarker = null;
-      }
-
-      routeDistance = null;
-      routeTimeMinutes = null;
-      remainingRouteDistance = null;
-      remainingRouteTimeMinutes = null;
-      currentManeuvers = [];
-      currentDisplayedManeuver = null;
+      useMockLocation = !useMockLocation;
       followGps = false;
-      isRouteActiveForCardSwitch = false;
-      _isInRouteOverviewMode = false;
-
-      if (startLatLng != null && endLatLng != null) {
-        calculateAndDisplayRoute();
-      } else {
-        routePolyline = null;
-      }
+      _resetRouteAndNavigation();
+      _initializeGpsOrMock(selectedLocation);
     });
-
-    showSnackbar("Start und Ziel getauscht.", durationSeconds: 2);
   }
 
-  double _distanceToSegment(
-      LatLng p, LatLng a, LatLng b, Distance distanceCalc) {
-    final double l2 = pow(distanceCalc(a, b), 2).toDouble();
-    if (l2 == 0.0) return distanceCalc(p, a);
+  void _centerOnGps() {
+    if (currentGpsPosition == null) {
+      showSnackbar("Aktuelle GPS-Position ist unbekannt.");
+      return;
+    }
+    final selectedLocation =
+        Provider.of<LocationProvider>(context, listen: false).selectedLocation;
+    if (selectedLocation != null) {
+      final distanceToCenter = distanceCalculatorInstance.distance(
+          currentGpsPosition!, selectedLocation.initialCenter);
+      if (distanceToCenter > centerOnGpsMaxDistanceMeters) {
+        showSnackbar(
+            "Du bist zu weit vom Campingplatz entfernt, um zu zentrieren.");
+        return;
+      }
+    }
 
-    final double distAP = distanceCalc(p, a);
-    final double distBP = distanceCalc(p, b);
+    setStateIfMounted(() {
+      followGps = true;
+    });
+
+    mapController.move(currentGpsPosition!, _followGpsZoomLevel);
+    showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
+  }
+
+  void _onStartSearchChanged() {
+    if (startFocusNode.hasFocus &&
+        startSearchController.text != "Aktueller Standort") {
+      _filterFeatures(startSearchController.text);
+    }
+  }
+
+  void _onEndSearchChanged() {
+    if (endFocusNode.hasFocus) {
+      _filterFeatures(endSearchController.text);
+    }
+  }
+
+  void _onStartFocusChanged() {
+    setStateIfMounted(() {
+      if (startFocusNode.hasFocus) {
+        activeSearchField = ActiveSearchField.start;
+        isRouteActiveForCardSwitch = false;
+        if (startSearchController.text != "Aktueller Standort") {
+          _filterFeatures(startSearchController.text);
+        }
+      } else {
+        if (activeSearchField == ActiveSearchField.start) {
+          activeSearchField = ActiveSearchField.none;
+        }
+        _hideSearchResultsAfterDelay();
+      }
+    });
+  }
+
+  void _onEndFocusChanged() {
+    setStateIfMounted(() {
+      if (endFocusNode.hasFocus) {
+        activeSearchField = ActiveSearchField.end;
+        isRouteActiveForCardSwitch = false;
+        _filterFeatures(endSearchController.text);
+      } else {
+        if (activeSearchField == ActiveSearchField.end) {
+          activeSearchField = ActiveSearchField.none;
+        }
+        _hideSearchResultsAfterDelay();
+      }
+    });
+  }
+
+  void _filterFeatures(String query) {
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    final allFeatures = locationProvider.currentSearchableFeatures;
+
+    if (query.isEmpty) {
+      setStateIfMounted(() {
+        searchResults = allFeatures;
+        showSearchResults = true;
+      });
+      return;
+    }
+    setStateIfMounted(() {
+      searchResults = allFeatures
+          .where((feature) =>
+              feature.name.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+      showSearchResults = true;
+    });
+  }
+
+  void _hideSearchResultsAfterDelay() {
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!startFocusNode.hasFocus && !endFocusNode.hasFocus) {
+        setStateIfMounted(() {
+          showSearchResults = false;
+        });
+      }
+    });
+  }
+
+  void selectFeatureAndSetPoint(SearchableFeature feature) {
+    final point = feature.representativePoint;
+
+    setStateIfMounted(() {
+      if (activeSearchField == ActiveSearchField.start) {
+        startSearchController.text = feature.name;
+        startLatLng = point;
+        _updateStartMarker();
+        startFocusNode.unfocus();
+      } else if (activeSearchField == ActiveSearchField.end) {
+        endSearchController.text = feature.name;
+        endLatLng = point;
+        _updateEndMarker();
+        endFocusNode.unfocus();
+      }
+      showSearchResults = false;
+      _calculateRouteIfPossible();
+    });
+  }
+
+  void setStartToCurrentLocation() {
+    if (currentGpsPosition == null) {
+      showSnackbar("Aktuelle Position unbekannt.");
+      return;
+    }
+    setStateIfMounted(() {
+      startSearchController.text = "Aktueller Standort";
+      startLatLng = currentGpsPosition;
+      startMarker = null; // Kein Marker für die aktuelle Position
+      _calculateRouteIfPossible();
+      startFocusNode.unfocus();
+    });
+  }
+
+  void swapStartAndEnd() {
+    final tempName = startSearchController.text;
+    final tempLatLng = startLatLng;
+
+    setStateIfMounted(() {
+      startSearchController.text = endSearchController.text;
+      startLatLng = endLatLng;
+      endSearchController.text = tempName;
+      endLatLng = tempLatLng;
+      _updateStartMarker();
+      _updateEndMarker();
+      _calculateRouteIfPossible();
+    });
+  }
+
+  void _handleMapTap(TapPosition tapPos, LatLng latlng) {
+    if (isCalculatingRoute) return;
+
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    final graph = locationProvider.currentRoutingGraph;
+    if (graph == null) return;
+
+    final nearestNode = _findNearestNode(latlng, graph);
+    if (nearestNode == null) {
+      showSnackbar("Kein Weg in der Nähe gefunden.");
+      return;
+    }
+
+    final pointOnGraph = nearestNode.latlng;
+    final pointName = "Punkt auf Karte";
+
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.play_arrow),
+                title: const Text('Als Startpunkt'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setStateIfMounted(() {
+                    startSearchController.text = pointName;
+                    startLatLng = pointOnGraph;
+                    _updateStartMarker();
+                    _calculateRouteIfPossible();
+                  });
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.flag),
+                title: const Text('Als Ziel'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setStateIfMounted(() {
+                    endSearchController.text = pointName;
+                    endLatLng = pointOnGraph;
+                    _updateEndMarker();
+                    _calculateRouteIfPossible();
+                  });
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _calculateRouteIfPossible() async {
+    if (startLatLng == null || endLatLng == null) {
+      return;
+    }
+
+    setStateIfMounted(() {
+      isCalculatingRoute = true;
+    });
+
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    final graph = locationProvider.currentRoutingGraph;
+
+    if (graph == null) {
+      showSnackbar("Routing-Graph ist nicht geladen.");
+      setStateIfMounted(() => isCalculatingRoute = false);
+      return;
+    }
+
+    final startNode = _findNearestNode(startLatLng!, graph);
+    final endNode = _findNearestNode(endLatLng!, graph);
+
+    if (startNode == null || endNode == null) {
+      showSnackbar("Start- oder Endpunkt liegt außerhalb des Wegnetzes.");
+      setStateIfMounted(() => isCalculatingRoute = false);
+      return;
+    }
+
+    final result = await RoutingService.calculateShortestPath(
+        graph, startNode.id, endNode.id);
+
+    setStateIfMounted(() {
+      if (result.path.isNotEmpty) {
+        routePolyline = Polyline(
+            points: result.path.map((node) => node.latlng).toList(),
+            color: Colors.blue,
+            strokeWidth: 5.0);
+        currentManeuvers = result.maneuvers;
+        _updateRouteMetrics(result.path);
+        _updateCurrentManeuverOnGpsUpdate(
+            currentGpsPosition ?? result.path.first.latlng);
+
+        showSnackbar(
+            "Route berechnet. Distanz: ${routeDistance!.toStringAsFixed(2)}m");
+        isRouteActiveForCardSwitch = true;
+        _toggleRouteOverview(zoomOut: true, delaySeconds: 0.5);
+      } else {
+        showSnackbar("Keine Route zwischen den Punkten gefunden.");
+        _resetRouteAndNavigation();
+      }
+      isCalculatingRoute = false;
+    });
+  }
+
+  GraphNode? _findNearestNode(LatLng point, RoutingGraph graph) {
+    GraphNode? nearestNode;
+    double minDistance = double.infinity;
+    for (var node in graph.nodes.values) {
+      final d = distanceCalculatorInstance.distance(point, node.latlng);
+      if (d < minDistance) {
+        minDistance = d;
+        nearestNode = node;
+      }
+    }
+    return nearestNode;
+  }
+
+  void _updateCurrentLocationMarker() {
+    if (currentGpsPosition != null) {
+      setStateIfMounted(() {
+        currentLocationMarker = Marker(
+          width: 80.0,
+          height: 80.0,
+          point: currentGpsPosition!,
+          child: const Icon(Icons.my_location, color: Colors.blueAccent),
+        );
+      });
+    }
+  }
+
+  void _updateStartMarker() {
+    if (startLatLng != null &&
+        startSearchController.text != "Aktueller Standort") {
+      setStateIfMounted(() {
+        startMarker = Marker(
+          point: startLatLng!,
+          width: 80,
+          height: 80,
+          child: const Icon(Icons.play_circle_fill, color: Colors.green),
+        );
+      });
+    } else {
+      setStateIfMounted(() {
+        startMarker = null;
+      });
+    }
+  }
+
+  void _updateEndMarker() {
+    if (endLatLng != null) {
+      setStateIfMounted(() {
+        endMarker = Marker(
+          point: endLatLng!,
+          width: 80,
+          height: 80,
+          child: const Icon(Icons.flag_circle, color: Colors.red),
+        );
+      });
+    } else {
+      setStateIfMounted(() {
+        endMarker = null;
+      });
+    }
+  }
+
+  void _updateRouteMetrics(List<GraphNode> path) {
+    if (path.isEmpty) return;
+    double totalDistance = 0;
+    for (int i = 0; i < path.length - 1; i++) {
+      totalDistance += distanceCalculatorInstance.distance(
+          path[i].latlng, path[i + 1].latlng);
+    }
+    setStateIfMounted(() {
+      routeDistance = totalDistance;
+      routeTimeMinutes = (totalDistance / 80).ceil(); // ~5 km/h walking speed
+    });
+  }
+
+  void _updateCurrentManeuverOnGpsUpdate(LatLng currentPos) {
+    if (currentManeuvers.isEmpty) return;
+
+    int currentManeuverIndex = currentManeuvers
+        .indexWhere((m) => m.nodeId == currentDisplayedManeuver?.nodeId);
+    if (currentManeuverIndex == -1) currentManeuverIndex = 0;
+
+    for (int i = currentManeuverIndex; i < currentManeuvers.length; i++) {
+      final maneuverNode = Provider.of<LocationProvider>(context, listen: false)
+          .currentRoutingGraph
+          ?.nodes[currentManeuvers[i].nodeId];
+      if (maneuverNode == null) continue;
+
+      final distanceToManeuver =
+          distanceCalculatorInstance.distance(currentPos, maneuverNode.latlng);
+
+      if (i < currentManeuvers.length - 1 &&
+          distanceToManeuver < _maneuverReachedThreshold) {
+        continue;
+      } else {
+        Maneuver nextManeuver = currentManeuvers[i];
+        if (nextManeuver.nodeId != currentDisplayedManeuver?.nodeId) {
+          ttsService.speak(nextManeuver.instruction);
+          setStateIfMounted(() {
+            currentDisplayedManeuver = nextManeuver;
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  void _toggleRouteOverview({bool? zoomOut, double delaySeconds = 0.0}) {
+    Future.delayed(Duration(milliseconds: (delaySeconds * 1000).toInt()), () {
+      if (!mounted) return;
+      if (routePolyline == null || routePolyline!.points.isEmpty) return;
+
+      bool shouldZoomOut = zoomOut ?? !_isInRouteOverviewMode;
+
+      if (shouldZoomOut) {
+        mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds.fromPoints(routePolyline!.points),
+            padding: const EdgeInsets.all(50.0),
+          ),
+        );
+        setStateIfMounted(() {
+          _isInRouteOverviewMode = true;
+          followGps = false;
+        });
+      } else {
+        _centerOnGps();
+        setStateIfMounted(() {
+          _isInRouteOverviewMode = false;
+        });
+      }
+    });
+  }
+
+  double _distanceToPolylineSegment(LatLng p, LatLng a, LatLng b) {
+    double l2 =
+        pow(b.longitude - a.longitude, 2) + pow(b.latitude - a.latitude, 2);
+    if (l2 == 0.0) return distanceCalculatorInstance.distance(p, a);
+
+    final double distAP = distanceCalculatorInstance.distance(p, a);
+    final double distBP = distanceCalculatorInstance.distance(p, b);
     final double distAB = sqrt(l2);
 
     if (distAP == 0) return 0.0;
@@ -1850,18 +1077,18 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   double _calculateDistanceToPolyline(LatLng p, List<LatLng> polyline) {
-    if (polyline.isEmpty) return double.infinity;
-    if (polyline.length == 1)
-      return distanceCalculatorInstance(p, polyline.first);
-
+    if (polyline.isEmpty) {
+      return double.infinity;
+    }
+    if (polyline.length == 1) {
+      return distanceCalculatorInstance.distance(p, polyline.first);
+    }
     double minDistance = double.infinity;
     for (int i = 0; i < polyline.length - 1; i++) {
-      final LatLng a = polyline[i];
-      final LatLng b = polyline[i + 1];
-      final double distanceToCurrentSegment =
-          _distanceToSegment(p, a, b, distanceCalculatorInstance);
-      if (distanceToCurrentSegment < minDistance) {
-        minDistance = distanceToCurrentSegment;
+      final distance =
+          _distanceToPolylineSegment(p, polyline[i], polyline[i + 1]);
+      if (distance < minDistance) {
+        minDistance = distance;
       }
     }
     return minDistance;
