@@ -89,7 +89,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   double fullSearchCardHeight = 0;
 
   String _maptilerUrlTemplate = '';
-  String _debugMapStatus = "Initialisiere..."; // DIAGNOSE
+  String _debugMapStatus = "Initialisiere...";
 
   @override
   void initState() {
@@ -109,7 +109,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       if (kDebugMode) {
         print("[DIAGNOSE] WARNUNG: MAPTILER_API_KEY nicht in .env gefunden!");
       }
-      _maptilerUrlTemplate = ''; // Leer lassen, damit Fallback greift
+      _maptilerUrlTemplate = '';
       setStateIfMounted(() => _debugMapStatus = "initState: KEIN API KEY!");
     } else {
       _maptilerUrlTemplate =
@@ -147,8 +147,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     if (kDebugMode) {
       print("[DIAGNOSE] MapScreen didChangeDependencies: Start");
     }
-    final locationProvider = Provider.of<LocationProvider>(context,
-        listen: false); // listen: false ist hier oft besser
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
     final newLocationInfo = locationProvider.selectedLocation;
 
     if (newLocationInfo != null &&
@@ -205,7 +205,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         isGraphReady &&
         mapThemeFromProvider != null;
 
-    // DIAGNOSE: Update debug status string
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() {
@@ -271,19 +270,16 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           ),
         }),
         maximumZoom: 20,
-        // DIAGNOSE: Tile-Fehler loggen
-        tileProviderErrorStrategy: TileProviderErrorStrategy.logAndContinue,
-        // tileDisplayErrorStrategy: TileDisplayErrorStrategy.logAndContinue, // falls verfügbar
-        onTileError: (tile, error, stackTrace) {
-          if (kDebugMode) {
-            print(
-                "[DIAGNOSE] VectorTileLayer onTileError: Tile: $tile, Error: $error");
-            if (stackTrace != null) {
-              print(
-                  "[DIAGNOSE] VectorTileLayer onTileError StackTrace: $stackTrace");
-            }
-          }
-        },
+        // KORREKTUR: Nicht unterstützte Diagnose-Parameter entfernt
+        // tileProviderErrorStrategy: TileProviderErrorStrategy.logAndContinue,
+        // onTileError: (tile, error, stackTrace) {
+        //   if (kDebugMode) {
+        //     print("[DIAGNOSE] VectorTileLayer onTileError: Tile: $tile, Error: $error");
+        //     if (stackTrace != null) {
+        //       print("[DIAGNOSE] VectorTileLayer onTileError StackTrace: $stackTrace");
+        //     }
+        //   }
+        // },
       );
     } else {
       if (kDebugMode) {
@@ -423,14 +419,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
             ),
             children: [
-              mapLayerWidget, // Hier wird der oben ausgewählte Layer eingefügt
+              mapLayerWidget,
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
           ),
-          // DIAGNOSE-UI: Statusanzeige
           Positioned(
             bottom: 80,
             left: 10,
@@ -524,7 +519,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     child: const Center(
                         child:
                             CircularProgressIndicator(color: Colors.white)))),
-          if (isLoadingDataFromProvider) // Geändert auf isLoadingDataFromProvider
+          if (isLoadingDataFromProvider)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withAlpha(180),
@@ -594,7 +589,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
   }
 
-  // --- Rest der Methoden von MapScreenState bleibt unverändert ---
   void _onStartSearchChanged() {
     if (!mounted) return;
     final locationProvider =
