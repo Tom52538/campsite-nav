@@ -253,44 +253,44 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
 
     Widget mapLayerWidget;
-    if (isUiReady &&
-        _maptilerUrlTemplate.isNotEmpty &&
-        _maptilerUrlTemplate.contains('key=')) {
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}' mit theme: ${mapThemeFromProvider != null}");
-      }
-      mapLayerWidget = VectorTileLayer(
-        theme: mapThemeFromProvider!,
-        fileCacheTtl: const Duration(days: 7),
-        tileProviders: TileProviders({
-          'maptiler_planet': NetworkVectorTileProvider(
-            urlTemplate: _maptilerUrlTemplate,
-            maximumZoom: 14,
-          ),
-        }),
-        maximumZoom: 20,
-        // KORREKTUR: Nicht unterstützte Diagnose-Parameter entfernt
-        // tileProviderErrorStrategy: TileProviderErrorStrategy.logAndContinue,
-        // onTileError: (tile, error, stackTrace) {
-        //   if (kDebugMode) {
-        //     print("[DIAGNOSE] VectorTileLayer onTileError: Tile: $tile, Error: $error");
-        //     if (stackTrace != null) {
-        //       print("[DIAGNOSE] VectorTileLayer onTileError StackTrace: $stackTrace");
-        //     }
-        //   }
-        // },
-      );
-    } else {
-      if (kDebugMode) {
-        print(
-            "[DIAGNOSE] MapScreen build: Erzeuge Fallback TileLayer (OSM). Grund: isUiReady=$isUiReady, template='$_maptilerUrlTemplate'");
-      }
-      mapLayerWidget = TileLayer(
-        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        userAgentPackageName: 'com.example.camping_osm_navi',
-      );
+    // ===== DIAGNOSTISCHE ÄNDERUNG: VectorTileLayer auskommentiert, TileLayer immer aktiv =====
+    // if (isUiReady &&
+    //     _maptilerUrlTemplate.isNotEmpty &&
+    //     _maptilerUrlTemplate.contains('key=')) {
+    //   if (kDebugMode) {
+    //     print(
+    //         "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}' mit theme: ${mapThemeFromProvider != null}");
+    //   }
+    //   mapLayerWidget = VectorTileLayer(
+    //     theme: mapThemeFromProvider!,
+    //     fileCacheTtl: const Duration(days: 7),
+    //     tileProviders: TileProviders({
+    //       'maptiler_planet': NetworkVectorTileProvider(
+    //         urlTemplate: _maptilerUrlTemplate,
+    //         maximumZoom: 14,
+    //       ),
+    //     }),
+    //     maximumZoom: 20,
+    //   );
+    // } else {
+    //   if (kDebugMode) {
+    //     print(
+    //         "[DIAGNOSE] MapScreen build: Erzeuge Fallback TileLayer (OSM). Grund: isUiReady=$isUiReady, template='$_maptilerUrlTemplate'");
+    //   }
+    //   mapLayerWidget = TileLayer(
+    //     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    //     userAgentPackageName: 'com.example.camping_osm_navi',
+    //   );
+    // }
+    if (kDebugMode) {
+      print(
+          "[DIAGNOSE] MapScreen build: Forciere Fallback TileLayer (OSM) für Testzwecke.");
     }
+    mapLayerWidget = TileLayer(
+      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      userAgentPackageName: 'com.example.camping_osm_navi',
+    );
+    // ===== ENDE DIAGNOSTISCHE ÄNDERUNG =====
 
     return Scaffold(
       appBar: AppBar(
@@ -588,6 +588,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
+
+  // --- Rest der Methoden von MapScreenState bleibt unverändert ---
+  // (Hier nur _onStartSearchChanged als Beispiel, alle anderen Methoden sind identisch
+  //  zur Version, die ich dir bereits zur Verfügung gestellt habe)
 
   void _onStartSearchChanged() {
     if (!mounted) return;
