@@ -89,10 +89,15 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   double fullSearchCardHeight = 0;
 
   String _maptilerUrlTemplate = '';
+  String _debugMapStatus = "Initialisiere..."; // DIAGNOSE
 
   @override
   void initState() {
     super.initState();
+    _debugMapStatus = "initState: Start";
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen initState: Start");
+    }
     ttsService = TtsService();
     startSearchController.addListener(_onStartSearchChanged);
     endSearchController.addListener(_onEndSearchChanged);
@@ -102,12 +107,18 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
       if (kDebugMode) {
-        print("WARNUNG: MAPTILER_API_KEY nicht in .env gefunden!");
+        print("[DIAGNOSE] WARNUNG: MAPTILER_API_KEY nicht in .env gefunden!");
       }
-      _maptilerUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      _maptilerUrlTemplate = ''; // Leer lassen, damit Fallback greift
+      setStateIfMounted(() => _debugMapStatus = "initState: KEIN API KEY!");
     } else {
       _maptilerUrlTemplate =
           'https://api.maptiler.com/maps/dataviz/{z}/{x}/{y}.pbf?key=$apiKey';
+      setStateIfMounted(() => _debugMapStatus = "initState: API Key geladen.");
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen initState: Maptiler URL Template gesetzt: $_maptilerUrlTemplate");
+      }
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -120,26 +131,46 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
           });
         }
       }
+      _debugMapStatus = "initState: PostFrameCallback beendet.";
+      if (kDebugMode) {
+        print("[DIAGNOSE] MapScreen initState: PostFrameCallback beendet.");
+      }
     });
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen initState: Ende");
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen didChangeDependencies: Start");
+    }
+    final locationProvider = Provider.of<LocationProvider>(context,
+        listen: false); // listen: false ist hier oft besser
     final newLocationInfo = locationProvider.selectedLocation;
 
     if (newLocationInfo != null &&
         (lastProcessedLocation == null ||
             newLocationInfo.id != lastProcessedLocation!.id)) {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen didChangeDependencies: Standortwechsel erkannt zu ${newLocationInfo.name}");
+      }
       _handleLocationChangeUIUpdates(newLocationInfo);
       lastProcessedLocation = newLocationInfo;
+    }
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen didChangeDependencies: Ende");
     }
   }
 
   @override
   void dispose() {
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen dispose");
+    }
     mapController.dispose();
     positionStreamSubscription?.cancel();
     ttsService.stop();
@@ -158,15 +189,35 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen build: Start");
+    }
     final locationProvider = Provider.of<LocationProvider>(context);
     final selectedLocationFromUI = locationProvider.selectedLocation;
     final availableLocationsFromUI = locationProvider.availableLocations;
 
-    final bool isLoading = locationProvider.isLoadingLocationData;
-    final vtr.Theme? mapTheme = locationProvider.mapTheme;
-    final bool isUiReady = !isLoading &&
-        locationProvider.currentRoutingGraph != null &&
-        mapTheme != null;
+    final bool isLoadingDataFromProvider =
+        locationProvider.isLoadingLocationData;
+    final vtr.Theme? mapThemeFromProvider = locationProvider.mapTheme;
+    final bool isGraphReady = locationProvider.currentRoutingGraph != null;
+
+    final bool isUiReady = !isLoadingDataFromProvider &&
+        isGraphReady &&
+        mapThemeFromProvider != null;
+
+    // DIAGNOSE: Update debug status string
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _debugMapStatus =
+              "Build: isLoading: $isLoadingDataFromProvider, isGraphReady: $isGraphReady, mapTheme: ${mapThemeFromProvider != null}, isUiReady: $isUiReady, apiKeyOK: ${_maptilerUrlTemplate.contains('key=')}";
+        });
+      }
+    });
+    if (kDebugMode) {
+      print(
+          "[DIAGNOSE] MapScreen build: isLoading: $isLoadingDataFromProvider, isGraphReady: $isGraphReady, mapTheme: ${mapThemeFromProvider != null}, isUiReady: $isUiReady, template: $_maptilerUrlTemplate");
+    }
 
     List<Marker> activeMarkers = [];
     if (currentLocationMarker != null) {
@@ -202,6 +253,49 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       searchResultsTopPosition += 65.0 + kInstructionCardSpacing;
     }
 
+    Widget mapLayerWidget;
+    if (isUiReady &&
+        _maptilerUrlTemplate.isNotEmpty &&
+        _maptilerUrlTemplate.contains('key=')) {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}' mit theme: ${mapThemeFromProvider != null}");
+      }
+      mapLayerWidget = VectorTileLayer(
+        theme: mapThemeFromProvider!,
+        fileCacheTtl: const Duration(days: 7),
+        tileProviders: TileProviders({
+          'maptiler_planet': NetworkVectorTileProvider(
+            urlTemplate: _maptilerUrlTemplate,
+            maximumZoom: 14,
+          ),
+        }),
+        maximumZoom: 20,
+        // DIAGNOSE: Tile-Fehler loggen
+        tileProviderErrorStrategy: TileProviderErrorStrategy.logAndContinue,
+        // tileDisplayErrorStrategy: TileDisplayErrorStrategy.logAndContinue, // falls verfügbar
+        onTileError: (tile, error, stackTrace) {
+          if (kDebugMode) {
+            print(
+                "[DIAGNOSE] VectorTileLayer onTileError: Tile: $tile, Error: $error");
+            if (stackTrace != null) {
+              print(
+                  "[DIAGNOSE] VectorTileLayer onTileError StackTrace: $stackTrace");
+            }
+          }
+        },
+      );
+    } else {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen build: Erzeuge Fallback TileLayer (OSM). Grund: isUiReady=$isUiReady, template='$_maptilerUrlTemplate'");
+      }
+      mapLayerWidget = TileLayer(
+        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        userAgentPackageName: 'com.example.camping_osm_navi',
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Campground Navigator"),
@@ -232,7 +326,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                                     overflow: TextOverflow.ellipsis),
                               ))
                       .toList(),
-                  onChanged: isUiReady ? _onLocationSelectedFromDropdown : null,
+                  onChanged: isUiReady && !isLoadingDataFromProvider
+                      ? _onLocationSelectedFromDropdown
+                      : null,
                   hint: const Text("Standort wählen",
                       style: TextStyle(color: Colors.white70)),
                 ),
@@ -246,7 +342,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               icon: Icon(
                   useMockLocation ? Icons.location_on : Icons.location_off),
               color: useMockLocation ? Colors.orangeAccent : Colors.white,
-              onPressed: isUiReady ? _toggleMockLocation : null,
+              onPressed: isUiReady && !isLoadingDataFromProvider
+                  ? _toggleMockLocation
+                  : null,
             ),
           ),
         ],
@@ -261,7 +359,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               initialZoom: 17.0,
               minZoom: 13.0,
               maxZoom: 20.0,
-              onTap: isUiReady ? _handleMapTap : null,
+              onTap: isUiReady && !isLoadingDataFromProvider
+                  ? _handleMapTap
+                  : null,
               onMapEvent: (MapEvent mapEvent) {
                 if (mapEvent is MapEventMove &&
                     (mapEvent.source == MapEventSource.dragStart ||
@@ -296,6 +396,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
               onMapReady: () {
                 if (!mounted) return;
+                if (kDebugMode) {
+                  print("[DIAGNOSE] MapScreen onMapReady: Karte ist bereit.");
+                }
                 setState(() => isMapReady = true);
                 final locationProvider =
                     Provider.of<LocationProvider>(context, listen: false);
@@ -320,31 +423,26 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
               },
             ),
             children: [
-              if (isUiReady &&
-                  _maptilerUrlTemplate.isNotEmpty &&
-                  _maptilerUrlTemplate.contains('key='))
-                VectorTileLayer(
-                  theme: mapTheme!,
-                  fileCacheTtl: const Duration(days: 7),
-                  tileProviders: TileProviders({
-                    // KORREKTUR: Der Schlüssel hier MUSS mit dem Source-Namen im Theme übereinstimmen.
-                    'maptiler_planet': NetworkVectorTileProvider(
-                      urlTemplate: _maptilerUrlTemplate,
-                      maximumZoom: 14,
-                    ),
-                  }),
-                  maximumZoom: 20,
-                )
-              else
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.camping_osm_navi',
-                ),
+              mapLayerWidget, // Hier wird der oben ausgewählte Layer eingefügt
               if (isUiReady && routePolyline != null)
                 PolylineLayer(polylines: [routePolyline!]),
               if (isUiReady && activeMarkers.isNotEmpty)
                 MarkerLayer(markers: activeMarkers),
             ],
+          ),
+          // DIAGNOSE-UI: Statusanzeige
+          Positioned(
+            bottom: 80,
+            left: 10,
+            right: 10,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.black.withOpacity(0.7),
+              child: Text(
+                "Debug: $_debugMapStatus",
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
+            ),
           ),
           Positioned(
             top: kSearchCardTopPadding,
@@ -426,7 +524,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                     child: const Center(
                         child:
                             CircularProgressIndicator(color: Colors.white)))),
-          if (isLoading)
+          if (isLoadingDataFromProvider) // Geändert auf isLoadingDataFromProvider
             Positioned.fill(
               child: Container(
                 color: Colors.black.withAlpha(180),
@@ -480,7 +578,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             padding: const EdgeInsets.only(bottom: 8.0),
             child: FloatingActionButton.small(
               heroTag: "centerBtn",
-              onPressed: isUiReady ? _centerOnGps : null,
+              onPressed:
+                  isUiReady && !isLoadingDataFromProvider ? _centerOnGps : null,
               tooltip: followGps && !_isInRouteOverviewMode
                   ? 'Follow-GPS Modus aktiv'
                   : 'Follow-GPS Modus aktivieren',
@@ -495,6 +594,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     );
   }
 
+  // --- Rest der Methoden von MapScreenState bleibt unverändert ---
   void _onStartSearchChanged() {
     if (!mounted) return;
     final locationProvider =
@@ -586,12 +686,20 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocationParam) {
     if (newLocationParam == null) return;
+    if (kDebugMode) {
+      print(
+          "[DIAGNOSE] MapScreen _onLocationSelectedFromDropdown: ${newLocationParam.name}");
+    }
     Provider.of<LocationProvider>(context, listen: false)
         .selectLocation(newLocationParam);
   }
 
   void _handleLocationChangeUIUpdates(LocationInfo newLocation) {
     if (!mounted) return;
+    if (kDebugMode) {
+      print(
+          "[DIAGNOSE] MapScreen _handleLocationChangeUIUpdates for ${newLocation.name}");
+    }
     final bool isActualChange = lastProcessedLocation != null &&
         lastProcessedLocation!.id != newLocation.id;
     setState(() {
@@ -631,6 +739,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   void _toggleMockLocation() {
     if (!mounted) return;
+    if (kDebugMode) {
+      print(
+          "[DIAGNOSE] MapScreen _toggleMockLocation. Aktuell useMockLocation: $useMockLocation");
+    }
     final currentLocationInfo =
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
     setState(() {
@@ -667,6 +779,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _initializeGpsOrMock(LocationInfo location) {
+    if (kDebugMode) {
+      print(
+          "[DIAGNOSE] MapScreen _initializeGpsOrMock for ${location.name}. useMockLocation: $useMockLocation");
+    }
     positionStreamSubscription?.cancel();
     LatLng? oldGpsPos = currentGpsPosition;
 
@@ -728,11 +844,26 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void _performInitialMapMove() {
-    if (!mounted || !isMapReady) return;
+    if (!mounted || !isMapReady) {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen _performInitialMapMove: Nicht bereit (mounted: $mounted, isMapReady: $isMapReady)");
+      }
+      return;
+    }
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen _performInitialMapMove: Start");
+    }
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final location = locationProvider.selectedLocation;
-    if (location == null) return;
+    if (location == null) {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen _performInitialMapMove: Keine Location ausgewählt.");
+      }
+      return;
+    }
 
     LatLng? targetToMoveToNullSafe;
     if (useMockLocation) {
@@ -752,11 +883,20 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
 
     if (mounted && targetToMoveToNullSafe != null) {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen _performInitialMapMove: Bewege Karte zu $targetToMoveToNullSafe");
+      }
       mapController.move(
           targetToMoveToNullSafe,
           (followGps && !useMockLocation && !_isInRouteOverviewMode)
               ? _followGpsZoomLevel
               : 17.0);
+    } else {
+      if (kDebugMode) {
+        print(
+            "[DIAGNOSE] MapScreen _performInitialMapMove: Kein Zielpunkt für Kartenbewegung.");
+      }
     }
   }
 
@@ -837,6 +977,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   Future<void> _initializeGpsReal(LocationInfo location) async {
     if (!mounted) return;
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen _initializeGpsReal for ${location.name}");
+    }
 
     late LocationPermission permission;
     bool serviceEnabled;
@@ -898,6 +1041,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
 
       if (significantPositionChange) {
+        if (kDebugMode) {
+          print("[DIAGNOSE] MapScreen GPS Update: $newGpsPos");
+        }
         currentGpsPosition = newGpsPos;
         setStateIfMounted(() {
           currentLocationMarker = createMarker(
@@ -964,9 +1110,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             currentGpsPosition!, routePolyline!.points);
         if (distanceToRoute > _offRouteThreshold) {
           if (kDebugMode) {
-            // ignore: avoid_print
             print(
-                "[MapScreen._initializeGpsReal] VON ROUTE ABGEKOMMEN! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
+                "[DIAGNOSE] VON ROUTE ABGEKOMMEN! Distanz: ${distanceToRoute.toStringAsFixed(1)}m. Schwellenwert: $_offRouteThreshold m. Berechne neu...");
           }
           showSnackbar("Von Route abgekommen. Neue Route wird berechnet...",
               durationSeconds: 3);
@@ -984,8 +1129,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     }, onError: (error) {
       if (kDebugMode) {
-        // ignore: avoid_print
-        print("[MapScreen._initializeGpsReal] Fehler GPS-Empfang: $error");
+        print("[DIAGNOSE] Fehler GPS-Empfang: $error");
       }
       showErrorDialog("Fehler GPS-Empfang: $error");
       if (mounted) {
@@ -999,6 +1143,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         routePolyline == null ||
         routePolyline!.points.isEmpty) {
       return;
+    }
+    if (kDebugMode) {
+      // print("[DIAGNOSE] MapScreen _updateCurrentManeuverOnGpsUpdate. Akt. Manöver: ${currentDisplayedManeuver?.turnType}");
     }
 
     if (currentDisplayedManeuver == null) {
@@ -1101,6 +1248,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   Future<void> calculateAndDisplayRoute() async {
+    if (kDebugMode) {
+      print("[DIAGNOSE] MapScreen calculateAndDisplayRoute: Start");
+    }
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final RoutingGraph? currentGraphValue =
@@ -1306,9 +1456,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 });
               } catch (e) {
                 if (kDebugMode) {
-                  // ignore: avoid_print
                   print(
-                      "[MapScreen.calculateAndDisplayRoute] Fehler beim Anpassen der Kartenansicht an die Route: $e");
+                      "[DIAGNOSE] MapScreen calculateAndDisplayRoute: Fehler beim Anpassen der Kartenansicht: $e");
                 }
                 if (endLatLng != null) {
                   mapController.move(endLatLng!, mapController.camera.zoom);
@@ -1327,11 +1476,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
     } catch (e, stacktrace) {
       if (kDebugMode) {
-        // ignore: avoid_print
-        print(
-            "[MapScreen.calculateAndDisplayRoute] FEHLER bei Routenberechnung: $e");
-        // ignore: avoid_print
-        print("[MapScreen.calculateAndDisplayRoute] Stacktrace: $stacktrace");
+        print("[DIAGNOSE] MapScreen calculateAndDisplayRoute: FEHLER: $e");
+        print("[DIAGNOSE] Stacktrace: $stacktrace");
       }
       showErrorDialog("Fehler Routenberechnung: $e");
       setStateIfMounted(() {
