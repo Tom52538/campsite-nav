@@ -210,9 +210,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         print(
             "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
       }
-      // *** KORREKTUR: 'styleDelegate' zu 'theme' geändert und '!' entfernt ***
+      // *** KORREKTUR: Das `Style`-Objekt wird in ein `Theme`-Objekt umgewandelt. ***
       mapLayerWidget = VectorTileLayer(
-        theme: mapStyleFromProvider, // 'theme' ist der korrekte Parameter
+        theme: Theme.fromStyle(mapStyleFromProvider),
         fileCacheTtl: const Duration(days: 7),
         tileProviders: TileProviders({
           'maptiler_planet': NetworkVectorTileProvider(
