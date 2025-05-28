@@ -60,7 +60,7 @@ class LocationProvider with ChangeNotifier {
       LocationInfo(
         id: "gangelt",
         name: "Umgebung Zuhause (Gangelt)",
-        geojsonAssetPath: "assets/data/export_gangelt.geojson",
+        geojsonAssetPath: "assets/data/zuhause_umgebung.geojson",
         initialLatitude: 51.001452,
         initialLongitude: 6.051261,
         radiusInMeters: 2000.0,
