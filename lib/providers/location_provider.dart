@@ -16,7 +16,7 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? _selectedLocation;
   bool _isLoadingLocationData = false;
 
-  vector_map_tiles.Theme? _mapTheme;
+  vector_map_tiles.VectorTileTheme? _mapTheme;
   RoutingGraph? _currentRoutingGraph;
   List<SearchableFeature> _currentSearchableFeatures = [];
 
@@ -24,7 +24,7 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? get selectedLocation => _selectedLocation;
   bool get isLoadingLocationData => _isLoadingLocationData;
 
-  vector_map_tiles.Theme? get mapTheme => _mapTheme;
+  vector_map_tiles.VectorTileTheme? get mapTheme => _mapTheme;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
   List<SearchableFeature> get currentSearchableFeatures =>
       _currentSearchableFeatures;
