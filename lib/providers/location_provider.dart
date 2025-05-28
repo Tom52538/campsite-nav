@@ -1,12 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:vector_map_tiles/vector_map_tiles.dart' as vmt;
+import 'package:camping_osm_navi/models/routing_graph.dart';
+import 'package:camping_osm_navi/models/searchable_feature.dart';
 
 import '../models/location_info.dart';
 
 class LocationProvider with ChangeNotifier {
   LocationInfo? _selectedLocation;
   LocationInfo? get selectedLocation => _selectedLocation;
+
+  List<LocationInfo> _availableLocations = [];
+  List<LocationInfo> get availableLocations => _availableLocations;
+
+  bool _isLoadingLocationData = true;
+  bool get isLoadingLocationData => _isLoadingLocationData;
+
+  vmt.Theme? _mapTheme;
+  vmt.Theme? get mapTheme => _mapTheme;
+
+  RoutingGraph? _currentRoutingGraph;
+  RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
+
+  List<SearchableFeature> _currentSearchableFeatures = [];
+  List<SearchableFeature> get currentSearchableFeatures => _currentSearchableFeatures;
 
   Position? _currentPosition;
   Position? get currentPosition => _currentPosition;
@@ -68,11 +85,13 @@ class LocationProvider with ChangeNotifier {
   }
 
   void _showPermissionSnackbar() {
-    ScaffoldMessenger.of(_context!).showSnackBar(
-      const SnackBar(
-        content: Text('Standortberechtigung wurde verweigert.'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    if (_context != null && ScaffoldMessenger.maybeOf(_context!) != null) {
+      ScaffoldMessenger.of(_context!).showSnackBar(
+        const SnackBar(
+          content: Text('Standortberechtigung wurde verweigert.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
