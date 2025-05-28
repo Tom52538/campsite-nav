@@ -1,53 +1,77 @@
-import 'dart:io';
-import 'dart:convert'; // Für jsonDecode hinzugefügt
-import 'package:vector_tile_renderer/vector_tile_renderer.dart'; // Theme kommt von hier
-import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as p;
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart';
+import 'package:http/http.dart' as http;
 
 class StyleCachingService {
   StyleCachingService._();
   static final instance = StyleCachingService._();
 
-  // KORREKTUR: Rückgabetyp geändert zu Theme aus vector_tile_renderer
-  Future<Theme> getTheme(String styleUrl) async {
-    final cacheDir = await getApplicationDocumentsDirectory();
-    final String safeFileName = styleUrl.replaceAll(
-        RegExp(r'[^\w\s.-]'), '_'); // Ersetze ungültige Zeichen
-    final file = File(p.join(cacheDir.path, "map_styles",
-        safeFileName)); // Unterverzeichnis für Styles
+  // In-Memory Cache für Web (ersetzt File-System Cache)
+  final Map<String, Theme> _memoryCache = {};
 
-    // Erstelle das Verzeichnis, falls es nicht existiert
-    if (!await file.parent.exists()) {
-      await file.parent.create(recursive: true);
+  Future<Theme> getTheme(String styleUrl) async {
+    // Überprüfe Memory Cache zuerst
+    if (_memoryCache.containsKey(styleUrl)) {
+      if (kDebugMode) {
+        print(
+            "[StyleCachingService] Stil '$styleUrl' aus Memory-Cache geladen");
+      }
+      return _memoryCache[styleUrl]!;
     }
 
-    if (await file.exists()) {
-      if (kDebugMode) {
-        print(
-            "[StyleCachingService] Stil '$styleUrl' aus Cache geladen: ${file.path}");
-      }
-      final mapJson = await file.readAsString();
-      final Map<String, dynamic> styleMap = jsonDecode(mapJson);
-      // KORREKTUR: ThemeReader().read() braucht Map<String, dynamic>
-      return ThemeReader().read(styleMap);
-    } else {
-      if (kDebugMode) {
-        print(
-            "[StyleCachingService] Stil '$styleUrl' aus Netzwerk geladen und gecacht.");
-      }
-      final response = await http.get(Uri.parse(styleUrl));
+    if (kDebugMode) {
+      print(
+          "[StyleCachingService] Stil '$styleUrl' wird aus Netzwerk geladen...");
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(styleUrl),
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'CampsiteNav/1.0',
+        },
+      );
+
       if (response.statusCode == 200) {
-        await file.writeAsBytes(response.bodyBytes);
-        final responseString = String.fromCharCodes(response.bodyBytes);
+        final responseString = response.body;
         final Map<String, dynamic> styleMap = jsonDecode(responseString);
-        // KORREKTUR: ThemeReader().read() braucht Map<String, dynamic>
-        return ThemeReader().read(styleMap);
+
+        if (kDebugMode) {
+          print(
+              "[StyleCachingService] Style JSON erfolgreich geladen und geparst");
+        }
+
+        final theme = ThemeReader().read(styleMap);
+
+        // In Memory Cache speichern für zukünftige Verwendung
+        _memoryCache[styleUrl] = theme;
+
+        if (kDebugMode) {
+          print("[StyleCachingService] Theme erfolgreich erstellt und gecacht");
+        }
+
+        return theme;
       } else {
         throw Exception(
-            'Failed to load map style from network: ${response.statusCode}');
+            'HTTP Error ${response.statusCode}: ${response.reasonPhrase}');
       }
+    } catch (e) {
+      if (kDebugMode) {
+        print("[StyleCachingService] FEHLER beim Laden von $styleUrl: $e");
+      }
+      rethrow;
     }
   }
+
+  // Cache-Management
+  void clearCache() {
+    _memoryCache.clear();
+    if (kDebugMode) {
+      print("[StyleCachingService] Memory-Cache geleert");
+    }
+  }
+
+  int get cacheSize => _memoryCache.length;
 }
