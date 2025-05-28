@@ -1,11 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart'
-    hide Theme; // Theme ausblenden um Konflikt zu vermeiden
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
 import 'package:vector_tile_renderer/vector_tile_renderer.dart'; // Theme kommt von hier
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
