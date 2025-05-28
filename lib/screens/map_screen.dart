@@ -1,6 +1,5 @@
 // lib/screens/map_screen.dart
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -79,7 +78,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   static const double _maneuverReachedThreshold = 15.0;
   static const double _significantGpsChangeThreshold = 2.0;
 
-  final Distance distanceCalculatorInstance = const Distance();
+  static const Distance distanceCalculatorInstance = Distance();
 
   bool isRouteActiveForCardSwitch = false;
   final GlobalKey fullSearchCardKey = GlobalKey();
