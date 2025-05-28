@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:vector_map_tiles/vector_map_tiles.dart' as vmt; // Use a prefix
+import 'package:vector_map_tiles/vector_map_tiles.dart'; // Chosen import
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 
@@ -10,20 +10,19 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? _selectedLocation;
   LocationInfo? get selectedLocation => _selectedLocation;
 
-  final List<LocationInfo> _availableLocations = [];
+  final List<LocationInfo> _availableLocations = []; // Chosen: final
   List<LocationInfo> get availableLocations => _availableLocations;
 
-  bool _isLoadingLocationData = true;
+  bool _isLoadingLocationData = true; // Kept as non-final, assuming it changes
   bool get isLoadingLocationData => _isLoadingLocationData;
 
-  // Specify the theme using the prefix
-  vmt.Theme? _mapTheme;
-  vmt.Theme? get mapTheme => _mapTheme;
+  Style? _mapStyle; // Chosen: Style?
+  Style? get mapStyle => _mapStyle; // Chosen: Style?
 
   RoutingGraph? _currentRoutingGraph;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
 
-  final List<SearchableFeature> _currentSearchableFeatures = [];
+  final List<SearchableFeature> _currentSearchableFeatures = []; // Chosen: final
   List<SearchableFeature> get currentSearchableFeatures =>
       _currentSearchableFeatures;
 

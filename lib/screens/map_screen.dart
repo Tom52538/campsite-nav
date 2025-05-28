@@ -159,11 +159,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final isLoading = locationProvider.isLoadingLocationData;
-    final mapThemeFromProvider = locationProvider.mapTheme;
+    final mapStyleFromProvider = locationProvider.mapStyle;
     final isGraphReady = locationProvider.currentRoutingGraph != null;
 
     final isUiReady =
-        !isLoading && isGraphReady && mapThemeFromProvider != null;
+        !isLoading && isGraphReady && mapStyleFromProvider != null;
 
     final List<Marker> activeMarkers = [];
     if (currentLocationMarker != null) {
@@ -211,7 +211,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
       }
       mapLayerWidget = VectorTileLayer(
-        theme: mapThemeFromProvider,
+        styleDelegate: (tile) => mapStyleFromProvider!,
         fileCacheTtl: const Duration(days: 7),
         tileProviders: TileProviders({
           'maptiler_planet': NetworkVectorTileProvider(
@@ -224,7 +224,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     } else {
       if (kDebugMode) {
         print(
-            "[DIAGNOSE] MapScreen build: Bedingungen für VectorTileLayer nicht erfüllt, erzeuge Fallback TileLayer (OSM). isUiReady=$isUiReady, template='$_maptilerUrlTemplate', themeNull=${mapThemeFromProvider == null}");
+            "[DIAGNOSE] MapScreen build: Bedingungen für VectorTileLayer nicht erfüllt, erzeuge Fallback TileLayer (OSM). isUiReady=$isUiReady, template='$_maptilerUrlTemplate', styleNull=${mapStyleFromProvider == null}");
       }
       mapLayerWidget = TileLayer(
         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
