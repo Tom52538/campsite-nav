@@ -78,7 +78,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   static const double _maneuverReachedThreshold = 15.0;
   static const double _significantGpsChangeThreshold = 2.0;
 
-  const Distance distanceCalculatorInstance = Distance();
+  static const Distance distanceCalculatorInstance = Distance();
 
   bool isRouteActiveForCardSwitch = false;
   final GlobalKey fullSearchCardKey = GlobalKey();

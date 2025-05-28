@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:vector_map_tiles/vector_map_tiles.dart';
+import 'package:vector_map_tiles/src/theme/theme.dart'; // Corrected import
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 
@@ -16,8 +16,8 @@ class LocationProvider with ChangeNotifier {
   bool _isLoadingLocationData = true;
   bool get isLoadingLocationData => _isLoadingLocationData;
 
-  MapTheme? _mapTheme;
-  MapTheme? get mapTheme => _mapTheme;
+  Theme? _mapTheme; // Corrected type
+  Theme? get mapTheme => _mapTheme; // Corrected type
 
   RoutingGraph? _currentRoutingGraph;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
@@ -85,11 +85,13 @@ class LocationProvider with ChangeNotifier {
   }
 
   void _showPermissionSnackbar() {
-    ScaffoldMessenger.of(_context!).showSnackBar(
-      const SnackBar(
-        content: Text('Standortberechtigung wurde verweigert.'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    if (_context != null && ScaffoldMessenger.maybeOf(_context!) != null) {
+      ScaffoldMessenger.of(_context!).showSnackBar(
+        const SnackBar(
+          content: Text('Standortberechtigung wurde verweigert.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
