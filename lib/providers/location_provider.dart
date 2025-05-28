@@ -1,3 +1,4 @@
+// ===== KORRIGIERTER LOCATION_PROVIDER.DART =====
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart'; // Für Theme-Klasse hinzugefügt
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // dotenv Import hinzugefügt
 import 'package:latlong2/latlong.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
+import 'package:vector_tile_renderer/vector_tile_renderer.dart'; // WICHTIG: Theme kommt hier her!
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
@@ -16,7 +18,7 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? _selectedLocation;
   bool _isLoadingLocationData = false;
 
-  vector_map_tiles.VectorTileTheme? _mapTheme;
+  Theme? _mapTheme; // KORREKTUR: Theme aus vector_tile_renderer
   RoutingGraph? _currentRoutingGraph;
   List<SearchableFeature> _currentSearchableFeatures = [];
 
@@ -24,141 +26,63 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? get selectedLocation => _selectedLocation;
   bool get isLoadingLocationData => _isLoadingLocationData;
 
-  vector_map_tiles.VectorTileTheme? get mapTheme => _mapTheme;
+  Theme? get mapTheme => _mapTheme; // KORREKTUR: Theme aus vector_tile_renderer
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
   List<SearchableFeature> get currentSearchableFeatures =>
       _currentSearchableFeatures;
 
-  LocationProvider() {
-    _loadAvailableLocations();
-  }
+  // ... Rest des Codes bleibt gleich ...
+}
 
-  Future<void> _loadAvailableLocations() async {
-    _availableLocations = [
-      LocationInfo(
-        id: 'camping_de_grote_lier',
-        name: 'Camping de Grote Lier',
-        geojsonAssetPath: "assets/data/export_camping_de_grote_lier.geojson",
-        initialLatitude: 51.4880,
-        initialLongitude: 3.6550,
-        radiusInMeters: 2000.0,
-        styleId: "maptiler_dataviz_grote_lier",
-        styleUrl:
-            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
-      LocationInfo(
-        id: "sittard",
-        name: "Testgelände Sittard",
-        geojsonAssetPath: "assets/data/export.geojson",
-        initialLatitude: 51.02518780487824,
-        initialLongitude: 5.858832278816441,
-        radiusInMeters: 1000.0,
-        styleId: "maptiler_dataviz_sittard",
-        styleUrl:
-            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
-      LocationInfo(
-        id: "kamperland",
-        name: "Camping Resort Kamperland",
-        geojsonAssetPath: "assets/data/export_kamperland.geojson",
-        initialLatitude: 51.5833,
-        initialLongitude: 3.6333,
-        radiusInMeters: 1500.0,
-        styleId: "maptiler_dataviz_kamperland",
-        styleUrl:
-            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
-      LocationInfo(
-        id: "amsterdam",
-        name: "Amsterdamse Bos Camping",
-        geojsonAssetPath: "assets/data/export_amsterdam.geojson",
-        initialLatitude: 52.3275,
-        initialLongitude: 4.8589,
-        radiusInMeters: 2500.0,
-        styleId: "maptiler_dataviz_amsterdam",
-        styleUrl:
-            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
-      LocationInfo(
-        id: "gangelt",
-        name: "Umgebung Zuhause (Gangelt)",
-        geojsonAssetPath: "assets/data/export_gangelt.geojson",
-        initialLatitude: 51.001452,
-        initialLongitude: 6.051261,
-        radiusInMeters: 2000.0,
-        styleId: "maptiler_dataviz_gangelt",
-        styleUrl:
-            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
-    ];
+// ===== KORRIGIERTER STYLE_CACHING_SERVICE.DART =====
+import 'dart:io';
+import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
+import 'package:vector_tile_renderer/vector_tile_renderer.dart'; // WICHTIG: Theme kommt hier her!
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
+import 'package:flutter/foundation.dart';
 
-    if (_availableLocations.isNotEmpty) {
-      _selectedLocation = _availableLocations.first;
-      await _loadLocationData(_selectedLocation!);
+class StyleCachingService {
+  StyleCachingService._();
+  static final instance = StyleCachingService._();
+
+  // KORREKTUR: Theme aus vector_tile_renderer
+  Future<Theme> getTheme(String styleUrl) async {
+    final cacheDir = await getApplicationDocumentsDirectory();
+    final String safeFileName = styleUrl.replaceAll(
+        RegExp(r'[^\w\s.-]'), '_'); // Ersetze ungültige Zeichen
+    final file = File(p.join(cacheDir.path, "map_styles",
+        safeFileName)); // Unterverzeichnis für Styles
+
+    // Erstelle das Verzeichnis, falls es nicht existiert
+    if (!await file.parent.exists()) {
+      await file.parent.create(recursive: true);
     }
-  }
 
-  Future<void> selectLocation(LocationInfo location) async {
-    if (_selectedLocation == location) return;
-    _selectedLocation = location;
-    notifyListeners();
-    await _loadLocationData(location);
-  }
-
-  Future<void> _loadLocationData(LocationInfo newLocationInfo) async {
-    _isLoadingLocationData = true;
-    notifyListeners();
-
-    try {
+    if (await file.exists()) {
       if (kDebugMode) {
         print(
-            "INFO: ${DateTime.now()}: LocationProvider: Lade Vector-Theme für ${newLocationInfo.name} von ${newLocationInfo.styleUrl}");
+            "[StyleCachingService] Stil '$styleUrl' aus Cache geladen: ${file.path}");
       }
-
-      _mapTheme =
-          await StyleCachingService.instance.getTheme(newLocationInfo.styleUrl);
-
+      final mapJson = await file.readAsString();
+      // KORREKTUR: ThemeReader().read() aus vector_tile_renderer
+      return ThemeReader().read(mapJson);
+    } else {
       if (kDebugMode) {
         print(
-            "INFO: ${DateTime.now()}: LocationProvider: Vector-Theme erfolgreich geladen von: ${newLocationInfo.styleUrl}");
+            "[StyleCachingService] Stil '$styleUrl' aus Netzwerk geladen und gecacht.");
       }
-
-      if (kDebugMode) {
-        print(
-            "INFO: ${DateTime.now()}: LocationProvider: Lade GeoJSON-String für ${newLocationInfo.name}.");
+      final response = await http.get(Uri.parse(styleUrl));
+      if (response.statusCode == 200) {
+        await file.writeAsBytes(response.bodyBytes);
+        final responseString = String.fromCharCodes(response.bodyBytes);
+        // KORREKTUR: ThemeReader().read() aus vector_tile_renderer
+        return ThemeReader().read(responseString);
+      } else {
+        throw Exception(
+            'Failed to load map style from network: ${response.statusCode}');
       }
-
-      final String geojsonString =
-          await rootBundle.loadString(newLocationInfo.geojsonAssetPath);
-
-      if (kDebugMode) {
-        print(
-            "INFO: ${DateTime.now()}: LocationProvider: GeoJSON-String für ${newLocationInfo.name} geladen.");
-      }
-
-      // KORREKTUR: await entfernt, da parseGeoJsonToGraphAndFeatures kein Future zurückgibt
-      final ({RoutingGraph graph, List<SearchableFeature> features}) result =
-          GeojsonParserService.parseGeoJsonToGraphAndFeatures(geojsonString);
-
-      _currentRoutingGraph = result.graph;
-      _currentSearchableFeatures = result.features;
-
-      if (kDebugMode) {
-        print(
-            "INFO: ${DateTime.now()}: LocationProvider: Daten für ${newLocationInfo.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}");
-      }
-    } catch (e, stacktrace) {
-      if (kDebugMode) {
-        print(
-            "FEHLER: ${DateTime.now()}: LocationProvider: Fehler beim Laden der Standortdaten für ${newLocationInfo.name}: $e");
-        print(stacktrace);
-      }
-      _mapTheme = null;
-      _currentRoutingGraph = null;
-      _currentSearchableFeatures = [];
-    } finally {
-      _isLoadingLocationData = false;
-      notifyListeners();
     }
   }
 }
