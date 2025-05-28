@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart'
-    show rootBundle; // Hinzugefügt für rootBundle
+import 'package:flutter/material.dart'; // Für Theme-Klasse hinzugefügt
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // dotenv Import hinzugefügt
 import 'package:latlong2/latlong.dart';
-import 'package:vector_map_tiles/vector_map_tiles.dart'
-    as vector_map_tiles; // Alias hinzugefügt
+import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
@@ -16,7 +16,7 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? _selectedLocation;
   bool _isLoadingLocationData = false;
 
-  vector_map_tiles.Theme? _mapTheme; // Verwendung des Aliases
+  vector_map_tiles.Theme? _mapTheme;
   RoutingGraph? _currentRoutingGraph;
   List<SearchableFeature> _currentSearchableFeatures = [];
 
@@ -24,7 +24,7 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? get selectedLocation => _selectedLocation;
   bool get isLoadingLocationData => _isLoadingLocationData;
 
-  vector_map_tiles.Theme? get mapTheme => _mapTheme; // Verwendung des Aliases
+  vector_map_tiles.Theme? get mapTheme => _mapTheme;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
   List<SearchableFeature> get currentSearchableFeatures =>
       _currentSearchableFeatures;
@@ -39,8 +39,8 @@ class LocationProvider with ChangeNotifier {
         id: 'camping_de_grote_lier',
         name: 'Camping de Grote Lier',
         geojsonAssetPath: "assets/data/export_camping_de_grote_lier.geojson",
-        initialLatitude: 51.4880, // Beispielwert
-        initialLongitude: 3.6550, // Beispielwert
+        initialLatitude: 51.4880,
+        initialLongitude: 3.6550,
         radiusInMeters: 2000.0,
         styleId: "maptiler_dataviz_grote_lier",
         styleUrl:
@@ -61,8 +61,8 @@ class LocationProvider with ChangeNotifier {
         id: "kamperland",
         name: "Camping Resort Kamperland",
         geojsonAssetPath: "assets/data/export_kamperland.geojson",
-        initialLatitude: 51.5833, // Beispielwert
-        initialLongitude: 3.6333, // Beispielwert
+        initialLatitude: 51.5833,
+        initialLongitude: 3.6333,
         radiusInMeters: 1500.0,
         styleId: "maptiler_dataviz_kamperland",
         styleUrl:
@@ -72,8 +72,8 @@ class LocationProvider with ChangeNotifier {
         id: "amsterdam",
         name: "Amsterdamse Bos Camping",
         geojsonAssetPath: "assets/data/export_amsterdam.geojson",
-        initialLatitude: 52.3275, // Beispielwert
-        initialLongitude: 4.8589, // Beispielwert
+        initialLatitude: 52.3275,
+        initialLongitude: 4.8589,
         radiusInMeters: 2500.0,
         styleId: "maptiler_dataviz_amsterdam",
         styleUrl:
@@ -91,10 +91,10 @@ class LocationProvider with ChangeNotifier {
             "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
     ];
-    // Setze den ersten Standort als Standard oder lade einen gespeicherten
+
     if (_availableLocations.isNotEmpty) {
       _selectedLocation = _availableLocations.first;
-      _loadLocationData(_selectedLocation!);
+      await _loadLocationData(_selectedLocation!);
     }
   }
 
@@ -114,8 +114,10 @@ class LocationProvider with ChangeNotifier {
         print(
             "INFO: ${DateTime.now()}: LocationProvider: Lade Vector-Theme für ${newLocationInfo.name} von ${newLocationInfo.styleUrl}");
       }
-      _mapTheme = await StyleCachingService.instance.getTheme(
-          newLocationInfo.styleUrl); // Korrigierte Verwendung des Aliases
+
+      _mapTheme =
+          await StyleCachingService.instance.getTheme(newLocationInfo.styleUrl);
+
       if (kDebugMode) {
         print(
             "INFO: ${DateTime.now()}: LocationProvider: Vector-Theme erfolgreich geladen von: ${newLocationInfo.styleUrl}");
@@ -125,17 +127,18 @@ class LocationProvider with ChangeNotifier {
         print(
             "INFO: ${DateTime.now()}: LocationProvider: Lade GeoJSON-String für ${newLocationInfo.name}.");
       }
-      // Verwendung von geojsonAssetPath zum Laden der Asset-Datei
+
       final String geojsonString =
           await rootBundle.loadString(newLocationInfo.geojsonAssetPath);
+
       if (kDebugMode) {
         print(
             "INFO: ${DateTime.now()}: LocationProvider: GeoJSON-String für ${newLocationInfo.name} geladen.");
       }
 
+      // KORREKTUR: await entfernt, da parseGeoJsonToGraphAndFeatures kein Future zurückgibt
       final ({RoutingGraph graph, List<SearchableFeature> features}) result =
-          await GeojsonParserService.parseGeoJsonToGraphAndFeatures(
-              geojsonString);
+          GeojsonParserService.parseGeoJsonToGraphAndFeatures(geojsonString);
 
       _currentRoutingGraph = result.graph;
       _currentSearchableFeatures = result.features;
