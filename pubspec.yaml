@@ -36,7 +36,7 @@ flutter:
 
   assets:
     - .env 
-    # Nur die 3 GeoJSON-Dateien, die du tatsächlich hast:
+    # Alle 3 GeoJSON-Dateien mit den korrekten Namen:
     - assets/data/export.geojson                # Sittard
-    - assets/data/export_kamperland.geojson     # Kamperland  
-    - assets/data/export_gangelt.geojson        # Gangelt
+    - assets/data/export_kamperland.geojson     # Kamperland
+    - assets/data/zuhause_umgebung.geojson      # Zuhause/Gangelt

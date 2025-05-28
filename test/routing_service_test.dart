@@ -1,58 +1,146 @@
-// test/routing_service_test.dart
-
-import 'package:flutter_test/flutter_test.dart';
-import 'package:latlong2/latlong.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:vector_tile_renderer/vector_tile_renderer.dart'; // Theme kommt von hier
+import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
-import 'package:camping_osm_navi/services/routing_service.dart';
+import 'package:camping_osm_navi/models/searchable_feature.dart';
+import 'package:camping_osm_navi/services/geojson_parser_service.dart';
+import 'package:camping_osm_navi/services/style_caching_service.dart';
 
-void main() {
-  group('RoutingService Tests', () {
-    // --- Testfall 1: Einfacher Pfad ---
-    test('Finds a simple path correctly', () async {
-      // 1. Arrange: Erstelle einen einfachen Test-Graphen (A -> B -> C)
-      final graph = RoutingGraph();
-      // Verwende leicht unterschiedliche Koordinaten, um sicherzustellen, dass IDs eindeutig sind
-      final nodeA = graph.addNode(const LatLng(51.000000, 5.800000)); // Start
-      final nodeB = graph.addNode(const LatLng(51.000100, 5.800000)); // Mitte
-      final nodeC = graph.addNode(const LatLng(51.000100, 5.800100)); // Ziel
+class LocationProvider with ChangeNotifier {
+  final List<LocationInfo> _availableLocations = []; // final hinzugefügt
+  LocationInfo? _selectedLocation;
+  bool _isLoadingLocationData = false;
 
-      // Füge Kanten hinzu (Gewichtung hier z.B. 1 für Einfachheit)
-      graph.addEdge(nodeA, nodeB, 1.0); // A nach B
-      graph.addEdge(nodeB, nodeC, 1.0); // B nach C
+  Theme? _mapTheme; // Theme aus vector_tile_renderer
+  RoutingGraph? _currentRoutingGraph;
+  final List<SearchableFeature> _currentSearchableFeatures =
+      []; // final hinzugefügt
 
-      // WICHTIG: Setze Kosten zurück, bevor der Algorithmus läuft
-      graph.resetAllNodeCosts();
+  List<LocationInfo> get availableLocations => _availableLocations;
+  LocationInfo? get selectedLocation => _selectedLocation;
+  bool get isLoadingLocationData => _isLoadingLocationData;
 
-      // 2. Act: Rufe die zu testende Methode auf
-      final List<LatLng>? path =
-          await RoutingService.findPath(graph, nodeA, nodeC);
+  Theme? get mapTheme => _mapTheme;
+  RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
+  List<SearchableFeature> get currentSearchableFeatures =>
+      _currentSearchableFeatures;
 
-      // 3. Assert: Überprüfe das Ergebnis
-      expect(path, isNotNull,
-          reason:
-              "Pfad sollte nicht null sein."); // Prüft, ob ein Pfad gefunden wurde
-      if (path != null) {
-        expect(path, hasLength(3),
-            reason: "Pfad sollte 3 Punkte haben (A, B, C)."); // Länge prüfen
-        expect(path[0].latitude, equals(nodeA.position.latitude),
-            reason: "Startpunkt Lat falsch.");
-        expect(path[0].longitude, equals(nodeA.position.longitude),
-            reason: "Startpunkt Lng falsch.");
+  LocationProvider() {
+    _loadAvailableLocations();
+  }
 
-        expect(path[1].latitude, equals(nodeB.position.latitude),
-            reason: "Zwischenpunkt Lat falsch.");
-        expect(path[1].longitude, equals(nodeB.position.longitude),
-            reason: "Zwischenpunkt Lng falsch.");
+  Future<void> _loadAvailableLocations() async {
+    // Die 3 Standorte mit den korrekten Dateinamen
+    _availableLocations.addAll([
+      LocationInfo(
+        id: "sittard",
+        name: "Testgelände Sittard",
+        geojsonAssetPath: "assets/data/export.geojson",
+        initialLatitude: 51.02518780487824,
+        initialLongitude: 5.858832278816441,
+        radiusInMeters: 1000.0,
+        styleId: "maptiler_dataviz_sittard",
+        styleUrl:
+            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
+      ),
+      LocationInfo(
+        id: "kamperland",
+        name: "Camping Resort Kamperland",
+        geojsonAssetPath: "assets/data/export_kamperland.geojson",
+        initialLatitude: 51.5833,
+        initialLongitude: 3.6333,
+        radiusInMeters: 1500.0,
+        styleId: "maptiler_dataviz_kamperland",
+        styleUrl:
+            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
+      ),
+      LocationInfo(
+        id: "zuhause",
+        name: "Umgebung Zuhause (Gangelt)",
+        geojsonAssetPath:
+            "assets/data/zuhause_umgebung.geojson", // KORRIGIERTER DATEINAME
+        initialLatitude: 51.001452,
+        initialLongitude: 6.051261,
+        radiusInMeters: 2000.0,
+        styleId: "maptiler_dataviz_zuhause",
+        styleUrl:
+            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
+      ),
+    ]);
 
-        expect(path[2].latitude, equals(nodeC.position.latitude),
-            reason: "Endpunkt Lat falsch.");
-        expect(path[2].longitude, equals(nodeC.position.longitude),
-            reason: "Endpunkt Lng falsch.");
+    if (_availableLocations.isNotEmpty) {
+      _selectedLocation = _availableLocations.first;
+      await _loadLocationData(_selectedLocation!);
+    }
+  }
+
+  Future<void> selectLocation(LocationInfo location) async {
+    if (_selectedLocation == location) return;
+    _selectedLocation = location;
+    notifyListeners();
+    await _loadLocationData(location);
+  }
+
+  Future<void> _loadLocationData(LocationInfo newLocationInfo) async {
+    _isLoadingLocationData = true;
+    notifyListeners();
+
+    try {
+      if (kDebugMode) {
+        print(
+            "INFO: ${DateTime.now()}: LocationProvider: Lade Vector-Theme für ${newLocationInfo.name} von ${newLocationInfo.styleUrl}");
       }
-    });
 
-    // --- Hier können später weitere Testfälle hinzugefügt werden ---
-    // test('Returns null if no path exists', () async { ... });
-    // test('Handles start and end node being the same', () async { ... });
-  });
+      _mapTheme =
+          await StyleCachingService.instance.getTheme(newLocationInfo.styleUrl);
+
+      if (kDebugMode) {
+        print(
+            "INFO: ${DateTime.now()}: LocationProvider: Vector-Theme erfolgreich geladen von: ${newLocationInfo.styleUrl}");
+      }
+
+      if (kDebugMode) {
+        print(
+            "INFO: ${DateTime.now()}: LocationProvider: Lade GeoJSON-String für ${newLocationInfo.name}.");
+      }
+
+      final String geojsonString =
+          await rootBundle.loadString(newLocationInfo.geojsonAssetPath);
+
+      if (kDebugMode) {
+        print(
+            "INFO: ${DateTime.now()}: LocationProvider: GeoJSON-String für ${newLocationInfo.name} geladen.");
+      }
+
+      // KORREKTUR: await entfernt, da parseGeoJsonToGraphAndFeatures kein Future zurückgibt
+      final ({RoutingGraph graph, List<SearchableFeature> features}) result =
+          GeojsonParserService.parseGeoJsonToGraphAndFeatures(geojsonString);
+
+      _currentRoutingGraph = result.graph;
+      _currentSearchableFeatures.clear();
+      _currentSearchableFeatures.addAll(result.features);
+
+      if (kDebugMode) {
+        print(
+            "INFO: ${DateTime.now()}: LocationProvider: Daten für ${newLocationInfo.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}");
+      }
+    } catch (e, stacktrace) {
+      if (kDebugMode) {
+        print(
+            "FEHLER: ${DateTime.now()}: LocationProvider: Fehler beim Laden der Standortdaten für ${newLocationInfo.name}: $e");
+        print("Stack trace: $stacktrace");
+      }
+      _mapTheme = null;
+      _currentRoutingGraph = null;
+      _currentSearchableFeatures.clear();
+
+      // Nicht-kritische Fehler: App läuft weiter, aber ohne erweiterte Features
+    } finally {
+      _isLoadingLocationData = false;
+      notifyListeners();
+    }
+  }
 }
