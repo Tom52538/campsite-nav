@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart';
 import 'package:http/http.dart' as http;
+// import 'package:path_provider/path_provider.dart'; // <- Dieser Import könnte die Exception verursachen, wenn das Paket nicht korrekt für Web konfiguriert ist
 
 class StyleCachingService {
   StyleCachingService._();
@@ -64,14 +65,4 @@ class StyleCachingService {
       rethrow;
     }
   }
-
-  // Cache-Management
-  void clearCache() {
-    _memoryCache.clear();
-    if (kDebugMode) {
-      print("[StyleCachingService] Memory-Cache geleert");
-    }
-  }
-
-  int get cacheSize => _memoryCache.length;
 }
