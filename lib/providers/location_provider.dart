@@ -1,3 +1,4 @@
+// lib/providers/location_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -35,7 +36,8 @@ class LocationProvider with ChangeNotifier {
   Future<void> _loadAvailableLocations() async {
     // TEST: MapTiler mit einfacherem Style (streets statt dataviz)
     _availableLocations.addAll([
-      const LocationInfo(
+      LocationInfo(
+        // Removed const
         id: "sittard",
         name: "Testgelände Sittard",
         geojsonAssetPath: "assets/data/export.geojson",
@@ -47,7 +49,8 @@ class LocationProvider with ChangeNotifier {
         styleUrl:
             "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
-      const LocationInfo(
+      LocationInfo(
+        // Removed const
         id: "kamperland",
         name: "Camping Resort Kamperland",
         geojsonAssetPath: "assets/data/export_kamperland.geojson",
@@ -58,7 +61,8 @@ class LocationProvider with ChangeNotifier {
         styleUrl:
             "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
-      const LocationInfo(
+      LocationInfo(
+        // Removed const
         id: "gangelt",
         name: "Umgebung Zuhause (Gangelt)",
         geojsonAssetPath: "assets/data/zuhause_umgebung.geojson",
