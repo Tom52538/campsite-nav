@@ -508,11 +508,29 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   @override
   void showSnackbar(String message, {int durationSeconds = 3}) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(message),
-          duration: Duration(seconds: durationSeconds)));
+    // Überprüfe ob der Context und Scaffold verfügbar sind
+    if (mounted && context.mounted) {
+      // Warte kurz, damit der Scaffold gerendert werden kann
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && context.mounted) {
+          try {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(message),
+                duration: Duration(seconds: durationSeconds)));
+          } catch (e) {
+            // Fallback: Print zur Konsole wenn Snackbar nicht funktioniert
+            if (kDebugMode) {
+              print("SNACKBAR: $message");
+            }
+          }
+        }
+      });
+    } else {
+      // Fallback für den Fall, dass kein Context verfügbar ist
+      if (kDebugMode) {
+        print("SNACKBAR (no context): $message");
+      }
     }
   }
 
@@ -818,7 +836,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
 
     final pointOnGraph = nearestNode.position;
-    const pointName = "Punkt auf Karte";
+    const pointName = "Punkt auf Karte"; // KORREKTUR: const statt final
 
     showModalBottomSheet(
       context: context,
