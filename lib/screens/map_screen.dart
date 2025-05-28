@@ -13,7 +13,7 @@ import 'package:vector_map_tiles/vector_map_tiles.dart'
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
-import 'package:camping_osm_navi/services/routing_service.
+import 'package:camping_osm_navi/services/routing_service.dart'; // Corrected: Added .dart and ;
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
@@ -159,7 +159,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final isLoading = locationProvider.isLoadingLocationData;
-    final mapThemeFromProvider = locationProvider.mapTheme; // Corrected usage
+    final mapThemeFromProvider = locationProvider.mapTheme;
     final isGraphReady = locationProvider.currentRoutingGraph != null;
 
     final isUiReady =
@@ -210,13 +210,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
             "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
       }
       mapLayerWidget = vector_map_tiles.VectorTileLayer(
-        // Corrected usage with alias
         theme: mapThemeFromProvider,
         fileCacheTtl: const Duration(days: 7),
         tileProviders: vector_map_tiles.TileProviders({
-          // Corrected usage with alias
-          'openmaptiles': vector_map_tiles.NetworkVectorTileProvider( // Changed key from 'maptiler_planet' to 'openmaptiles'
-            // Corrected usage with alias
+          'openmaptiles': vector_map_tiles.NetworkVectorTileProvider(
             urlTemplate: _maptilerUrlTemplate,
             maximumZoom: 14,
           ),
@@ -414,7 +411,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                             title: Text(feature.name),
                             subtitle: Text("Typ: ${feature.type}"),
                             onTap: () => selectFeatureAndSetPoint(feature),
-                            dense: true, // Hinzugefügt
+                            dense: true,
                           );
                         },
                       ),
@@ -508,9 +505,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
   @override
   void showSnackbar(String message, {int durationSeconds = 3}) {
-    // Überprüfe ob der Context und Scaffold verfügbar sind
     if (mounted && context.mounted) {
-      // Warte kurz, damit der Scaffold gerendert werden kann
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && context.mounted) {
           try {
@@ -519,7 +514,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                 content: Text(message),
                 duration: Duration(seconds: durationSeconds)));
           } catch (e) {
-            // Fallback: Print zur Konsole wenn Snackbar nicht funktioniert
             if (kDebugMode) {
               print("SNACKBAR: $message");
             }
@@ -527,7 +521,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         }
       });
     } else {
-      // Fallback für den Fall, dass kein Context verfügbar ist
       if (kDebugMode) {
         print("SNACKBAR (no context): $message");
       }
@@ -836,7 +829,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
 
     final pointOnGraph = nearestNode.position;
-    const pointName = "Punkt auf Karte"; // KORREKTUR: const statt final
+    const pointName = "Punkt auf Karte";
 
     showModalBottomSheet(
       context: context,
