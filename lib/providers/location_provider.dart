@@ -33,18 +33,8 @@ class LocationProvider with ChangeNotifier {
   }
 
   Future<void> _loadAvailableLocations() async {
+    // NUR die 3 Standorte, für die du GeoJSON-Dateien hast
     _availableLocations.addAll([
-      LocationInfo(
-        id: 'camping_de_grote_lier',
-        name: 'Camping de Grote Lier',
-        geojsonAssetPath: "assets/data/export_camping_de_grote_lier.geojson",
-        initialLatitude: 51.4880,
-        initialLongitude: 3.6550,
-        radiusInMeters: 2000.0,
-        styleId: "maptiler_dataviz_grote_lier",
-        styleUrl:
-            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
       LocationInfo(
         id: "sittard",
         name: "Testgelände Sittard",
@@ -64,17 +54,6 @@ class LocationProvider with ChangeNotifier {
         initialLongitude: 3.6333,
         radiusInMeters: 1500.0,
         styleId: "maptiler_dataviz_kamperland",
-        styleUrl:
-            "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
-      LocationInfo(
-        id: "amsterdam",
-        name: "Amsterdamse Bos Camping",
-        geojsonAssetPath: "assets/data/export_amsterdam.geojson",
-        initialLatitude: 52.3275,
-        initialLongitude: 4.8589,
-        radiusInMeters: 2500.0,
-        styleId: "maptiler_dataviz_amsterdam",
         styleUrl:
             "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
@@ -151,11 +130,13 @@ class LocationProvider with ChangeNotifier {
       if (kDebugMode) {
         print(
             "FEHLER: ${DateTime.now()}: LocationProvider: Fehler beim Laden der Standortdaten für ${newLocationInfo.name}: $e");
-        print(stacktrace);
+        print("Stack trace: $stacktrace");
       }
       _mapTheme = null;
       _currentRoutingGraph = null;
       _currentSearchableFeatures.clear();
+
+      // Nicht-kritische Fehler: App läuft weiter, aber ohne erweiterte Features
     } finally {
       _isLoadingLocationData = false;
       notifyListeners();

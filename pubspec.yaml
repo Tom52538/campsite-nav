@@ -1,6 +1,6 @@
 name: camping_osm_navi
 description: A navigation app for a specific campground using OpenStreetMap.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -11,11 +11,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  geolocator: ^12.0.0 # Du kannst dies bei Bedarf später anpassen
-  flutter_map: ^6.1.0  # <- Zurückgesetzt
-  flutter_map_cancellable_tile_provider: ^2.0.0 # <- Zurückgesetzt
-  vector_map_tiles: ^7.3.1 # <- Zurückgesetzt
-  vector_tile_renderer: ^5.2.1 # Behalte deine aktuelle Version oder passe an
+  geolocator: ^12.0.0
+  flutter_map: ^6.1.0
+  flutter_map_cancellable_tile_provider: ^2.0.0
+  vector_map_tiles: ^7.3.1
+  vector_tile_renderer: ^5.2.1
   http: ^1.2.1
   latlong2: ^0.9.1
   collection: ^1.18.0
@@ -25,7 +25,6 @@ dependencies:
   path_provider: ^2.1.3
   path: ^1.9.0
   logging: ^1.2.0
-
 
 dev_dependencies:
   flutter_test:
@@ -37,6 +36,7 @@ flutter:
 
   assets:
     - .env 
-    - assets/data/export.geojson
-    - assets/data/export_kamperland.geojson
-    - assets/data/zuhause_umgebung.geojson
+    # Nur die 3 GeoJSON-Dateien, die du tatsächlich hast:
+    - assets/data/export.geojson                # Sittard
+    - assets/data/export_kamperland.geojson     # Kamperland  
+    - assets/data/export_gangelt.geojson        # Gangelt
