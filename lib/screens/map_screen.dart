@@ -102,8 +102,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       }
       _maptilerUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     } else {
+      // Corrected: Use 'streets' instead of 'dataviz' for tile template
       _maptilerUrlTemplate =
-          'https://api.maptiler.com/maps/dataviz/{z}/{x}/{y}.pbf?key=$apiKey';
+          'https://api.maptiler.com/maps/streets/{z}/{x}/{y}.pbf?key=$apiKey';
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
