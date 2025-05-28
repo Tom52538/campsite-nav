@@ -117,8 +117,8 @@ class RoutingService {
     }
 
     if (safetyBreak >= maxPathLength && kDebugMode) {
-      print(
-          "[RoutingService._reconstructPath] WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge $maxPathLength erreicht). Möglicherweise Kreis im Parent-Graph oder sehr langer Pfad?");
+      // print(
+      //     "[RoutingService._reconstructPath] WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge $maxPathLength erreicht). Möglicherweise Kreis im Parent-Graph oder sehr langer Pfad?");
     }
 
     if (path.isEmpty) {
