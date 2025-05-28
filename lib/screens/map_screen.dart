@@ -159,11 +159,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final isLoading = locationProvider.isLoadingLocationData;
-    // Changed from mapTheme to mapStyle
     final mapStyleFromProvider = locationProvider.mapStyle;
     final isGraphReady = locationProvider.currentRoutingGraph != null;
 
-    // Updated isUiReady check
     final isUiReady =
         !isLoading && isGraphReady && mapStyleFromProvider != null;
 
@@ -201,8 +199,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       searchResultsTopPosition += 65.0 + kInstructionCardSpacing;
     }
 
+    // *** KORREKTUR: Die Logik wird nun dynamisch gesteuert ***
     Widget mapLayerWidget;
-    // Updated vectorConditionsMet check
     final bool vectorConditionsMet = isUiReady &&
         _maptilerUrlTemplate.isNotEmpty &&
         _maptilerUrlTemplate.contains('key=');
@@ -212,7 +210,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         print(
             "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
       }
-      // Changed from 'theme' to 'styleDelegate'
       mapLayerWidget = VectorTileLayer(
         styleDelegate: (tile) => mapStyleFromProvider!,
         fileCacheTtl: const Duration(days: 7),
