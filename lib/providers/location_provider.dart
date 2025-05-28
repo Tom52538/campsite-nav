@@ -10,20 +10,21 @@ class LocationProvider with ChangeNotifier {
   LocationInfo? _selectedLocation;
   LocationInfo? get selectedLocation => _selectedLocation;
 
-  List<LocationInfo> _availableLocations = [];
+  final List<LocationInfo> _availableLocations = [];
   List<LocationInfo> get availableLocations => _availableLocations;
 
   bool _isLoadingLocationData = true;
   bool get isLoadingLocationData => _isLoadingLocationData;
 
-  vmt.Theme? _mapTheme;
-  vmt.Theme? get mapTheme => _mapTheme;
+  vmt.Theme? _mapTheme; // Corrected type
+  vmt.Theme? get mapTheme => _mapTheme; // Corrected type
 
   RoutingGraph? _currentRoutingGraph;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
 
-  List<SearchableFeature> _currentSearchableFeatures = [];
-  List<SearchableFeature> get currentSearchableFeatures => _currentSearchableFeatures;
+  final List<SearchableFeature> _currentSearchableFeatures = [];
+  List<SearchableFeature> get currentSearchableFeatures =>
+      _currentSearchableFeatures;
 
   Position? _currentPosition;
   Position? get currentPosition => _currentPosition;
