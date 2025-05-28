@@ -1,61 +1,78 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../models/location_info.dart';
 
 class LocationProvider with ChangeNotifier {
-  LocationInfo? _currentLocation;
+  LocationInfo? _selectedLocation;
+  LocationInfo? get selectedLocation => _selectedLocation;
+
+  Position? _currentPosition;
+  Position? get currentPosition => _currentPosition;
+
   bool _isFollowing = true;
-  Stream<Position>? _positionStream;
-
-  LocationInfo? get currentLocation => _currentLocation;
   bool get isFollowing => _isFollowing;
-  Stream<Position>? get positionStream => _positionStream;
 
-  Future<bool> initialize() async {
+  Stream<Position>? _positionStream;
+  Stream<Position>? get positionStream => _positionStream;
+  BuildContext? _context;
+
+  void selectLocation(LocationInfo location) {
+    _selectedLocation = location;
+    notifyListeners();
+  }
+
+  Future<void> initialize(BuildContext context) async {
+    _context = context;
+    _checkPermission();
+    _positionStream = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 1,
+    )).map((Position position) {
+      _currentPosition = position;
+      if (_isFollowing) {
+        notifyListeners();
+      }
+      return position;
+    });
+    notifyListeners();
+  }
+
+  void toggleFollowing() {
+    _isFollowing = !_isFollowing;
+    notifyListeners();
+  }
+
+  Future<void> _checkPermission() async {
     bool serviceEnabled;
     LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return false;
+      // Handle service not enabled
     }
 
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        return false;
+        _showPermissionSnackbar();
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      return false;
+      _showPermissionSnackbar();
     }
-
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 1,
-      ),
-    ).map((Position position) {
-      _currentLocation = LocationInfo(
-        latlng: LatLng(position.latitude, position.longitude),
-        accuracy: position.accuracy,
-        speed: position.speed,
-      );
-      if (_isFollowing) {
-        notifyListeners();
-      }
-      return position;
-    });
-
-    notifyListeners();
-    return true;
   }
 
-  void toggleFollowing() {
-    _isFollowing = !_isFollowing;
-    notifyListeners();
+  void _showPermissionSnackbar() {
+    ScaffoldMessenger.of(_context!).showSnackBar(
+      const SnackBar(
+        content: Text('Standortberechtigung wurde verweigert.'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 }
