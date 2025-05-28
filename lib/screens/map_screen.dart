@@ -8,8 +8,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'package:vector_map_tiles/vector_map_tiles.dart';
-
+import 'package:vector_map_tiles/vector_map_tiles.dart'
+    as vector_map_tiles; // Alias hinzugefügt
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
@@ -159,13 +159,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final isLoading = locationProvider.isLoadingLocationData;
-    // --- KORREKTUR: `mapStyle` zu `mapTheme` geändert ---
-    final mapThemeFromProvider = locationProvider.mapTheme;
+    final mapThemeFromProvider = locationProvider.mapTheme; // Corrected usage
     final isGraphReady = locationProvider.currentRoutingGraph != null;
 
     final isUiReady =
         !isLoading && isGraphReady && mapThemeFromProvider != null;
-    // --- ENDE KORREKTUR ---
 
     final List<Marker> activeMarkers = [];
     if (currentLocationMarker != null) {
@@ -211,12 +209,14 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         print(
             "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
       }
-      // --- KORREKTUR: `mapThemeFromProvider` wird direkt verwendet ---
-      mapLayerWidget = VectorTileLayer(
+      mapLayerWidget = vector_map_tiles.VectorTileLayer(
+        // Corrected usage with alias
         theme: mapThemeFromProvider,
         fileCacheTtl: const Duration(days: 7),
-        tileProviders: TileProviders({
-          'maptiler_planet': NetworkVectorTileProvider(
+        tileProviders: vector_map_tiles.TileProviders({
+          // Corrected usage with alias
+          'maptiler_planet': vector_map_tiles.NetworkVectorTileProvider(
+            // Corrected usage with alias
             urlTemplate: _maptilerUrlTemplate,
             maximumZoom: 14,
           ),
@@ -414,7 +414,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
                             title: Text(feature.name),
                             subtitle: Text("Typ: ${feature.type}"),
                             onTap: () => selectFeatureAndSetPoint(feature),
-                            dense: true,
+                            dense: true, // Hinzugefügt
                           );
                         },
                       ),
