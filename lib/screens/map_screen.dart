@@ -1047,6 +1047,29 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     });
   }
 
+  Future<void> calculateAndDisplayRoute() async {
+    await _calculateRouteIfPossible();
+  }
+
+  void _performClearRoute(bool clearMarkers) {
+    _resetRouteAndNavigation();
+    if (clearMarkers) {
+      startMarker = null;
+      endMarker = null;
+    }
+    setStateIfMounted(() {});
+  }
+
+  void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
+    if (showConfirmation) {
+      showConfirmationDialog("Route löschen", "Möchten Sie die aktuelle Route wirklich löschen?", () {
+        _performClearRoute(clearMarkers);
+      });
+    } else {
+      _performClearRoute(clearMarkers);
+    }
+  }
+
   double _distanceToPolylineSegment(LatLng p, LatLng a, LatLng b) {
     double l2 =
         pow(b.longitude - a.longitude, 2) + pow(b.latitude - a.latitude, 2);
