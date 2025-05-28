@@ -13,7 +13,7 @@ import 'package:vector_map_tiles/vector_map_tiles.dart'
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
-import 'package:camping_osm_navi/services/routing_service.dart';
+import 'package:camping_osm_navi/services/routing_service.
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
@@ -215,7 +215,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         fileCacheTtl: const Duration(days: 7),
         tileProviders: vector_map_tiles.TileProviders({
           // Corrected usage with alias
-          'maptiler_planet': vector_map_tiles.NetworkVectorTileProvider(
+          'openmaptiles': vector_map_tiles.NetworkVectorTileProvider( // Changed key from 'maptiler_planet' to 'openmaptiles'
             // Corrected usage with alias
             urlTemplate: _maptilerUrlTemplate,
             maximumZoom: 14,
