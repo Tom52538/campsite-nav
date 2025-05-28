@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+// Corrected import with a prefix to avoid naming conflicts
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vmt;
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
@@ -16,8 +17,9 @@ class LocationProvider with ChangeNotifier {
   bool _isLoadingLocationData = true;
   bool get isLoadingLocationData => _isLoadingLocationData;
 
-  vmt.Theme? _mapTheme; // Corrected type
-  vmt.Theme? get mapTheme => _mapTheme; // Corrected type
+  // Use the prefixed Theme from vector_map_tiles
+  vmt.Theme? _mapTheme;
+  vmt.Theme? get mapTheme => _mapTheme;
 
   RoutingGraph? _currentRoutingGraph;
   RoutingGraph? get currentRoutingGraph => _currentRoutingGraph;
