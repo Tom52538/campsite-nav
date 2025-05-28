@@ -78,6 +78,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   static const double _maneuverReachedThreshold = 15.0;
   static const double _significantGpsChangeThreshold = 2.0;
 
+  // *** KORREKTUR: 'final' zu 'const' geändert ***
   static const Distance distanceCalculatorInstance = Distance();
 
   bool isRouteActiveForCardSwitch = false;
@@ -199,7 +200,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       searchResultsTopPosition += 65.0 + kInstructionCardSpacing;
     }
 
-    // *** KORREKTUR: Die Logik wird nun dynamisch gesteuert ***
     Widget mapLayerWidget;
     final bool vectorConditionsMet = isUiReady &&
         _maptilerUrlTemplate.isNotEmpty &&
@@ -210,8 +210,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         print(
             "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
       }
+      // *** KORREKTUR: 'styleDelegate' zu 'theme' geändert und '!' entfernt ***
       mapLayerWidget = VectorTileLayer(
-        styleDelegate: (tile) => mapStyleFromProvider!,
+        theme: mapStyleFromProvider, // 'theme' ist der korrekte Parameter
         fileCacheTtl: const Duration(days: 7),
         tileProviders: TileProviders({
           'maptiler_planet': NetworkVectorTileProvider(
@@ -891,13 +892,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     setStateIfMounted(() {
       if (pathPoints != null && pathPoints.isNotEmpty) {
         currentManeuvers = RoutingService.analyzeRouteForTurns(pathPoints);
-        routePolyline = Polyline(
-            points: pathPoints, // Use pathPoints directly
-            color: Colors.blue,
-            strokeWidth: 5.0);
-        _updateRouteMetrics(pathPoints); // Use pathPoints
+        routePolyline =
+            Polyline(points: pathPoints, color: Colors.blue, strokeWidth: 5.0);
+        _updateRouteMetrics(pathPoints);
         _updateCurrentManeuverOnGpsUpdate(
-            currentGpsPosition ?? pathPoints.first); // Use pathPoints.first
+            currentGpsPosition ?? pathPoints.first);
 
         showSnackbar(
             "Route berechnet. Distanz: ${routeDistance!.toStringAsFixed(2)}m");
@@ -981,7 +980,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
     setStateIfMounted(() {
       routeDistance = totalDistance;
-      routeTimeMinutes = (totalDistance / 80).ceil(); // ~5 km/h walking speed
+      routeTimeMinutes = (totalDistance / 80).ceil();
     });
   }
 
@@ -991,14 +990,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     int startIndex = 0;
     if (currentDisplayedManeuver != null) {
       startIndex = currentManeuvers.indexWhere((m) =>
-          m.point.latitude ==
-              currentDisplayedManeuver!
-                  .point.latitude && // Compare LatLng components
+          m.point.latitude == currentDisplayedManeuver!.point.latitude &&
           m.point.longitude == currentDisplayedManeuver!.point.longitude &&
           m.turnType == currentDisplayedManeuver!.turnType);
     }
     if (startIndex == -1) {
-      // If not found or currentDisplayedManeuver was null
       startIndex = 0;
     }
 
@@ -1017,8 +1013,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
 
         bool isNewDisplay = currentDisplayedManeuver == null ||
             (nextManeuverToDisplay.point.latitude !=
-                    currentDisplayedManeuver!
-                        .point.latitude || // Compare LatLng
+                    currentDisplayedManeuver!.point.latitude ||
                 nextManeuverToDisplay.point.longitude !=
                     currentDisplayedManeuver!.point.longitude ||
                 nextManeuverToDisplay.turnType !=
