@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:vector_map_tiles/vector_map_tiles.dart';
-import 'package:vector_tile_renderer/vector_tile_renderer.dart' as vtr;
 
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
@@ -63,7 +62,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   Maneuver? currentDisplayedManeuver;
   bool followGps = false;
   static const double _followGpsZoomLevel = 17.5;
-  static const double _navigationStartZoomDelaySeconds = 2.5;
 
   bool _isInRouteOverviewMode = false;
 
@@ -81,7 +79,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   static const double _maneuverReachedThreshold = 15.0;
   static const double _significantGpsChangeThreshold = 2.0;
 
-  static const double _offRouteThreshold = 25.0;
   final Distance distanceCalculatorInstance = const Distance();
 
   bool isRouteActiveForCardSwitch = false;
@@ -508,6 +505,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
   }
 
+  @override
   void showSnackbar(String message, {int durationSeconds = 3}) {
     if (mounted) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -571,7 +569,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   void _initializeMockGps(LocationInfo location) {
     positionStreamSubscription?.cancel();
     setStateIfMounted(() {
-      currentGpsPosition = location.mockGpsStartLocation;
+      currentGpsPosition = location.initialCenter;
       _updateCurrentLocationMarker();
     });
     showSnackbar("Mock-GPS aktiv an Position: ${location.name}",
@@ -756,7 +754,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   }
 
   void selectFeatureAndSetPoint(SearchableFeature feature) {
-    final point = feature.representativePoint;
+    final point = feature.center;
 
     setStateIfMounted(() {
       if (activeSearchField == ActiveSearchField.start) {
@@ -818,7 +816,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    final pointOnGraph = nearestNode.latlng;
+    final pointOnGraph = nearestNode.position;
     final pointName = "Punkt auf Karte";
 
     showModalBottomSheet(
@@ -888,19 +886,18 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
       return;
     }
 
-    final result = await RoutingService.calculateShortestPath(
-        graph, startNode.id, endNode.id);
+    final List<LatLng>? pathPoints = await RoutingService.findPath(graph, startNode, endNode);
 
     setStateIfMounted(() {
-      if (result.path.isNotEmpty) {
+      if (pathPoints != null && pathPoints.isNotEmpty) {
+        currentManeuvers = RoutingService.analyzeRouteForTurns(pathPoints);
         routePolyline = Polyline(
-            points: result.path.map((node) => node.latlng).toList(),
+            points: pathPoints, // Use pathPoints directly
             color: Colors.blue,
             strokeWidth: 5.0);
-        currentManeuvers = result.maneuvers;
-        _updateRouteMetrics(result.path);
+        _updateRouteMetrics(pathPoints); // Use pathPoints
         _updateCurrentManeuverOnGpsUpdate(
-            currentGpsPosition ?? result.path.first.latlng);
+            currentGpsPosition ?? pathPoints.first); // Use pathPoints.first
 
         showSnackbar(
             "Route berechnet. Distanz: ${routeDistance!.toStringAsFixed(2)}m");
@@ -918,7 +915,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     GraphNode? nearestNode;
     double minDistance = double.infinity;
     for (var node in graph.nodes.values) {
-      final d = distanceCalculatorInstance.distance(point, node.latlng);
+      final d = distanceCalculatorInstance.distance(point, node.position);
       if (d < minDistance) {
         minDistance = d;
         nearestNode = node;
@@ -975,12 +972,12 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
   }
 
-  void _updateRouteMetrics(List<GraphNode> path) {
+  void _updateRouteMetrics(List<LatLng> path) {
     if (path.isEmpty) return;
     double totalDistance = 0;
     for (int i = 0; i < path.length - 1; i++) {
       totalDistance += distanceCalculatorInstance.distance(
-          path[i].latlng, path[i + 1].latlng);
+          path[i], path[i + 1]);
     }
     setStateIfMounted(() {
       routeDistance = totalDistance;
@@ -991,31 +988,40 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   void _updateCurrentManeuverOnGpsUpdate(LatLng currentPos) {
     if (currentManeuvers.isEmpty) return;
 
-    int currentManeuverIndex = currentManeuvers
-        .indexWhere((m) => m.nodeId == currentDisplayedManeuver?.nodeId);
-    if (currentManeuverIndex == -1) currentManeuverIndex = 0;
+    int startIndex = 0;
+    if (currentDisplayedManeuver != null) {
+      startIndex = currentManeuvers.indexWhere((m) =>
+          m.point.latitude == currentDisplayedManeuver!.point.latitude && // Compare LatLng components
+          m.point.longitude == currentDisplayedManeuver!.point.longitude &&
+          m.turnType == currentDisplayedManeuver!.turnType);
+    }
+    if (startIndex == -1) { // If not found or currentDisplayedManeuver was null
+      startIndex = 0;
+    }
 
-    for (int i = currentManeuverIndex; i < currentManeuvers.length; i++) {
-      final maneuverNode = Provider.of<LocationProvider>(context, listen: false)
-          .currentRoutingGraph
-          ?.nodes[currentManeuvers[i].nodeId];
-      if (maneuverNode == null) continue;
+    for (int i = startIndex; i < currentManeuvers.length; i++) {
+      final Maneuver potentialNextManeuver = currentManeuvers[i];
+      final LatLng maneuverPoint = potentialNextManeuver.point;
 
-      final distanceToManeuver =
-          distanceCalculatorInstance.distance(currentPos, maneuverNode.latlng);
+      final double distanceToManeuver = distanceCalculatorInstance.distance(currentPos, maneuverPoint);
 
-      if (i < currentManeuvers.length - 1 &&
-          distanceToManeuver < _maneuverReachedThreshold) {
-        continue;
+      if (i < currentManeuvers.length - 1 && distanceToManeuver < _maneuverReachedThreshold) {
+          continue;
       } else {
-        Maneuver nextManeuver = currentManeuvers[i];
-        if (nextManeuver.nodeId != currentDisplayedManeuver?.nodeId) {
-          ttsService.speak(nextManeuver.instruction);
-          setStateIfMounted(() {
-            currentDisplayedManeuver = nextManeuver;
-          });
-        }
-        break;
+          Maneuver nextManeuverToDisplay = potentialNextManeuver;
+
+          bool isNewDisplay = currentDisplayedManeuver == null ||
+                              (nextManeuverToDisplay.point.latitude != currentDisplayedManeuver!.point.latitude || // Compare LatLng
+                               nextManeuverToDisplay.point.longitude != currentDisplayedManeuver!.point.longitude ||
+                               nextManeuverToDisplay.turnType != currentDisplayedManeuver!.turnType);
+
+          if (isNewDisplay) {
+              ttsService.speak(nextManeuverToDisplay.instructionText ?? '');
+              setStateIfMounted(() {
+                  currentDisplayedManeuver = nextManeuverToDisplay;
+              });
+          }
+          break; 
       }
     }
   }
@@ -1068,52 +1074,5 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     } else {
       _performClearRoute(clearMarkers);
     }
-  }
-
-  double _distanceToPolylineSegment(LatLng p, LatLng a, LatLng b) {
-    double l2 =
-        pow(b.longitude - a.longitude, 2) + pow(b.latitude - a.latitude, 2);
-    if (l2 == 0.0) return distanceCalculatorInstance.distance(p, a);
-
-    final double distAP = distanceCalculatorInstance.distance(p, a);
-    final double distBP = distanceCalculatorInstance.distance(p, b);
-    final double distAB = sqrt(l2);
-
-    if (distAP == 0) return 0.0;
-    if (distBP == 0) return 0.0;
-    if (distAB == 0) return distAP;
-
-    double cosPAB = (pow(distAP, 2) + pow(distAB, 2) - pow(distBP, 2)) /
-        (2 * distAP * distAB);
-    double cosPBA = (pow(distBP, 2) + pow(distAB, 2) - pow(distAP, 2)) /
-        (2 * distBP * distAB);
-
-    if (cosPAB < 0) return distAP;
-    if (cosPBA < 0) return distBP;
-
-    final double s = (distAP + distBP + distAB) / 2;
-    final double areaArgCandidate =
-        s * (s - distAP) * (s - distBP) * (s - distAB);
-    final double areaArg = areaArgCandidate < 0 ? 0 : areaArgCandidate;
-    final double area = sqrt(areaArg);
-    return (2 * area) / distAB;
-  }
-
-  double _calculateDistanceToPolyline(LatLng p, List<LatLng> polyline) {
-    if (polyline.isEmpty) {
-      return double.infinity;
-    }
-    if (polyline.length == 1) {
-      return distanceCalculatorInstance.distance(p, polyline.first);
-    }
-    double minDistance = double.infinity;
-    for (int i = 0; i < polyline.length - 1; i++) {
-      final distance =
-          _distanceToPolylineSegment(p, polyline[i], polyline[i + 1]);
-      if (distance < minDistance) {
-        minDistance = distance;
-      }
-    }
-    return minDistance;
   }
 }
