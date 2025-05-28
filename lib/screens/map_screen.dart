@@ -818,7 +818,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     }
 
     final pointOnGraph = nearestNode.position;
-    final pointName = "Punkt auf Karte";
+    const pointName = "Punkt auf Karte";
 
     showModalBottomSheet(
       context: context,
