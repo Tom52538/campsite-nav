@@ -78,7 +78,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
   static const double _maneuverReachedThreshold = 15.0;
   static const double _significantGpsChangeThreshold = 2.0;
 
-  // *** KORREKTUR: 'final' zu 'const' geändert ***
   static const Distance distanceCalculatorInstance = Distance();
 
   bool isRouteActiveForCardSwitch = false;
@@ -160,11 +159,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     final availableLocationsFromUI = locationProvider.availableLocations;
 
     final isLoading = locationProvider.isLoadingLocationData;
-    final mapStyleFromProvider = locationProvider.mapStyle;
+    // --- KORREKTUR: `mapStyle` zu `mapTheme` geändert ---
+    final mapThemeFromProvider = locationProvider.mapTheme;
     final isGraphReady = locationProvider.currentRoutingGraph != null;
 
     final isUiReady =
-        !isLoading && isGraphReady && mapStyleFromProvider != null;
+        !isLoading && isGraphReady && mapThemeFromProvider != null;
+    // --- ENDE KORREKTUR ---
 
     final List<Marker> activeMarkers = [];
     if (currentLocationMarker != null) {
@@ -210,9 +211,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
         print(
             "[DIAGNOSE] MapScreen build: Erzeuge VectorTileLayer für '${selectedLocationFromUI?.name ?? 'Unbekannt'}'");
       }
-      // *** KORREKTUR: Das `Style`-Objekt wird in ein `Theme`-Objekt umgewandelt. ***
+      // --- KORREKTUR: `mapThemeFromProvider` wird direkt verwendet ---
       mapLayerWidget = VectorTileLayer(
-        theme: Theme.fromStyle(mapStyleFromProvider),
+        theme: mapThemeFromProvider,
         fileCacheTtl: const Duration(days: 7),
         tileProviders: TileProviders({
           'maptiler_planet': NetworkVectorTileProvider(
@@ -225,7 +226,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUIMixin {
     } else {
       if (kDebugMode) {
         print(
-            "[DIAGNOSE] MapScreen build: Bedingungen für VectorTileLayer nicht erfüllt, erzeuge Fallback TileLayer (OSM). isUiReady=$isUiReady, template='$_maptilerUrlTemplate', styleNull=${mapStyleFromProvider == null}");
+            "[DIAGNOSE] MapScreen build: Bedingungen für VectorTileLayer nicht erfüllt, erzeuge Fallback TileLayer (OSM). isUiReady=$isUiReady, template='$_maptilerUrlTemplate', styleNull=${mapThemeFromProvider == null}");
       }
       mapLayerWidget = TileLayer(
         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
