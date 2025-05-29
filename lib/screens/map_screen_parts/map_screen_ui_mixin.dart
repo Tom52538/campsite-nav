@@ -103,11 +103,6 @@ mixin MapScreenUiMixin on State<MapScreen> {
                                     iconSize: 20,
                                     onPressed: () {
                                       startSearchController.clear();
-                                      setStateIfMounted(() {
-                                        // Diese Variablen werden im State der MapScreen gesetzt
-                                        // und sind hier nur Parameter
-                                      });
-                                      // Route clearing logic should be handled in MapScreen
                                       clearRoute();
                                     },
                                   )
@@ -128,21 +123,13 @@ mixin MapScreenUiMixin on State<MapScreen> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                            if (currentGpsPosition != null) {
-                              final String locationName = useMockLocation
-                                  ? "Mock Position (${Provider.of<LocationProvider>(context, listen: false).selectedLocation?.name ?? ''})"
-                                  : "Aktueller Standort";
-
-                              startSearchController.text = locationName;
-                              if (startFocusNode.hasFocus) {
-                                startFocusNode.unfocus();
-                              }
-
-                              // Diese Logik sollte in MapScreen implementiert werden
-                              // setStartToCurrentLocation() method call
+                            // KORREKTUR: Direkte Verwendung der Methode aus dem State
+                            if (this is MapScreenState) {
+                              (this as MapScreenState)
+                                  .setStartToCurrentLocation();
                             } else {
                               showSnackbar(
-                                  "Aktuelle Position nicht verfügbar.");
+                                  "Fehler beim Setzen der aktuellen Position als Start.");
                             }
                           },
                         ),
@@ -213,9 +200,6 @@ mixin MapScreenUiMixin on State<MapScreen> {
                               iconSize: 20,
                               onPressed: () {
                                 endSearchController.clear();
-                                setStateIfMounted(() {
-                                  // Clear logic handled in MapScreen
-                                });
                                 clearRoute();
                               },
                             )
