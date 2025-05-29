@@ -21,7 +21,6 @@ import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
-import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -56,7 +55,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   double? routeDistance;
   int? routeTimeMinutes;
   double? remainingRouteDistance;
-  int? remainingRouteMinutes; // Changed from remainingRouteTimeMinutes
+  int? remainingRouteTimeMinutes; // Konsistente Namensgebung
   List<Maneuver> currentManeuvers = [];
   Maneuver? currentDisplayedManeuver;
   bool followGps = false;
@@ -364,9 +363,46 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
                 },
                 child: isRouteActiveForCardSwitch && isUiReady
                     ? buildCompactRouteInfoCard(
-                        key: const ValueKey('compactCard'))
+                        key: const ValueKey('compactCard'),
+                        remainingRouteDistance: remainingRouteDistance,
+                        routeDistance: routeDistance,
+                        remainingRouteTimeMinutes: remainingRouteTimeMinutes,
+                        routeTimeMinutes: routeTimeMinutes,
+                        routePolyline: routePolyline,
+                        endSearchController: endSearchController,
+                        setStateIfMounted: setStateIfMounted,
+                        isRouteActiveForCardSwitch: isRouteActiveForCardSwitch,
+                        clearRoute: clearRoute,
+                      )
                     : buildSearchInputCard(
-                        key: const ValueKey('searchInputCard')),
+                        key: const ValueKey('searchInputCard'),
+                        fullSearchCardKey: fullSearchCardKey,
+                        fullSearchCardHeight: fullSearchCardHeight,
+                        setStateIfMounted: setStateIfMounted,
+                        startSearchController: startSearchController,
+                        startFocusNode: startFocusNode,
+                        startLatLng: startLatLng,
+                        startMarker: startMarker,
+                        routePolyline: routePolyline,
+                        routeDistance: routeDistance,
+                        routeTimeMinutes: routeTimeMinutes,
+                        remainingRouteDistance: remainingRouteDistance,
+                        remainingRouteTimeMinutes: remainingRouteTimeMinutes,
+                        currentManeuvers: currentManeuvers,
+                        currentDisplayedManeuver: currentDisplayedManeuver,
+                        followGps: followGps,
+                        isRouteActiveForCardSwitch: isRouteActiveForCardSwitch,
+                        currentGpsPosition: currentGpsPosition,
+                        useMockLocation: useMockLocation,
+                        endSearchController: endSearchController,
+                        endFocusNode: endFocusNode,
+                        endLatLng: endLatLng,
+                        endMarker: endMarker,
+                        swapStartAndEnd: swapStartAndEnd,
+                        calculateAndDisplayRoute: calculateAndDisplayRoute,
+                        clearRoute: clearRoute,
+                        showSnackbar: showSnackbar,
+                      ),
               ),
             ),
           ),
@@ -557,7 +593,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       routeDistance = null;
       routeTimeMinutes = null;
       remainingRouteDistance = null;
-      remainingRouteMinutes = null; // Changed from remainingRouteTimeMinutes
+      remainingRouteTimeMinutes = null;
       isRouteActiveForCardSwitch = false;
     });
   }

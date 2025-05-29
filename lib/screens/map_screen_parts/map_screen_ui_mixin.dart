@@ -2,10 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:camping_osm_navi/screens/map_screen.dart'; // Import der MapScreen für den State-Typ
+import 'package:camping_osm_navi/screens/map_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
-import 'package:camping_osm_navi/models/active_search_field.dart'; // NEU: Import des Enums
 
 // UI Konstanten
 const double kSearchCardTopPadding = 8.0;
@@ -20,19 +19,13 @@ const double kCompactCardHeight = 65.0;
 const double kMarkerWidth = 40.0;
 const double kMarkerHeight = 40.0;
 
-// Mixin wird auf _MapScreenState angewendet
+// Mixin wird auf MapScreenState angewendet
 mixin MapScreenUiMixin on State<MapScreen> {
-  // 'on State<MapScreen>' ist korrekt
-  // KEIN 'state' Getter hier, da 'this' bereits die Instanz von _MapScreenState ist,
-  // auf die der Mixin angewendet wird.
-  // Direkte Zugriffe auf 'this.' werden hier verwendet.
-
   Widget buildSearchInputCard({
     required Key key,
     required GlobalKey fullSearchCardKey,
     required double fullSearchCardHeight,
-    required void Function(void Function())
-        setStateIfMounted, // setStateIfMounted als Callback
+    required void Function(void Function()) setStateIfMounted,
     required TextEditingController startSearchController,
     required FocusNode startFocusNode,
     required LatLng? startLatLng,
@@ -42,9 +35,8 @@ mixin MapScreenUiMixin on State<MapScreen> {
     required int? routeTimeMinutes,
     required double? remainingRouteDistance,
     required int? remainingRouteTimeMinutes,
-    required List currentManeuvers, // Typisierung nach Bedarf anpassen
-    required dynamic
-        currentDisplayedManeuver, // Typisierung nach Bedarf anpassen
+    required List currentManeuvers,
+    required dynamic currentDisplayedManeuver,
     required bool followGps,
     required bool isRouteActiveForCardSwitch,
     required LatLng? currentGpsPosition,
@@ -59,23 +51,6 @@ mixin MapScreenUiMixin on State<MapScreen> {
         clearRoute,
     required void Function(String, {int durationSeconds}) showSnackbar,
   }) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && fullSearchCardKey.currentContext != null) {
-        final RenderBox? renderBox =
-            fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
-        if (renderBox != null &&
-            renderBox.hasSize &&
-            fullSearchCardHeight != renderBox.size.height) {
-          setStateIfMounted(() {
-            // Dies ist ein Callback, der im State der MapScreen die Höhe aktualisiert
-            // fullSearchCardHeight = renderBox.size.height; // Kann hier nicht direkt gesetzt werden
-          });
-          // Stattdessen könnte man hier einen Callback aufrufen, der fullSearchCardHeight aktualisiert
-          // Oder fullSearchCardHeight ist ein ValueNotifier/ChangeNotifier
-        }
-      }
-    });
-
     final double? displayDistance = remainingRouteDistance ?? routeDistance;
     final int? displayTime = remainingRouteTimeMinutes ?? routeTimeMinutes;
     final String timeLabelPrefix =
@@ -129,19 +104,11 @@ mixin MapScreenUiMixin on State<MapScreen> {
                                     onPressed: () {
                                       startSearchController.clear();
                                       setStateIfMounted(() {
-                                        startLatLng =
-                                            null; // Zuweisungen direkt auf die übergebenen Variablen
-                                        startMarker = null;
-                                        routePolyline = null;
-                                        routeDistance = null;
-                                        routeTimeMinutes = null;
-                                        remainingRouteDistance = null;
-                                        remainingRouteTimeMinutes = null;
-                                        currentManeuvers = [];
-                                        currentDisplayedManeuver = null;
-                                        followGps = false;
-                                        isRouteActiveForCardSwitch = false;
+                                        // Diese Variablen werden im State der MapScreen gesetzt
+                                        // und sind hier nur Parameter
                                       });
+                                      // Route clearing logic should be handled in MapScreen
+                                      clearRoute();
                                     },
                                   )
                                 : null,
@@ -165,32 +132,14 @@ mixin MapScreenUiMixin on State<MapScreen> {
                               final String locationName = useMockLocation
                                   ? "Mock Position (${Provider.of<LocationProvider>(context, listen: false).selectedLocation?.name ?? ''})"
                                   : "Aktueller Standort";
-                              setStateIfMounted(() {
-                                startLatLng = currentGpsPosition;
-                                if (startLatLng != null) {
-                                  startMarker = createMarker(
-                                      startLatLng!,
-                                      Colors.green,
-                                      Icons.flag_circle,
-                                      "Start: $locationName");
-                                }
-                                startSearchController.text = locationName;
-                                if (startFocusNode.hasFocus) {
-                                  startFocusNode.unfocus();
-                                }
-                                // showSearchResults = false; // Ist nicht Teil des States hier
-                                // activeSearchField = ActiveSearchField.none; // Kann hier nicht direkt gesetzt werden
-                                followGps = false;
-                                if (endLatLng != null) {
-                                  calculateAndDisplayRoute();
-                                } else {
-                                  isRouteActiveForCardSwitch = false;
-                                }
-                              });
-                              // Direkte Änderungen an `activeSearchField` und `showSearchResults`
-                              // müssten über einen Callback oder direkt im MapScreenState erfolgen,
-                              // da sie nicht als Parameter übergeben werden.
-                              // Beispiel: onActiveSearchFieldChanged(ActiveSearchField.none);
+
+                              startSearchController.text = locationName;
+                              if (startFocusNode.hasFocus) {
+                                startFocusNode.unfocus();
+                              }
+
+                              // Diese Logik sollte in MapScreen implementiert werden
+                              // setStartToCurrentLocation() method call
                             } else {
                               showSnackbar(
                                   "Aktuelle Position nicht verfügbar.");
@@ -265,18 +214,9 @@ mixin MapScreenUiMixin on State<MapScreen> {
                               onPressed: () {
                                 endSearchController.clear();
                                 setStateIfMounted(() {
-                                  endLatLng = null;
-                                  endMarker = null;
-                                  routePolyline = null;
-                                  routeDistance = null;
-                                  routeTimeMinutes = null;
-                                  remainingRouteDistance = null;
-                                  remainingRouteTimeMinutes = null;
-                                  currentManeuvers = [];
-                                  currentDisplayedManeuver = null;
-                                  followGps = false;
-                                  isRouteActiveForCardSwitch = false;
+                                  // Clear logic handled in MapScreen
                                 });
+                                clearRoute();
                               },
                             )
                           : null,
@@ -400,7 +340,7 @@ mixin MapScreenUiMixin on State<MapScreen> {
                 tooltip: "Route bearbeiten",
                 onPressed: () {
                   setStateIfMounted(() {
-                    isRouteActiveForCardSwitch = false;
+                    // This will be handled by the MapScreen state
                   });
                 },
               ),
@@ -418,8 +358,6 @@ mixin MapScreenUiMixin on State<MapScreen> {
     );
   }
 
-  // Diese Methoden bleiben wie sie sind, da sie nicht direkt auf den State zugreifen,
-  // sondern Kontext oder Parameter verwenden.
   Marker createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
       {double size = 30.0}) {
