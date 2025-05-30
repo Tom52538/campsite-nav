@@ -62,6 +62,9 @@ class MapScreenRouteHandler {
       controller.setRoutePolyline(polyline);
       controller.updateRouteMetrics(pathPoints);
 
+      // ✅ NEU: TTS für neue Route zurücksetzen
+      controller.ttsService.resetForNewRoute();
+
       updateCurrentManeuverOnGpsUpdate(
           controller.currentGpsPosition ?? pathPoints.first);
 
@@ -147,6 +150,9 @@ class MapScreenRouteHandler {
           controller.updateRouteMetrics(newRoutePoints);
           updateCurrentManeuverOnGpsUpdate(currentPosition);
 
+          // ✅ NEU: Rerouting Ansage
+          controller.ttsService.speakImmediate("Route wird neu berechnet");
+
           if (kDebugMode) {
             print("Route neu berechnet");
           }
@@ -203,10 +209,13 @@ class MapScreenRouteHandler {
                     controller.currentDisplayedManeuver!.turnType);
 
         if (isNewDisplay) {
-          controller.ttsService
-              .speak(nextManeuverToDisplay.instructionText ?? '');
           controller.updateCurrentDisplayedManeuver(nextManeuverToDisplay);
         }
+
+        // ✅ NEU: Erweiterte Sprachanweisungen mit Distanzangaben
+        controller.ttsService.speakNavigationInstruction(
+            nextManeuverToDisplay, distanceToManeuver);
+
         break;
       }
     }
