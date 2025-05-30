@@ -121,8 +121,10 @@ mixin MapScreenUiMixin on State<MapScreen> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                            // ✅ KORRIGIERT: Direkte Verwendung der öffentlichen Methode
-                            setStartToCurrentLocation();
+                            // ✅ KORRIGIERT: Callback verwenden statt direkte Methode
+                            if (_setStartToCurrentLocationCallback != null) {
+                              _setStartToCurrentLocationCallback!();
+                            }
                           },
                         ),
                       ),
@@ -457,6 +459,10 @@ mixin MapScreenUiMixin on State<MapScreen> {
     }
   }
 
-  // ✅ NEU: Abstrakte Methode - muss von MapScreenState implementiert werden
-  void setStartToCurrentLocation();
+  // ✅ KORRIGIERT: Callback-Methode statt abstrakte Methode
+  void Function()? _setStartToCurrentLocationCallback;
+
+  void setSetStartToCurrentLocationCallback(void Function() callback) {
+    _setStartToCurrentLocationCallback = callback;
+  }
 }
