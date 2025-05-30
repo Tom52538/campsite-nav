@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_search_handler.dart (ERWEITERT)
+// lib/screens/map_screen/map_screen_search_handler.dart (KORRIGIERT)
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -152,19 +152,20 @@ class MapScreenSearchHandler {
 
     final results = <SearchableFeature>[];
 
-    for (final number in searchNumbers) {
+    for (final searchNum in searchNumbers) {
+      // ✅ KORRIGIERT: num → searchNum
       final numberResults = features.where((feature) {
         if (!_isAccommodationType(feature.type)) return false;
 
         final name = feature.name.toLowerCase();
 
         // Verschiedene Matching-Strategien
-        return name == number || // Exakte Nummer
-            name.contains(' $number ') || // Nummer mit Leerzeichen
-            name.startsWith('$number ') || // Nummer am Anfang
-            name.endsWith(' $number') || // Nummer am Ende
-            RegExp(r'\b' + number + r'\b').hasMatch(name) || // Wortgrenze
-            RegExp(r'^' + number + r'[a-z]?$')
+        return name == searchNum || // Exakte Nummer
+            name.contains(' $searchNum ') || // Nummer mit Leerzeichen
+            name.startsWith('$searchNum ') || // Nummer am Anfang
+            name.endsWith(' $searchNum') || // Nummer am Ende
+            RegExp(r'\b' + searchNum + r'\b').hasMatch(name) || // Wortgrenze
+            RegExp(r'^' + searchNum + r'[a-z]?$')
                 .hasMatch(name); // Mit Buchstabe (247a)
       }).toList();
 
@@ -175,8 +176,10 @@ class MapScreenSearchHandler {
     final uniqueResults = results.toSet().toList();
     uniqueResults.sort((a, b) {
       // Exakte Treffer zuerst
-      final aExact = searchNumbers.any((num) => a.name.toLowerCase() == num);
-      final bExact = searchNumbers.any((num) => b.name.toLowerCase() == num);
+      final aExact = searchNumbers.any((searchNum) =>
+          a.name.toLowerCase() == searchNum); // ✅ KORRIGIERT: num → searchNum
+      final bExact = searchNumbers.any((searchNum) =>
+          b.name.toLowerCase() == searchNum); // ✅ KORRIGIERT: num → searchNum
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
       return a.name.compareTo(b.name);
@@ -270,35 +273,6 @@ class MapScreenSearchHandler {
   void _logSearchActivity(String message) {
     if (kDebugMode) {
       print("[CampingSearchHandler] $message");
-    }
-  }
-
-  // ✅ NEU: Auto-Zoom zu Suchergebnissen
-  void _autoZoomToSearchResults(List<SearchableFeature> results) {
-    if (results.isEmpty) return;
-
-    try {
-      if (results.length == 1) {
-        // Einzelnes Ergebnis: Direkt hinzoomen
-        final feature = results.first;
-        controller.mapController.move(feature.center, 18.0);
-        _logSearchActivity("Auto-Zoom zu einzelnem POI: ${feature.name}");
-      } else {
-        // Multiple Ergebnisse: Alle POIs in Kamera-Bounds einpassen
-        final points = results.map((f) => f.center).toList();
-        final bounds = _calculateBounds(points);
-
-        controller.mapController.fitCamera(
-          CameraFit.bounds(
-            bounds: bounds,
-            padding:
-                const EdgeInsets.all(80.0), // Mehr Padding für bessere Sicht
-          ),
-        );
-        _logSearchActivity("Auto-Zoom zu ${results.length} POIs mit Bounds");
-      }
-    } catch (e) {
-      _logSearchActivity("Fehler beim Auto-Zoom: $e");
     }
   }
 

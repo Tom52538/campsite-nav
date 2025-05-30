@@ -1,4 +1,4 @@
-// lib/models/camping_search_categories.dart
+// lib/models/camping_search_categories.dart (KORRIGIERT)
 enum CampingPOICategory {
   accommodation, // Unterkünfte (Parzellen, Häuser, etc.)
   amenity, // Services (Rezeption, Information)
@@ -405,18 +405,26 @@ class CampingSearchCategories {
     final cleanQuery = query.trim().toLowerCase();
 
     // Reine Zahlen
-    if (RegExp(r'^\d+$').hasMatch(cleanQuery)) return true;
+    if (RegExp(r'^\d+$').hasMatch(cleanQuery)) {
+      return true;
+    }
 
     // Zahlen mit Buchstaben (247a, 15b)
-    if (RegExp(r'^\d+[a-z]$').hasMatch(cleanQuery)) return true;
+    if (RegExp(r'^\d+[a-z]$').hasMatch(cleanQuery)) {
+      return true;
+    }
 
     // Deutsche Muster
     if (RegExp(r'^(nr|no|nummer|haus|platz|stelle|parzelle)\.?\s*\d+[a-z]?$')
-        .hasMatch(cleanQuery)) return true;
+        .hasMatch(cleanQuery)) {
+      return true;
+    }
 
     // Englische Muster
-    if (RegExp(r'^(house|pitch|site|lot)\.?\s*\d+[a-z]?$').hasMatch(cleanQuery))
+    if (RegExp(r'^(house|pitch|site|lot)\.?\s*\d+[a-z]?$')
+        .hasMatch(cleanQuery)) {
       return true;
+    }
 
     return false;
   }
