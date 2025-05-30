@@ -1,5 +1,5 @@
 // lib/services/routing_service.dart
-import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:latlong2/latlong.dart';
