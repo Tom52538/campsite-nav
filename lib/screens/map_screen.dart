@@ -226,6 +226,14 @@ class MapScreenState extends State<MapScreen>
     return AppBar(
       title: const Text("Campground Navigator"),
       actions: [
+        // ✅ NEU: Debug Button
+        IconButton(
+          icon: const Icon(Icons.bug_report),
+          tooltip: 'Keyboard Debug',
+          onPressed: () {
+            Navigator.pushNamed(context, '/debug');
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.volume_up),
           tooltip: 'Test TTS',
