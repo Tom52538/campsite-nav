@@ -121,14 +121,8 @@ mixin MapScreenUiMixin on State<MapScreen> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                            // KORREKTUR: Direkte Verwendung der Methode aus dem State
-                            if (this is MapScreenState) {
-                              (this as MapScreenState)
-                                  .setStartToCurrentLocation();
-                            } else {
-                              showSnackbar(
-                                  "Fehler beim Setzen der aktuellen Position als Start.");
-                            }
+                            // ✅ KORRIGIERT: Direkte Verwendung der öffentlichen Methode
+                            setStartToCurrentLocation();
                           },
                         ),
                       ),
@@ -462,4 +456,7 @@ mixin MapScreenUiMixin on State<MapScreen> {
         return Icons.location_pin;
     }
   }
+
+  // ✅ NEU: Abstrakte Methode - muss von MapScreenState implementiert werden
+  void setStartToCurrentLocation();
 }
