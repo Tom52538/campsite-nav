@@ -97,14 +97,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeMetrics() {
-    super.didChangeMetrics();
-    // ✅ KRITISCH: Keine Keyboard-Interferenz mehr!
-    // Keyboard-Events werden vom System und den TextFields selbst verwaltet
-    // Keine manuellen Checks oder Updates nötig
-  }
-
-  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _startController.dispose();
