@@ -1,4 +1,4 @@
-// lib/screens/map_screen_parts/map_screen_ui_mixin.dart
+// lib/screens/map_screen_parts/map_screen_ui_mixin.dart - FOCUS FIX VERSION
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -16,7 +16,6 @@ const double kCompactCardHeight = 65.0;
 const double kMarkerWidth = 40.0;
 const double kMarkerHeight = 40.0;
 
-// Mixin für UI-Methoden - KEIN generischer State-Typ mehr
 mixin MapScreenUiMixin {
   Widget buildSearchInputCard(
     BuildContext context, {
@@ -69,7 +68,7 @@ mixin MapScreenUiMixin {
             key: fullSearchCardKey,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // START-EINGABEFELD
+              // ✅ FIX: START-EINGABEFELD mit stabilem Focus
               Container(
                 decoration: BoxDecoration(
                   border: startFocusNode.hasFocus
@@ -92,16 +91,24 @@ mixin MapScreenUiMixin {
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
+                            // ✅ FIX: Explizite Focus-Anfrage
                             if (!startFocusNode.hasFocus) {
-                              startFocusNode.requestFocus();
+                              FocusScope.of(context)
+                                  .requestFocus(startFocusNode);
                             }
                           },
                           child: TextField(
                             controller: startSearchController,
                             focusNode: startFocusNode,
+                            // ✅ FIX: Stabilere TextField-Konfiguration
                             enabled: true,
                             readOnly: false,
                             canRequestFocus: true,
+                            enableInteractiveSelection: true,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.next,
                             decoration: InputDecoration(
                               hintText: "Startpunkt wählen",
                               prefixIcon: const Icon(Icons.trip_origin),
@@ -120,6 +127,14 @@ mixin MapScreenUiMixin {
                               contentPadding: const EdgeInsets.symmetric(
                                   vertical: 8.0, horizontal: 8.0),
                             ),
+                            // ✅ FIX: Verhindere automatische Focus-Verluste
+                            onTapOutside: (event) {
+                              // Nicht automatisch unfocus - nur bei expliziter Aktion
+                            },
+                            onSubmitted: (value) {
+                              // ✅ FIX: Bei Enter zum nächsten Feld
+                              FocusScope.of(context).requestFocus(endFocusNode);
+                            },
                           ),
                         ),
                       ),
@@ -174,7 +189,7 @@ mixin MapScreenUiMixin {
                 ),
               ),
 
-              // ZIEL-EINGABEFELD
+              // ✅ FIX: ZIEL-EINGABEFELD mit stabilem Focus
               Container(
                 decoration: BoxDecoration(
                   border: endFocusNode.hasFocus
@@ -194,19 +209,23 @@ mixin MapScreenUiMixin {
                   height: kSearchInputRowHeight,
                   child: GestureDetector(
                     onTap: () {
+                      // ✅ FIX: Explizite Focus-Anfrage
                       if (!endFocusNode.hasFocus) {
-                        endFocusNode.requestFocus();
+                        FocusScope.of(context).requestFocus(endFocusNode);
                       }
                     },
                     child: TextField(
                       controller: endSearchController,
                       focusNode: endFocusNode,
+                      // ✅ FIX: Stabilere TextField-Konfiguration
                       enabled: true,
                       readOnly: false,
                       canRequestFocus: true,
-                      autofocus: false,
-                      enableInteractiveSelection:
-                          true, // ✅ FIX: Erlaubt persistente Selektion
+                      enableInteractiveSelection: true,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.done,
                       decoration: InputDecoration(
                         hintText: "Ziel wählen",
                         prefixIcon: const Icon(Icons.flag_outlined),
@@ -225,6 +244,17 @@ mixin MapScreenUiMixin {
                         contentPadding: const EdgeInsets.symmetric(
                             vertical: 8.0, horizontal: 8.0),
                       ),
+                      // ✅ FIX: Verhindere automatische Focus-Verluste
+                      onTapOutside: (event) {
+                        // Nicht automatisch unfocus - nur bei expliziter Aktion
+                      },
+                      onSubmitted: (value) {
+                        // ✅ FIX: Bei Enter Focus entfernen und Route berechnen
+                        FocusScope.of(context).unfocus();
+                        if (startLatLng != null && endLatLng != null) {
+                          calculateAndDisplayRoute();
+                        }
+                      },
                     ),
                   ),
                 ),
