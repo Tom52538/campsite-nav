@@ -1,4 +1,5 @@
 // lib/screens/map_screen/map_screen_search_handler.dart (KORRIGIERT)
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,9 @@ import 'map_screen_controller.dart';
 class MapScreenSearchHandler {
   final MapScreenController controller;
   final BuildContext context;
+
+  // ✅ FIX: Timer für verzögertes Ausblenden
+  Timer? _hideResultsTimer;
 
   MapScreenSearchHandler(this.controller, this.context) {
     _initializeSearchListeners();
@@ -64,6 +68,21 @@ class MapScreenSearchHandler {
       }
       _hideSearchResultsAfterDelay();
     }
+  }
+
+  // ✅ FIX: Fehlende Methode hinzugefügt
+  void _hideSearchResultsAfterDelay() {
+    _hideResultsTimer?.cancel();
+    _hideResultsTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!controller.startFocusNode.hasFocus &&
+          !controller.endFocusNode.hasFocus) {
+        controller.setShowSearchResults(false);
+        // Behalte POIs sichtbar wenn sie aktiv sind
+        if (controller.visibleSearchResults.isEmpty) {
+          controller.clearVisibleSearchResults();
+        }
+      }
+    });
   }
 
   // ✅ ERWEITERT: Camping-spezifische intelligente Suche
@@ -276,33 +295,6 @@ class MapScreenSearchHandler {
     }
   }
 
-  // ✅ NEU: Berechne Bounds für mehrere POIs
-  LatLngBounds _calculateBounds(List<LatLng> points) {
-    if (points.isEmpty) {
-      return LatLngBounds(
-        const LatLng(0, 0),
-        const LatLng(0, 0),
-      );
-    }
-
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final point in points) {
-      minLat = math.min(minLat, point.latitude);
-      maxLat = math.max(maxLat, point.latitude);
-      minLng = math.min(minLng, point.longitude);
-      maxLng = math.max(maxLng, point.longitude);
-    }
-
-    return LatLngBounds(
-      LatLng(minLat, minLng),
-      LatLng(maxLat, maxLng),
-    );
-  }
-
   void selectFeatureAndSetPoint(SearchableFeature feature) {
     final point = feature.center;
 
@@ -393,6 +385,9 @@ class MapScreenSearchHandler {
   }
 
   void dispose() {
+    // ✅ FIX: Timer cleanup hinzugefügt
+    _hideResultsTimer?.cancel();
+
     controller.startSearchController.removeListener(_onStartSearchChanged);
     controller.endSearchController.removeListener(_onEndSearchChanged);
     controller.startFocusNode.removeListener(_onStartFocusChanged);

@@ -22,7 +22,9 @@ class HorizontalPOIStrip extends StatelessWidget with MapScreenUiMixin {
     if (!isVisible || features.isEmpty) return const SizedBox.shrink();
 
     // Position über der Tastatur oder am unteren Bildschirmrand
-    final bottomPadding = keyboardHeight > 0 ? keyboardHeight + 10 : 100;
+    // ✅ FIX: Explizite double Konvertierung
+    final double bottomPadding =
+        keyboardHeight > 0 ? keyboardHeight + 10.0 : 100.0;
 
     return Positioned(
       left: 0,
