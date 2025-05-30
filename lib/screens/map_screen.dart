@@ -270,7 +270,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
   }
 
-  // ✅ Dezente POI-Beschriftung direkt auf Geoposition
+  // ✅ Intelligente POI-Anzeige mit Zoom-Level und Kollisionserkennung
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
@@ -285,16 +285,24 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
-    // ✅ Dezente Schrift direkt auf Geoposition
+    // ✅ Intelligente POI-Anzeige
     if (controller.showPOILabels) {
       final locationProvider = Provider.of<LocationProvider>(context);
-      final searchableFeatures = locationProvider.currentSearchableFeatures;
+      final allFeatures = locationProvider.currentSearchableFeatures;
 
-      for (final feature in searchableFeatures) {
+      // Zoom-Level abhängige Filterung
+      final currentZoom = controller.mapController.camera.zoom;
+      final filteredFeatures =
+          _filterPOIsByImportanceAndZoom(allFeatures, currentZoom);
+
+      // Kollisionserkennung
+      final nonOverlappingFeatures = _removeOverlappingPOIs(filteredFeatures);
+
+      for (final feature in nonOverlappingFeatures) {
         activeMarkers.add(
           Marker(
-            width: 120.0,
-            height: 15.0,
+            width: 100.0,
+            height: 12.0,
             point: feature.center,
             alignment: Alignment.center,
             child: GestureDetector(
@@ -302,13 +310,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
               child: Text(
                 feature.name,
                 style: TextStyle(
-                  fontSize: 10.0,
+                  fontSize: _getFontSizeForZoom(currentZoom),
                   fontWeight: FontWeight.w500,
                   color: _getColorForPOIType(feature.type),
                   shadows: [
                     Shadow(
                       color: Colors.white,
-                      blurRadius: 2.0,
+                      blurRadius: 1.5,
                     ),
                   ],
                 ),
@@ -323,6 +331,58 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
 
     return MarkerLayer(markers: activeMarkers);
+  }
+
+  // ✅ Zoom-abhängige Filterung
+  List<SearchableFeature> _filterPOIsByImportanceAndZoom(
+      List<SearchableFeature> features, double zoom) {
+    if (zoom < 16.0) {
+      // Nur wichtigste POIs bei niedrigem Zoom
+      return features
+          .where((f) =>
+              f.type == 'bus_stop' ||
+              (f.type == 'industrial' && f.name.isNotEmpty) ||
+              f.type == 'parking')
+          .toList();
+    } else if (zoom < 18.0) {
+      // Mittlere Wichtigkeit
+      return features
+          .where((f) => f.name.isNotEmpty && f.name.length > 3)
+          .toList();
+    } else {
+      // Alle POIs bei hohem Zoom
+      return features;
+    }
+  }
+
+  // ✅ Kollisionserkennung
+  List<SearchableFeature> _removeOverlappingPOIs(
+      List<SearchableFeature> features) {
+    final List<SearchableFeature> result = [];
+    const double minDistanceMeters = 50.0; // Mindestabstand
+
+    for (final feature in features) {
+      bool tooClose = false;
+      for (final existing in result) {
+        final distance = MapScreenController.distanceCalculatorInstance
+            .distance(feature.center, existing.center);
+        if (distance < minDistanceMeters) {
+          tooClose = true;
+          break;
+        }
+      }
+      if (!tooClose) {
+        result.add(feature);
+      }
+    }
+    return result;
+  }
+
+  // ✅ Zoom-abhängige Schriftgröße
+  double _getFontSizeForZoom(double zoom) {
+    if (zoom < 16.0) return 8.0;
+    if (zoom < 18.0) return 9.0;
+    return 10.0;
   }
 
   // ✅ NEU: POI-Aktionen beim Antippen
