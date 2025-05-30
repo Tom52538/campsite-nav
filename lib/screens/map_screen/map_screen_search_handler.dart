@@ -1,6 +1,5 @@
 // lib/screens/map_screen/map_screen_search_handler.dart
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
@@ -153,12 +152,16 @@ class MapScreenSearchHandler {
 
         final name = feature.name.toLowerCase();
 
+        // Einfache String-Vergleiche statt komplexer RegExp
         return name == searchNum ||
             name.contains(' $searchNum ') ||
             name.startsWith('$searchNum ') ||
             name.endsWith(' $searchNum') ||
-            RegExp(r'\b' + searchNum + r'\b').hasMatch(name) ||
-            RegExp(r'^' + searchNum + r'[a-z]?).hasMatch(name);
+            name.contains('$searchNum-') ||
+            name.contains('-$searchNum') ||
+            name.startsWith('${searchNum}a') ||
+            name.startsWith('${searchNum}b') ||
+            name.startsWith('${searchNum}c');
       }).toList();
 
       results.addAll(numberResults);
@@ -166,10 +169,10 @@ class MapScreenSearchHandler {
 
     final uniqueResults = results.toSet().toList();
     uniqueResults.sort((a, b) {
-      final aExact = searchNumbers.any((searchNum) =>
-          a.name.toLowerCase() == searchNum);
-      final bExact = searchNumbers.any((searchNum) =>
-          b.name.toLowerCase() == searchNum);
+      final aExact =
+          searchNumbers.any((searchNum) => a.name.toLowerCase() == searchNum);
+      final bExact =
+          searchNumbers.any((searchNum) => b.name.toLowerCase() == searchNum);
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
       return a.name.compareTo(b.name);
