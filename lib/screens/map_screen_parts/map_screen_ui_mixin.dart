@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:camping_osm_navi/screens/map_screen.dart';
 
 // UI Konstanten
 const double kSearchCardTopPadding = 8.0;
@@ -18,7 +17,7 @@ const double kMarkerWidth = 40.0;
 const double kMarkerHeight = 40.0;
 
 // Mixin wird auf MapScreenState angewendet
-mixin MapScreenUiMixin on State<MapScreen> {
+mixin MapScreenUiMixin on State {
   Widget buildSearchInputCard({
     required Key key,
     required GlobalKey fullSearchCardKey,
@@ -45,9 +44,9 @@ mixin MapScreenUiMixin on State<MapScreen> {
     required Marker? endMarker,
     required void Function() swapStartAndEnd,
     required void Function() calculateAndDisplayRoute,
-    required void Function({bool showConfirmation, bool clearMarkers})
-        clearRoute,
+    required void Function({bool showConfirmation, bool clearMarkers}) clearRoute,
     required void Function(String, {int durationSeconds}) showSnackbar,
+    required void Function() setStartToCurrentLocation, // ✅ PARAMETER HINZUGEFÜGT
   }) {
     final double? displayDistance = remainingRouteDistance ?? routeDistance;
     final int? displayTime = remainingRouteTimeMinutes ?? routeTimeMinutes;
@@ -120,13 +119,7 @@ mixin MapScreenUiMixin on State<MapScreen> {
                           iconSize: 22,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          onPressed: () {
-                            // ✅ EINFACHE LÖSUNG: Direkter Cast und Aufruf
-                            final mapScreenState = this;
-                            if (mapScreenState is MapScreenState) {
-                              mapScreenState.setStartToCurrentLocation();
-                            }
-                          },
+                          onPressed: setStartToCurrentLocation, // ✅ DIREKTE VERWENDUNG
                         ),
                       ),
                     ],
@@ -404,6 +397,62 @@ mixin MapScreenUiMixin on State<MapScreen> {
             TextButton(
                 child: const Text("Bestätigen"),
                 onPressed: () {
+                  Navigator.of(dialogContext).pop();
+                  onConfirm();
+                }),
+          ],
+        );
+      },
+    );
+  }
+
+  String formatDistance(double? distanceMeters) {
+    if (distanceMeters == null) {
+      return "";
+    }
+    if (distanceMeters < 1000) {
+      return "${distanceMeters.round()} m";
+    } else {
+      return "${(distanceMeters / 1000).toStringAsFixed(1)} km";
+    }
+  }
+
+  IconData getIconForFeatureType(String type) {
+    switch (type.toLowerCase()) {
+      case 'parking':
+        return Icons.local_parking;
+      case 'building':
+        return Icons.business;
+      case 'shop':
+        return Icons.store;
+      case 'amenity':
+        return Icons.place;
+      case 'tourism':
+        return Icons.attractions;
+      case 'reception':
+      case 'information':
+        return Icons.room_service;
+      case 'sanitary':
+      case 'toilets':
+        return Icons.wc;
+      case 'restaurant':
+      case 'cafe':
+      case 'bar':
+        return Icons.restaurant;
+      case 'playground':
+        return Icons.child_friendly;
+      case 'pitch':
+      case 'camp_pitch':
+        return Icons.holiday_village;
+      case 'water_point':
+        return Icons.water_drop;
+      case 'waste_disposal':
+        return Icons.recycling;
+      default:
+        return Icons.location_pin;
+    }
+  }
+} () {
                   Navigator.of(dialogContext).pop();
                   onConfirm();
                 }),
