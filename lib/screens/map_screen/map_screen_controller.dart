@@ -31,7 +31,9 @@ class MapScreenController with ChangeNotifier {
   bool isMapReady = false;
   bool followGps = false;
   bool isRouteActiveForCardSwitch = false;
-  bool showPOILabels = true; // ✅ NEU: POI-Labels Kontrolle
+
+  // ✅ GEÄNDERT: POI-Labels standardmäßig AUS für Search-First Navigation
+  bool showPOILabels = false;
 
   LocationInfo? lastProcessedLocation;
 
@@ -47,6 +49,10 @@ class MapScreenController with ChangeNotifier {
   bool _isRerouting = false;
 
   List<SearchableFeature> searchResults = [];
+
+  // ✅ NEU: Nur sichtbare POIs (durch Suche gefiltert)
+  List<SearchableFeature> visibleSearchResults = [];
+
   ActiveSearchField activeSearchField = ActiveSearchField.none;
 
   final TextEditingController startSearchController = TextEditingController();
@@ -118,9 +124,25 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ NEU: POI Toggle Methode
+  // ✅ GEÄNDERT: POI Toggle jetzt für visibleSearchResults
   void togglePOILabels() {
     showPOILabels = !showPOILabels;
+    if (!showPOILabels) {
+      // Wenn POIs ausgeblendet werden, auch visibleSearchResults leeren
+      visibleSearchResults.clear();
+    }
+    notifyListeners();
+  }
+
+  // ✅ NEU: Setter für sichtbare Suchergebnisse
+  void setVisibleSearchResults(List<SearchableFeature> results) {
+    visibleSearchResults = results;
+    notifyListeners();
+  }
+
+  // ✅ NEU: Suchergebnisse leeren
+  void clearVisibleSearchResults() {
+    visibleSearchResults.clear();
     notifyListeners();
   }
 
@@ -314,6 +336,10 @@ class MapScreenController with ChangeNotifier {
     endLatLng = null;
     startMarker = null;
     endMarker = null;
+
+    // ✅ NEU: Auch visibleSearchResults zurücksetzen
+    visibleSearchResults.clear();
+
     notifyListeners();
   }
 
