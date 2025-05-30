@@ -1,6 +1,5 @@
 // lib/services/routing_service.dart
-import 'dart:math' as math;
-
+import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
@@ -24,12 +23,6 @@ class RoutingService {
   static Future<List<LatLng>?> findPath(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) async {
     try {
-      // if (kDebugMode) {
-      //   print(
-      //       "[RoutingService.findPath] Start: ${startNode.id}, End: ${endNode.id}");
-      //   print(
-      //       "[RoutingService.findPath] Graph node count: ${graph.nodes.length}");
-      // }
       return _dijkstra(graph, startNode, endNode);
     } catch (e, stacktrace) {
       if (kDebugMode) {
@@ -49,17 +42,11 @@ class RoutingService {
     priorityQueue.add(startNode);
 
     final Set<String> visitedNodes = {};
-    // int iterations = 0; // Nicht mehr verwendet
 
     while (priorityQueue.isNotEmpty) {
-      // iterations++;
       GraphNode currentNode;
       try {
         if (priorityQueue.isEmpty) {
-          // if (kDebugMode) {
-          //   print(
-          //       "[RoutingService._dijkstra] PriorityQueue leer nach $iterations Iterationen. Ziel nicht erreicht.");
-          // }
           break;
         }
         currentNode = priorityQueue.removeFirst();
@@ -77,10 +64,6 @@ class RoutingService {
       visitedNodes.add(currentNode.id);
 
       if (currentNode.id == endNode.id) {
-        // if (kDebugMode) {
-        //   print(
-        //       "[RoutingService._dijkstra] Zielknoten ${endNode.id} erreicht nach $iterations Iterationen.");
-        // }
         return _reconstructPath(endNode);
       }
 
@@ -101,10 +84,6 @@ class RoutingService {
       }
     }
 
-    // if (kDebugMode) {
-    //   print(
-    //       "[RoutingService._dijkstra] Zielknoten ${endNode.id} nicht erreichbar von ${startNode.id} nach $iterations Iterationen.");
-    // }
     return null;
   }
 
@@ -121,21 +100,13 @@ class RoutingService {
     }
 
     if (safetyBreak >= maxPathLength && kDebugMode) {
-      // print(
-      //     "[RoutingService._reconstructPath] WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge $maxPathLength erreicht). Möglicherweise Kreis im Parent-Graph oder sehr langer Pfad?");
+      // print warning if needed
     }
 
     if (path.isEmpty) {
-      // if (kDebugMode) {
-      //   print(
-      //       "[RoutingService._reconstructPath] Rekonstruierter Pfad ist leer.");
-      // }
       return null;
     } else {
       final reversedPath = path.reversed.toList();
-      // if (kDebugMode) {
-      //   // print("[RoutingService._reconstructPath] Rekonstruierter Pfad (Länge ${reversedPath.length}): $reversedPath");
-      // }
       return reversedPath;
     }
   }
@@ -205,7 +176,7 @@ class RoutingService {
     for (int i = 0; i < routePoints.length - 1; i++) {
       double distanceToSegment = _distanceToLineSegment(
           currentPosition, routePoints[i], routePoints[i + 1]);
-      minDistanceToRoute = math.min(minDistanceToRoute, distanceToSegment);
+      minDistanceToRoute = min(minDistanceToRoute, distanceToSegment);
     }
 
     return minDistanceToRoute > thresholdMeters;
@@ -261,7 +232,7 @@ class RoutingService {
     // Vereinfachte Implementierung: Distanz zum nächsten Endpunkt
     double distToStart = _distanceCalculator(point, lineStart);
     double distToEnd = _distanceCalculator(point, lineEnd);
-    return math.min(distToStart, distToEnd);
+    return min(distToStart, distToEnd);
   }
 
   static String _getInstructionTextForTurnType(TurnType turnType) {
@@ -292,20 +263,7 @@ class RoutingService {
   }
 
   static List<Maneuver> analyzeRouteForTurns(List<LatLng> routePoints) {
-    // if (kDebugMode) {
-    //   print(
-    //       "[RoutingService.analyzeRouteForTurns] Analysiere Route mit ${routePoints.length} Punkten.");
-    //   print(
-    //       "[RoutingService.analyzeRouteForTurns] Verwendete Schwellenwerte: slight=$slightTurnThreshold, normal=$normalTurnThreshold, sharp=$sharpTurnThreshold, uTurn=$uTurnAngleThreshold");
-    // }
-
     if (routePoints.length < 2) {
-      // if (kDebugMode && routePoints.isNotEmpty) {
-      //   print(
-      //       "[RoutingService.analyzeRouteForTurns] Route zu kurz für Abbiegehinweise, nur Start/Ziel.");
-      // } else if (kDebugMode && routePoints.isEmpty) {
-      //   print("[RoutingService.analyzeRouteForTurns] Leere Route empfangen.");
-      // }
       return [];
     }
 
@@ -314,10 +272,6 @@ class RoutingService {
         point: routePoints.first,
         turnType: TurnType.depart,
         instructionText: _getInstructionTextForTurnType(TurnType.depart)));
-    // if (kDebugMode) {
-    //   print(
-    //       "[RoutingService.analyzeRouteForTurns] MANEUVER_GEN: Depart @ ${routePoints.first.latitude.toStringAsFixed(6)},${routePoints.first.longitude.toStringAsFixed(6)}");
-    // }
 
     if (routePoints.length < 3) {
       if (routePoints.length == 2) {
@@ -325,10 +279,6 @@ class RoutingService {
             point: routePoints.last,
             turnType: TurnType.arrive,
             instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
-        // if (kDebugMode) {
-        //   print(
-        //       "[RoutingService.analyzeRouteForTurns] MANEUVER_GEN: Arrive @ ${routePoints.last.latitude.toStringAsFixed(6)},${routePoints.last.longitude.toStringAsFixed(6)} (Route mit nur 2 Punkten)");
-        // }
       }
       return maneuvers;
     }
@@ -339,10 +289,6 @@ class RoutingService {
       final LatLng p3 = routePoints[i + 2];
 
       if (p1 == p2 || p2 == p3) {
-        // if (kDebugMode) {
-        //   print(
-        //       "[RoutingService.analyzeRouteForTurns] Identische aufeinanderfolgende Punkte übersprungen: p1=$p1, p2=$p2, p3=$p3 bei Index $i");
-        // }
         continue;
       }
 
@@ -392,27 +338,12 @@ class RoutingService {
         turnType = TurnType.sharpLeft;
       }
 
-      // if (kDebugMode) {
-      //   String p1Str =
-      //       "p1:(${p1.latitude.toStringAsFixed(6)},${p1.longitude.toStringAsFixed(6)})";
-      //   String p2Str =
-      //       "p2:(${p2.latitude.toStringAsFixed(6)},${p2.longitude.toStringAsFixed(6)})";
-      //   String p3Str =
-      //       "p3:(${p3.latitude.toStringAsFixed(6)},${p3.longitude.toStringAsFixed(6)})";
-      //   print(
-      //       "[RoutingService.analyzeRouteForTurns] Index $i: $p1Str, $p2Str, $p3Str | Angle: ${angleDegrees.toStringAsFixed(2)}° | Initial TurnType: $turnType");
-      // }
-
       if (turnType != TurnType.straight) {
         final maneuver = Maneuver(
             point: p2,
             turnType: turnType,
             instructionText: _getInstructionTextForTurnType(turnType));
         maneuvers.add(maneuver);
-        // if (kDebugMode) {
-        //   print(
-        //       "[RoutingService.analyzeRouteForTurns] MANEUVER_GEN: ${maneuver.turnType} '${maneuver.instructionText}' @ ${p2.latitude.toStringAsFixed(6)},${p2.longitude.toStringAsFixed(6)} (Angle: ${angleDegrees.toStringAsFixed(2)}°)");
-        // }
       }
     }
 
@@ -420,12 +351,7 @@ class RoutingService {
         point: routePoints.last,
         turnType: TurnType.arrive,
         instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
-    // if (kDebugMode) {
-    //   print(
-    //       "[RoutingService.analyzeRouteForTurns] MANEUVER_GEN: Arrive @ ${routePoints.last.latitude.toStringAsFixed(6)},${routePoints.last.longitude.toStringAsFixed(6)}");
-    //   print(
-    //       "[RoutingService.analyzeRouteForTurns] Analyse abgeschlossen. ${maneuvers.length} Manöver generiert.");
-    // }
+
     return maneuvers;
   }
 }
