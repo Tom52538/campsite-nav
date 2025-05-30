@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_search_handler.dart
+// lib/screens/map_screen/map_screen_search_handler.dart - KEYBOARD FIX VERSION
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -61,19 +61,20 @@ class MapScreenSearchHandler {
       if (controller.activeSearchField == ActiveSearchField.end) {
         controller.setActiveSearchField(ActiveSearchField.none);
       }
+      // ✅ FIX 6: Längere Verzögerung für Hide Timer
       _hideSearchResultsAfterDelay();
     }
   }
 
   void _hideSearchResultsAfterDelay() {
     _hideResultsTimer?.cancel();
-    _hideResultsTimer = Timer(const Duration(milliseconds: 1500), () {
+    // ✅ FIX 7: 30 Sekunden statt 1.5 Sekunden - viel weniger aggressiv
+    _hideResultsTimer = Timer(const Duration(seconds: 30), () {
       if (!controller.startFocusNode.hasFocus &&
           !controller.endFocusNode.hasFocus) {
         controller.setShowSearchResults(false);
-        if (controller.visibleSearchResults.isEmpty) {
-          controller.clearVisibleSearchResults();
-        }
+        // ✅ FIX 8: POIs bleiben sichtbar auch ohne Focus
+        // controller.clearVisibleSearchResults(); // ENTFERNT
       }
     });
   }
@@ -258,12 +259,14 @@ class MapScreenSearchHandler {
       controller.startSearchController.text = feature.name;
       controller.setStartLatLng(point);
       controller.updateStartMarker();
-      controller.startFocusNode.unfocus();
+      // ✅ FIX 9: Kein automatischer unfocus bei Feature-Auswahl
+      // controller.startFocusNode.unfocus(); // ENTFERNT
     } else if (controller.activeSearchField == ActiveSearchField.end) {
       controller.endSearchController.text = feature.name;
       controller.setEndLatLng(point);
       controller.updateEndMarker();
-      controller.endFocusNode.unfocus();
+      // ✅ FIX 10: Kein automatischer unfocus bei Feature-Auswahl
+      // controller.endFocusNode.unfocus(); // ENTFERNT
     }
 
     controller.setShowSearchResults(false);
