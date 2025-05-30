@@ -270,7 +270,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
   }
 
-  // ✅ OSMAnd-Style POI-Labels
+  // ✅ Dezente POI-Beschriftung direkt auf Geoposition
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
@@ -285,7 +285,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
-    // ✅ OSMAnd-Style: Saubere Text-Labels
+    // ✅ Dezente Schrift direkt auf Geoposition
     if (controller.showPOILabels) {
       final locationProvider = Provider.of<LocationProvider>(context);
       final searchableFeatures = locationProvider.currentSearchableFeatures;
@@ -293,37 +293,28 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       for (final feature in searchableFeatures) {
         activeMarkers.add(
           Marker(
-            width: 150.0,
-            height: 20.0,
+            width: 120.0,
+            height: 15.0,
             point: feature.center,
             alignment: Alignment.center,
             child: GestureDetector(
               onTap: () => _showPOIActions(feature),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(8.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
+              child: Text(
+                feature.name,
+                style: TextStyle(
+                  fontSize: 10.0,
+                  fontWeight: FontWeight.w500,
+                  color: _getColorForPOIType(feature.type),
+                  shadows: [
+                    Shadow(
+                      color: Colors.white,
                       blurRadius: 2.0,
-                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),
-                child: Text(
-                  feature.name,
-                  style: TextStyle(
-                    fontSize: 11.0,
-                    fontWeight: FontWeight.w600,
-                    color: _getColorForPOIType(feature.type),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                textAlign: TextAlign.center,
               ),
             ),
           ),
