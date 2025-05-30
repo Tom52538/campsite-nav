@@ -55,13 +55,17 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   double? routeDistance;
   int? routeTimeMinutes;
   double? remainingRouteDistance;
-  int? remainingRouteTimeMinutes; // Konsistente Namensgebung
+  int? remainingRouteTimeMinutes;
   List<Maneuver> currentManeuvers = [];
   Maneuver? currentDisplayedManeuver;
   bool followGps = false;
   static const double _followGpsZoomLevel = 17.5;
 
   bool _isInRouteOverviewMode = false;
+
+  // ✅ NEU: Rerouting Variablen
+  DateTime? _lastRerouteTime;
+  bool _isRerouting = false;
 
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
@@ -463,6 +467,21 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
                     child: const Center(
                         child:
                             CircularProgressIndicator(color: Colors.white)))),
+          // ✅ NEU: Rerouting Indicator
+          if (_isRerouting && isUiReady)
+            Positioned.fill(
+                child: Container(
+                    color: Colors.black.withAlpha(50),
+                    child: const Center(
+                        child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.orange),
+                        SizedBox(height: 8),
+                        Text("Route wird neu berechnet...",
+                            style: TextStyle(color: Colors.white)),
+                      ],
+                    )))),
           if (isLoading)
             Positioned.fill(
               child: Container(
@@ -595,6 +614,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       remainingRouteDistance = null;
       remainingRouteTimeMinutes = null;
       isRouteActiveForCardSwitch = false;
+      // ✅ NEU: Rerouting zurücksetzen
+      _isRerouting = false;
+      _lastRerouteTime = null;
     });
   }
 
@@ -670,6 +692,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
           _updateCurrentLocationMarker();
         });
 
+        // ✅ NEU: Navigation Updates bei GPS-Änderung
+        if (routePolyline != null && routePolyline!.points.isNotEmpty) {
+          _updateNavigationOnGpsChange(newGpsLatLng);
+        }
+
         if (currentManeuvers.isNotEmpty) {
           _updateCurrentManeuverOnGpsUpdate(newGpsLatLng);
         }
@@ -681,6 +708,86 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }, onError: (error) {
       showSnackbar("Fehler beim Empfangen des GPS-Signals.");
     });
+  }
+
+  // ✅ NEU: Navigation Updates bei GPS-Änderung
+  void _updateNavigationOnGpsChange(LatLng newGpsPosition) {
+    if (routePolyline == null || routePolyline!.points.isEmpty) return;
+
+    final routePoints = routePolyline!.points;
+
+    // 1. Aktualisiere verbleibende Zeit/Distanz
+    final remainingInfo =
+        RoutingService.calculateRemainingRouteInfo(newGpsPosition, routePoints);
+
+    if (remainingInfo != null) {
+      setStateIfMounted(() {
+        remainingRouteDistance = remainingInfo.remainingDistance;
+        remainingRouteTimeMinutes = remainingInfo.remainingTimeMinutes;
+      });
+    }
+
+    // 2. Prüfe auf Off-Route und führe ggf. Rerouting durch
+    if (!_isRerouting && endLatLng != null) {
+      final isOffRoute = RoutingService.isOffRoute(newGpsPosition, routePoints);
+
+      if (isOffRoute && _shouldTriggerReroute()) {
+        _performRerouting(newGpsPosition);
+      }
+    }
+  }
+
+  // ✅ NEU: Rerouting Logic
+  bool _shouldTriggerReroute() {
+    if (_lastRerouteTime == null) return true;
+
+    final timeSinceLastReroute = DateTime.now().difference(_lastRerouteTime!);
+    return timeSinceLastReroute.inSeconds >= RoutingService.rerouteDelaySeconds;
+  }
+
+  Future<void> _performRerouting(LatLng currentPosition) async {
+    if (_isRerouting || endLatLng == null) return;
+
+    setStateIfMounted(() {
+      _isRerouting = true;
+      _lastRerouteTime = DateTime.now();
+    });
+
+    try {
+      final locationProvider =
+          Provider.of<LocationProvider>(context, listen: false);
+      final graph = locationProvider.currentRoutingGraph;
+
+      if (graph != null) {
+        final newRoutePoints = await RoutingService.recalculateRoute(
+            graph, currentPosition, endLatLng!);
+
+        if (newRoutePoints != null && newRoutePoints.isNotEmpty) {
+          setStateIfMounted(() {
+            routePolyline = Polyline(
+                points: newRoutePoints, color: Colors.blue, strokeWidth: 5.0);
+            currentManeuvers =
+                RoutingService.analyzeRouteForTurns(newRoutePoints);
+            _updateRouteMetrics(newRoutePoints);
+            _updateCurrentManeuverOnGpsUpdate(currentPosition);
+          });
+
+          showSnackbar("Route neu berechnet", durationSeconds: 2);
+        } else {
+          showSnackbar("Neue Route konnte nicht berechnet werden",
+              durationSeconds: 3);
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Fehler beim Rerouting: $e");
+      }
+      showSnackbar("Fehler beim Neuberechnen der Route", durationSeconds: 3);
+    } finally {
+      setStateIfMounted(() {
+        _isRerouting = false;
+      });
+    }
   }
 
   void _toggleMockLocation() {
