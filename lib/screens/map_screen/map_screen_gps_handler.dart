@@ -100,7 +100,7 @@ class MapScreenGpsHandler {
 
       if (controller.followGps) {
         controller.mapController
-            .move(newGpsLatLng, MapScreenController._followGpsZoomLevel);
+            .move(newGpsLatLng, MapScreenController.followGpsZoomLevel);
       }
     }
   }
@@ -147,7 +147,7 @@ class MapScreenGpsHandler {
     if (controller.currentGpsPosition != null) {
       controller.setFollowGps(true);
       controller.mapController.move(controller.currentGpsPosition!,
-          MapScreenController._followGpsZoomLevel);
+          MapScreenController.followGpsZoomLevel);
 
       if (kDebugMode) {
         print("Follow-GPS Modus aktiviert.");

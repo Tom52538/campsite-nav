@@ -57,12 +57,12 @@ class MapScreenController with ChangeNotifier {
   String _maptilerUrlTemplate = '';
 
   // Constants
-  static const double _followGpsZoomLevel = 17.5;
+  static const double followGpsZoomLevel = 17.5;
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
   static const double centerOnGpsMaxDistanceMeters = 5000;
-  static const double _maneuverReachedThreshold = 15.0;
-  static const double _significantGpsChangeThreshold = 2.0;
+  static const double maneuverReachedThreshold = 15.0;
+  static const double significantGpsChangeThreshold = 2.0;
   static const Distance distanceCalculatorInstance = Distance();
 
   // Getters

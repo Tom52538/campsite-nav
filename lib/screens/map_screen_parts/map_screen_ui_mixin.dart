@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/screens/map_screen.dart';
-import 'package:provider/provider.dart';
-import 'package:camping_osm_navi/providers/location_provider.dart';
 
 // UI Konstanten
 const double kSearchCardTopPadding = 8.0;

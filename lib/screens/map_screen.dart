@@ -2,7 +2,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
@@ -272,12 +271,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   }
 
   Widget _buildSearchCard(bool isUiReady) {
-    final double currentSearchCardHeight = controller.isRouteActiveForCardSwitch
-        ? kCompactCardHeight
-        : controller.fullSearchCardHeight > 0
-            ? controller.fullSearchCardHeight
-            : _calculateDefaultCardHeight();
-
     return Positioned(
       top: kSearchCardTopPadding,
       left: kSearchCardHorizontalMargin,

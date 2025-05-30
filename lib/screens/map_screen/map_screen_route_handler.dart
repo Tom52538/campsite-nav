@@ -16,7 +16,7 @@ class MapScreenRouteHandler {
   final BuildContext context;
 
   static const Distance _distanceCalculator = Distance();
-  static const double _maneuverReachedThreshold = 15.0;
+  static const double maneuverReachedThreshold = 15.0;
 
   MapScreenRouteHandler(this.controller, this.context);
 
@@ -27,8 +27,7 @@ class MapScreenRouteHandler {
 
     controller.setCalculatingRoute(true);
 
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
+    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
     final graph = locationProvider.currentRoutingGraph;
 
     if (graph == null) {
@@ -50,26 +49,28 @@ class MapScreenRouteHandler {
       return;
     }
 
-    final List<LatLng>? pathPoints =
-        await RoutingService.findPath(graph, startNode, endNode);
+    final List<LatLng>? pathPoints = await RoutingService.findPath(graph, startNode, endNode);
 
     if (pathPoints != null && pathPoints.isNotEmpty) {
       final maneuvers = RoutingService.analyzeRouteForTurns(pathPoints);
-      final polyline =
-          Polyline(points: pathPoints, color: Colors.blue, strokeWidth: 5.0);
-
+      final polyline = Polyline(
+        points: pathPoints, 
+        color: Colors.blue, 
+        strokeWidth: 5.0
+      );
+      
       controller.setCurrentManeuvers(maneuvers);
       controller.setRoutePolyline(polyline);
       controller.updateRouteMetrics(pathPoints);
-
+      
       updateCurrentManeuverOnGpsUpdate(
-          controller.currentGpsPosition ?? pathPoints.first);
+        controller.currentGpsPosition ?? pathPoints.first
+      );
 
       if (kDebugMode) {
-        print(
-            "Route berechnet. Distanz: ${controller.routeDistance?.toStringAsFixed(2)}m");
+        print("Route berechnet. Distanz: ${controller.routeDistance?.toStringAsFixed(2)}m");
       }
-
+      
       controller.setRouteActiveForCardSwitch(true);
       _toggleRouteOverview(zoomOut: true, delaySeconds: 0.5);
     } else {
@@ -78,14 +79,14 @@ class MapScreenRouteHandler {
       }
       controller.resetRouteAndNavigation();
     }
-
+    
     controller.setCalculatingRoute(false);
   }
 
   GraphNode? _findNearestNode(LatLng point, RoutingGraph graph) {
     GraphNode? nearestNode;
     double minDistance = double.infinity;
-
+    
     for (var node in graph.nodes.values) {
       final d = _distanceCalculator.distance(point, node.position);
       if (d < minDistance) {
@@ -97,26 +98,29 @@ class MapScreenRouteHandler {
   }
 
   void updateNavigationOnGpsChange(LatLng newGpsPosition) {
-    if (controller.routePolyline == null ||
-        controller.routePolyline!.points.isEmpty) {
+    if (controller.routePolyline == null || controller.routePolyline!.points.isEmpty) {
       return;
     }
 
     final routePoints = controller.routePolyline!.points;
 
     // 1. Aktualisiere verbleibende Zeit/Distanz
-    final remainingInfo =
-        RoutingService.calculateRemainingRouteInfo(newGpsPosition, routePoints);
-
+    final remainingInfo = RoutingService.calculateRemainingRouteInfo(
+      newGpsPosition, 
+      routePoints
+    );
+    
     if (remainingInfo != null) {
       controller.updateRemainingRouteInfo(
-          remainingInfo.remainingDistance, remainingInfo.remainingTimeMinutes);
+        remainingInfo.remainingDistance,
+        remainingInfo.remainingTimeMinutes
+      );
     }
 
     // 2. Prüfe auf Off-Route und führe ggf. Rerouting durch
     if (!controller.isRerouting && controller.endLatLng != null) {
       final isOffRoute = RoutingService.isOffRoute(newGpsPosition, routePoints);
-
+      
       if (isOffRoute && controller.shouldTriggerReroute()) {
         _performRerouting(newGpsPosition);
       }
@@ -129,24 +133,30 @@ class MapScreenRouteHandler {
     controller.setRerouting(true);
 
     try {
-      final locationProvider =
-          Provider.of<LocationProvider>(context, listen: false);
+      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
       final graph = locationProvider.currentRoutingGraph;
-
+      
       if (graph != null) {
         final newRoutePoints = await RoutingService.recalculateRoute(
-            graph, currentPosition, controller.endLatLng!);
-
+          graph, 
+          currentPosition, 
+          controller.endLatLng!
+        );
+        
         if (newRoutePoints != null && newRoutePoints.isNotEmpty) {
           final newPolyline = Polyline(
-              points: newRoutePoints, color: Colors.blue, strokeWidth: 5.0);
-
+            points: newRoutePoints, 
+            color: Colors.blue, 
+            strokeWidth: 5.0
+          );
+          
           controller.setRoutePolyline(newPolyline);
           controller.setCurrentManeuvers(
-              RoutingService.analyzeRouteForTurns(newRoutePoints));
+            RoutingService.analyzeRouteForTurns(newRoutePoints)
+          );
           controller.updateRouteMetrics(newRoutePoints);
           updateCurrentManeuverOnGpsUpdate(currentPosition);
-
+          
           if (kDebugMode) {
             print("Route neu berechnet");
           }
@@ -171,10 +181,8 @@ class MapScreenRouteHandler {
     int startIndex = 0;
     if (controller.currentDisplayedManeuver != null) {
       startIndex = controller.currentManeuvers.indexWhere((m) =>
-          m.point.latitude ==
-              controller.currentDisplayedManeuver!.point.latitude &&
-          m.point.longitude ==
-              controller.currentDisplayedManeuver!.point.longitude &&
+          m.point.latitude == controller.currentDisplayedManeuver!.point.latitude &&
+          m.point.longitude == controller.currentDisplayedManeuver!.point.longitude &&
           m.turnType == controller.currentDisplayedManeuver!.turnType);
     }
     if (startIndex == -1) {
@@ -185,11 +193,10 @@ class MapScreenRouteHandler {
       final Maneuver potentialNextManeuver = controller.currentManeuvers[i];
       final LatLng maneuverPoint = potentialNextManeuver.point;
 
-      final double distanceToManeuver =
-          _distanceCalculator.distance(currentPos, maneuverPoint);
+      final double distanceToManeuver = _distanceCalculator.distance(currentPos, maneuverPoint);
 
       if (i < controller.currentManeuvers.length - 1 &&
-          distanceToManeuver < _maneuverReachedThreshold) {
+          distanceToManeuver < maneuverReachedThreshold) {
         continue;
       } else {
         Maneuver nextManeuverToDisplay = potentialNextManeuver;
@@ -203,8 +210,7 @@ class MapScreenRouteHandler {
                     controller.currentDisplayedManeuver!.turnType);
 
         if (isNewDisplay) {
-          controller.ttsService
-              .speak(nextManeuverToDisplay.instructionText ?? '');
+          controller.ttsService.speak(nextManeuverToDisplay.instructionText ?? '');
           controller.updateCurrentDisplayedManeuver(nextManeuverToDisplay);
         }
         break;
@@ -214,8 +220,7 @@ class MapScreenRouteHandler {
 
   void _toggleRouteOverview({bool? zoomOut, double delaySeconds = 0.0}) {
     Future.delayed(Duration(milliseconds: (delaySeconds * 1000).toInt()), () {
-      if (controller.routePolyline == null ||
-          controller.routePolyline!.points.isEmpty) return;
+      if (controller.routePolyline == null || controller.routePolyline!.points.isEmpty) return;
 
       bool shouldZoomOut = zoomOut ?? !controller.isInRouteOverviewMode;
 
@@ -238,8 +243,10 @@ class MapScreenRouteHandler {
   void _centerOnGps() {
     if (controller.currentGpsPosition != null) {
       controller.setFollowGps(true);
-      controller.mapController.move(controller.currentGpsPosition!,
-          MapScreenController._followGpsZoomLevel);
+      controller.mapController.move(
+        controller.currentGpsPosition!, 
+        MapScreenController.followGpsZoomLevel
+      );
     }
   }
 
@@ -250,9 +257,10 @@ class MapScreenRouteHandler {
   void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
     if (showConfirmation) {
       _showConfirmationDialog(
-          "Route löschen",
-          "Möchten Sie die aktuelle Route wirklich löschen?",
-          () => _performClearRoute(clearMarkers));
+        "Route löschen", 
+        "Möchten Sie die aktuelle Route wirklich löschen?",
+        () => _performClearRoute(clearMarkers)
+      );
     } else {
       _performClearRoute(clearMarkers);
     }
@@ -266,8 +274,7 @@ class MapScreenRouteHandler {
     }
   }
 
-  void _showConfirmationDialog(
-      String title, String content, VoidCallback onConfirm) {
+  void _showConfirmationDialog(String title, String content, VoidCallback onConfirm) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -295,8 +302,7 @@ class MapScreenRouteHandler {
   void handleMapTap(TapPosition tapPos, LatLng latlng) {
     if (controller.isCalculatingRoute) return;
 
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
+    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
     final graph = locationProvider.currentRoutingGraph;
     if (graph == null) return;
 
@@ -305,6 +311,8 @@ class MapScreenRouteHandler {
       if (kDebugMode) {
         print("Kein Weg in der Nähe gefunden.");
       }
+      return;
+    }
       return;
     }
 
