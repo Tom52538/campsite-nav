@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_controller.dart - FOCUS FIX VERSION
+// lib/screens/map_screen/map_screen_controller.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -59,12 +59,10 @@ class MapScreenController with ChangeNotifier {
   double fullSearchCardHeight = 0;
   String _maptilerUrlTemplate = '';
 
-  // ✅ FIX: Stabilere Keyboard-Erkennung
   bool _isKeyboardVisible = false;
   double _keyboardHeight = 0;
   bool _compactSearchMode = false;
   bool _showHorizontalPOIStrip = false;
-  bool _preventNotificationLoop = false; // ✅ NEU: Loop-Preventer
 
   // Constants
   static const double followGpsZoomLevel = 17.5;
@@ -90,19 +88,12 @@ class MapScreenController with ChangeNotifier {
   }
 
   void _initializeListeners() {
-    // ✅ FIX: Stabilere Focus-Listener ohne sofortige Benachrichtigung
-    startFocusNode.addListener(_onStartFocusChangedStable);
-    endFocusNode.addListener(_onEndFocusChangedStable);
-
-    // Search Controller Listener werden vom SearchHandler gesetzt
-    // NICHT hier, um Konflikte zu vermeiden
+    startFocusNode.addListener(_onStartFocusChanged);
+    endFocusNode.addListener(_onEndFocusChanged);
   }
 
   void initializeMaptilerUrl(String? apiKey) {
     if (apiKey == null || apiKey.isEmpty) {
-      if (kDebugMode) {
-        print("WARNUNG: MAPTILER_API_KEY nicht in .env gefunden!");
-      }
       _maptilerUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     } else {
       _maptilerUrlTemplate =
@@ -110,73 +101,37 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // ✅ FIX: Stabilere Keyboard-Behandlung ohne Loops
   void updateKeyboardVisibility(bool visible, double height) {
-    if (_preventNotificationLoop) return;
-
-    final wasVisible = _isKeyboardVisible;
-    final heightChanged = (height - _keyboardHeight).abs() > 10;
-
-    if (visible != wasVisible || heightChanged) {
+    if (visible != _isKeyboardVisible ||
+        (height - _keyboardHeight).abs() > 10) {
       _isKeyboardVisible = visible;
       _keyboardHeight = height;
 
-      if (kDebugMode) {
-        print(
-            "[MapScreenController] Keyboard stable: visible=$visible, height=$height");
-      }
-
-      // ✅ FIX: Verzögerte UI-Updates um Focus-Konflikte zu vermeiden
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (!_preventNotificationLoop) {
-          _updateUIForKeyboardState(visible, wasVisible);
+      if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
+        setCompactSearchMode(true);
+        if (visibleSearchResults.isNotEmpty) {
+          setShowHorizontalPOIStrip(true);
         }
-      });
-    }
-  }
-
-  void _updateUIForKeyboardState(bool visible, bool wasVisible) {
-    if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
-      setCompactSearchMode(true);
-      if (visibleSearchResults.isNotEmpty) {
-        setShowHorizontalPOIStrip(true);
+      } else if (!visible) {
+        setCompactSearchMode(false);
+        setShowHorizontalPOIStrip(false);
       }
-    } else if (!visible && wasVisible) {
-      setCompactSearchMode(false);
-      setShowHorizontalPOIStrip(false);
-    }
 
-    _safeNotifyListeners();
+      notifyListeners();
+    }
   }
 
   void setCompactSearchMode(bool compact) {
     if (_compactSearchMode != compact) {
       _compactSearchMode = compact;
-      if (kDebugMode) {
-        print("[MapScreenController] Compact Search Mode: $compact");
-      }
-      _safeNotifyListeners();
+      notifyListeners();
     }
   }
 
   void setShowHorizontalPOIStrip(bool show) {
     if (_showHorizontalPOIStrip != show) {
       _showHorizontalPOIStrip = show;
-      if (kDebugMode) {
-        print("[MapScreenController] Horizontal POI Strip: $show");
-      }
-      _safeNotifyListeners();
-    }
-  }
-
-  // ✅ FIX: Sichere NotifyListeners Methode
-  void _safeNotifyListeners() {
-    if (!_preventNotificationLoop) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!_preventNotificationLoop) {
-          notifyListeners();
-        }
-      });
+      notifyListeners();
     }
   }
 
@@ -189,13 +144,13 @@ class MapScreenController with ChangeNotifier {
       setShowHorizontalPOIStrip(false);
     }
 
-    _safeNotifyListeners();
+    notifyListeners();
   }
 
   void clearVisibleSearchResults() {
     visibleSearchResults.clear();
     setShowHorizontalPOIStrip(false);
-    _safeNotifyListeners();
+    notifyListeners();
   }
 
   void autoZoomToPOIsWithKeyboard(BuildContext context) {
@@ -205,10 +160,6 @@ class MapScreenController with ChangeNotifier {
 
     if (results.length == 1) {
       mapController.move(results.first.center, 18.0);
-      if (kDebugMode) {
-        print(
-            "[MapScreenController] Auto-Zoom zu einzelnem POI: ${results.first.name}");
-      }
     } else {
       try {
         final points = results.map((f) => f.center).toList();
@@ -225,14 +176,10 @@ class MapScreenController with ChangeNotifier {
             ),
           ),
         );
-
-        if (kDebugMode) {
-          print(
-              "[MapScreenController] Auto-Zoom zu ${results.length} POIs mit Tastatur-Bounds");
-        }
       } catch (e) {
-        if (kDebugMode) {
-          print("[MapScreenController] Fehler beim Auto-Zoom: $e");
+        // Fallback: Zoom to first result
+        if (results.isNotEmpty) {
+          mapController.move(results.first.center, 17.0);
         }
       }
     }
@@ -261,67 +208,30 @@ class MapScreenController with ChangeNotifier {
     );
   }
 
-  // ✅ FIX: Stabilere Focus-Handler ohne sofortige Updates
-  void _onStartFocusChangedStable() {
-    // ✅ FIX: Kurze Verzögerung um Race Conditions zu vermeiden
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (startFocusNode.hasFocus) {
-        activeSearchField = ActiveSearchField.start;
-        isRouteActiveForCardSwitch = false;
-        if (kDebugMode) {
-          print("[MapScreenController] Start Focus GAINED - stable");
-        }
-      } else {
-        if (activeSearchField == ActiveSearchField.start) {
-          activeSearchField = ActiveSearchField.none;
-        }
-        if (kDebugMode) {
-          print("[MapScreenController] Start Focus LOST - stable");
-        }
+  void _onStartFocusChanged() {
+    if (startFocusNode.hasFocus) {
+      activeSearchField = ActiveSearchField.start;
+      isRouteActiveForCardSwitch = false;
+    } else {
+      if (activeSearchField == ActiveSearchField.start) {
+        activeSearchField = ActiveSearchField.none;
       }
-      _safeNotifyListeners();
-    });
+    }
+    notifyListeners();
   }
 
-  void _onEndFocusChangedStable() {
-    // ✅ FIX: Kurze Verzögerung um Race Conditions zu vermeiden
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (endFocusNode.hasFocus) {
-        activeSearchField = ActiveSearchField.end;
-        isRouteActiveForCardSwitch = false;
-        if (kDebugMode) {
-          print("[MapScreenController] End Focus GAINED - stable");
-        }
-      } else {
-        if (activeSearchField == ActiveSearchField.end) {
-          activeSearchField = ActiveSearchField.none;
-        }
-        if (kDebugMode) {
-          print("[MapScreenController] End Focus LOST - stable");
-        }
+  void _onEndFocusChanged() {
+    if (endFocusNode.hasFocus) {
+      activeSearchField = ActiveSearchField.end;
+      isRouteActiveForCardSwitch = false;
+    } else {
+      if (activeSearchField == ActiveSearchField.end) {
+        activeSearchField = ActiveSearchField.none;
       }
-      _safeNotifyListeners();
-    });
+    }
+    notifyListeners();
   }
 
-  // ✅ FIX: Sichere Focus-Request Methode
-  void requestFocusStable(ActiveSearchField field) {
-    _preventNotificationLoop = true;
-
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (field == ActiveSearchField.start && !startFocusNode.hasFocus) {
-        startFocusNode.requestFocus();
-      } else if (field == ActiveSearchField.end && !endFocusNode.hasFocus) {
-        endFocusNode.requestFocus();
-      }
-
-      Future.delayed(const Duration(milliseconds: 200), () {
-        _preventNotificationLoop = false;
-      });
-    });
-  }
-
-  // Bestehende Methoden bleiben unverändert...
   void setMapReady() {
     isMapReady = true;
     notifyListeners();
@@ -602,15 +512,13 @@ class MapScreenController with ChangeNotifier {
 
   @override
   void dispose() {
-    _preventNotificationLoop = true; // ✅ FIX: Verhindere Updates beim Dispose
-
     mapController.dispose();
     ttsService.stop();
     startSearchController.dispose();
     endSearchController.dispose();
-    startFocusNode.removeListener(_onStartFocusChangedStable);
+    startFocusNode.removeListener(_onStartFocusChanged);
     startFocusNode.dispose();
-    endFocusNode.removeListener(_onEndFocusChangedStable);
+    endFocusNode.removeListener(_onEndFocusChanged);
     endFocusNode.dispose();
     super.dispose();
   }

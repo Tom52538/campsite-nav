@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart - KEYBOARD FIX VERSION
+// lib/screens/map_screen.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -11,7 +11,6 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
-import 'package:camping_osm_navi/debug/simple_keyboard_test.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen_parts/horizontal_poi_strip.dart';
@@ -35,10 +34,6 @@ class MapScreenState extends State<MapScreen>
   late MapScreenSearchHandler searchHandler;
 
   final GlobalKey fullSearchCardKey = GlobalKey();
-
-  // ✅ FIX: Stabilere Keyboard-Erkennung
-  bool _isKeyboardCheckInProgress = false;
-  double _lastKnownKeyboardHeight = 0;
 
   @override
   void initState() {
@@ -66,48 +61,20 @@ class MapScreenState extends State<MapScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateSearchCardHeight();
-      _setupInitialKeyboardState();
     });
   }
 
-  // ✅ FIX: Verbesserte Keyboard-Erkennung
-  void _setupInitialKeyboardState() {
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _checkKeyboardVisibilityStable();
-      }
-    });
-  }
-
-  // ✅ FIX: Stabilere Keyboard-Erkennung mit Debouncing
-  void _checkKeyboardVisibilityStable() {
-    if (_isKeyboardCheckInProgress) return;
-
-    _isKeyboardCheckInProgress = true;
-
-    // ✅ FIX: Verzögerung um Race Conditions zu vermeiden
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (!mounted) {
-        _isKeyboardCheckInProgress = false;
-        return;
-      }
-
-      final mediaQuery = MediaQuery.of(context);
-      final keyboardHeight = mediaQuery.viewInsets.bottom;
-      final isKeyboardVisible = keyboardHeight > 50; // Threshold erhöht
-
-      // ✅ FIX: Nur bei signifikanten Änderungen updaten
-      if ((keyboardHeight - _lastKnownKeyboardHeight).abs() > 10) {
-        _lastKnownKeyboardHeight = keyboardHeight;
-
-        if (kDebugMode) {
-          print(
-              "[MapScreen] Keyboard state: visible=$isKeyboardVisible, height=$keyboardHeight");
-        }
+        final mediaQuery = MediaQuery.of(context);
+        final keyboardHeight = mediaQuery.viewInsets.bottom;
+        final isKeyboardVisible = keyboardHeight > 50;
 
         controller.updateKeyboardVisibility(isKeyboardVisible, keyboardHeight);
 
-        // ✅ FIX: Auto-Zoom nur wenn wirklich neue Ergebnisse da sind
         if (isKeyboardVisible &&
             controller.visibleSearchResults.isNotEmpty &&
             (controller.startFocusNode.hasFocus ||
@@ -119,24 +86,7 @@ class MapScreenState extends State<MapScreen>
           });
         }
       }
-
-      _isKeyboardCheckInProgress = false;
     });
-  }
-
-  // ✅ FIX: Stabilerer Observer für Keyboard Changes
-  @override
-  void didChangeMetrics() {
-    super.didChangeMetrics();
-
-    // ✅ FIX: Debouncing für Keyboard-Updates
-    if (!_isKeyboardCheckInProgress) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _checkKeyboardVisibilityStable();
-        }
-      });
-    }
   }
 
   void _updateSearchCardHeight() {
@@ -162,17 +112,6 @@ class MapScreenState extends State<MapScreen>
       _handleLocationChange(newLocationInfo);
       controller.lastProcessedLocation = newLocationInfo;
     }
-
-    // ✅ FIX: Keyboard Check bei Dependency Changes (verzögert)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) {
-            _checkKeyboardVisibilityStable();
-          }
-        });
-      }
-    });
   }
 
   void _handleLocationChange(LocationInfo newLocation) {
@@ -227,14 +166,6 @@ class MapScreenState extends State<MapScreen>
     return AppBar(
       title: const Text("Campground Navigator"),
       actions: [
-        // ✅ NEU: Debug Button
-        IconButton(
-          icon: const Icon(Icons.bug_report),
-          tooltip: 'Keyboard Debug',
-          onPressed: () {
-            Navigator.pushNamed(context, '/debug');
-          },
-        ),
         IconButton(
           icon: const Icon(Icons.volume_up),
           tooltip: 'Test TTS',
@@ -313,16 +244,12 @@ class MapScreenState extends State<MapScreen>
       LocationInfo? selectedLocation, bool isLoading) {
     return Stack(
       children: [
-        // ✅ FIX: GestureDetector nur um die MAP, nicht um alles!
         GestureDetector(
           onTap: () {
-            // Nur bei Map-Taps unfocus
             FocusScope.of(context).unfocus();
           },
           child: _buildMap(isUiReady, mapTheme, selectedLocation),
         ),
-
-        // UI-Elemente AUSSERHALB des GestureDetectors
         if (!controller.compactSearchMode) _buildSearchCard(isUiReady),
         if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady),
         _buildInstructionCard(isUiReady),
@@ -333,7 +260,6 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ MINIMAL: Kompakte Suchleiste
   Widget _buildCompactSearchBar(bool isUiReady) {
     if (!isUiReady) return const SizedBox.shrink();
 
@@ -414,7 +340,6 @@ class MapScreenState extends State<MapScreen>
       keyboardHeight: controller.keyboardHeight,
       isVisible: controller.showHorizontalPOIStrip,
       onFeatureTap: (feature) {
-        // ✅ FIX: Stabilere Feature-Auswahl
         if (controller.activeSearchField == ActiveSearchField.start) {
           controller.startSearchController.text = feature.name;
           controller.setStartLatLng(feature.center);
@@ -425,17 +350,12 @@ class MapScreenState extends State<MapScreen>
           controller.updateEndMarker();
         }
 
-        // ✅ FIX: Explizite Focus-Entfernung und Route-Berechnung
         FocusScope.of(context).unfocus();
 
         Future.delayed(const Duration(milliseconds: 200), () {
           routeHandler.calculateRouteIfPossible();
           controller.mapController.move(feature.center, 18.0);
         });
-
-        if (kDebugMode) {
-          print("[MapScreen] POI ausgewählt: ${feature.name}");
-        }
       },
     );
   }
@@ -501,18 +421,12 @@ class MapScreenState extends State<MapScreen>
       activeMarkers.add(controller.endMarker!);
     }
 
-    // ✅ FIX: POI-Marker nur wenn KEINE horizontale Leiste aktiv
     if (controller.visibleSearchResults.isNotEmpty &&
         !controller.showHorizontalPOIStrip) {
       final currentZoom = controller.mapController.camera.zoom;
 
       for (final feature in controller.visibleSearchResults) {
         activeMarkers.add(_createSearchResultMarker(feature, currentZoom));
-      }
-
-      if (kDebugMode) {
-        print(
-            "[MapScreen] ${controller.visibleSearchResults.length} Karten-POIs angezeigt bei Zoom $currentZoom");
       }
     }
 
@@ -962,25 +876,6 @@ class MapScreenState extends State<MapScreen>
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // ✅ NEU: DEBUG BUTTON (temporär)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: FloatingActionButton(
-            heroTag: "debugBtn",
-            backgroundColor: Colors.red,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SimpleKeyboardTest(),
-                ),
-              );
-            },
-            tooltip: "Keyboard Debug",
-            child: const Icon(Icons.bug_report, color: Colors.white),
-          ),
-        ),
-
         if (isUiReady && controller.routePolyline != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
@@ -1020,7 +915,6 @@ class MapScreenState extends State<MapScreen>
       }
     }
 
-    // ✅ FIX: Map-Drag entfernt Focus von Suchfeldern
     if (mapEvent is MapEventMove &&
         (mapEvent.source == MapEventSource.dragStart ||
             mapEvent.source == MapEventSource.flingAnimationController) &&
@@ -1046,7 +940,6 @@ class MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _updateSearchCardHeight();
-        _setupInitialKeyboardState();
       }
     });
   }

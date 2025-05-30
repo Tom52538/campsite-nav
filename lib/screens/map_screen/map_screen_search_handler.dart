@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_search_handler.dart (DEBUG VERSION)
+// lib/screens/map_screen/map_screen_search_handler.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +12,6 @@ class MapScreenSearchHandler {
   final MapScreenController controller;
   final BuildContext context;
 
-  // ✅ FIX: Timer für verzögertes Ausblenden
   Timer? _hideResultsTimer;
 
   MapScreenSearchHandler(this.controller, this.context) {
@@ -20,10 +19,6 @@ class MapScreenSearchHandler {
   }
 
   void _initializeSearchListeners() {
-    if (kDebugMode) {
-      print("🔍 [DEBUG] SearchHandler: Initialisiere Listener");
-    }
-
     controller.startSearchController.addListener(_onStartSearchChanged);
     controller.endSearchController.addListener(_onEndSearchChanged);
     controller.startFocusNode.addListener(_onStartFocusChanged);
@@ -31,11 +26,6 @@ class MapScreenSearchHandler {
   }
 
   void _onStartSearchChanged() {
-    if (kDebugMode) {
-      print(
-          "🔍 [DEBUG] Start Search Changed: '${controller.startSearchController.text}', Focus: ${controller.startFocusNode.hasFocus}");
-    }
-
     if (controller.startFocusNode.hasFocus &&
         controller.startSearchController.text != "Aktueller Standort") {
       _performCampingIntelligentSearch(controller.startSearchController.text);
@@ -43,22 +33,12 @@ class MapScreenSearchHandler {
   }
 
   void _onEndSearchChanged() {
-    if (kDebugMode) {
-      print(
-          "🔍 [DEBUG] End Search Changed: '${controller.endSearchController.text}', Focus: ${controller.endFocusNode.hasFocus}");
-    }
-
     if (controller.endFocusNode.hasFocus) {
       _performCampingIntelligentSearch(controller.endSearchController.text);
     }
   }
 
   void _onStartFocusChanged() {
-    if (kDebugMode) {
-      print(
-          "🔍 [DEBUG] Start Focus Changed: ${controller.startFocusNode.hasFocus}");
-    }
-
     if (controller.startFocusNode.hasFocus) {
       controller.setActiveSearchField(ActiveSearchField.start);
       controller.setRouteActiveForCardSwitch(false);
@@ -74,25 +54,11 @@ class MapScreenSearchHandler {
   }
 
   void _onEndFocusChanged() {
-    if (kDebugMode) {
-      print(
-          "🔍 [DEBUG] End Focus Changed: ${controller.endFocusNode.hasFocus}");
-      print("🔍 [DEBUG] Current Active Field: ${controller.activeSearchField}");
-      print(
-          "🔍 [DEBUG] Route Active: ${controller.isRouteActiveForCardSwitch}");
-    }
-
     if (controller.endFocusNode.hasFocus) {
-      if (kDebugMode) {
-        print("🔍 [DEBUG] End Field gained focus - setting active");
-      }
       controller.setActiveSearchField(ActiveSearchField.end);
       controller.setRouteActiveForCardSwitch(false);
       _performCampingIntelligentSearch(controller.endSearchController.text);
     } else {
-      if (kDebugMode) {
-        print("🔍 [DEBUG] End Field lost focus - clearing if was active");
-      }
       if (controller.activeSearchField == ActiveSearchField.end) {
         controller.setActiveSearchField(ActiveSearchField.none);
       }
@@ -100,67 +66,34 @@ class MapScreenSearchHandler {
     }
   }
 
-  // ✅ FIX: Fehlende Methode hinzugefügt
   void _hideSearchResultsAfterDelay() {
-    if (kDebugMode) {
-      print("🔍 [DEBUG] Hide results timer started");
-    }
-
     _hideResultsTimer?.cancel();
     _hideResultsTimer = Timer(const Duration(milliseconds: 1500), () {
-      // ✅ FIX: Längere Verzögerung!
-      if (kDebugMode) {
-        print(
-            "🔍 [DEBUG] Timer executed - Start Focus: ${controller.startFocusNode.hasFocus}, End Focus: ${controller.endFocusNode.hasFocus}");
-      }
-
       if (!controller.startFocusNode.hasFocus &&
           !controller.endFocusNode.hasFocus) {
-        if (kDebugMode) {
-          print("🔍 [DEBUG] Hiding search results - no focus");
-        }
         controller.setShowSearchResults(false);
-        // Behalte POIs sichtbar wenn sie aktiv sind
         if (controller.visibleSearchResults.isEmpty) {
           controller.clearVisibleSearchResults();
-        }
-      } else {
-        if (kDebugMode) {
-          print("🔍 [DEBUG] NOT hiding - still has focus");
         }
       }
     });
   }
 
-  // ✅ ERWEITERT: Camping-spezifische intelligente Suche
   void _performCampingIntelligentSearch(String query) {
-    if (kDebugMode) {
-      print("🔍 [DEBUG] Performing search for: '$query'");
-    }
-
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final allFeatures = locationProvider.currentSearchableFeatures;
 
-    if (kDebugMode) {
-      print("🔍 [DEBUG] Available features: ${allFeatures.length}");
-    }
-
     if (query.isEmpty) {
-      // Search-First Prinzip: Keine Suche = keine POIs
       controller.setSearchResults([]);
       controller.setShowSearchResults(false);
       controller.clearVisibleSearchResults();
-      _logSearchActivity("Leere Suche - alle POIs ausgeblendet");
       return;
     }
 
-    // ✅ Emoji-Shortcuts prüfen
+    // Emoji-Shortcuts prüfen
     final shortcutQuery = CampingSearchCategories.quickSearchShortcuts[query];
     if (shortcutQuery != null) {
-      if (kDebugMode) {
-        print("🔍 [DEBUG] Using emoji shortcut: $query -> $shortcutQuery");
-      }
       _performCampingIntelligentSearch(shortcutQuery);
       return;
     }
@@ -168,26 +101,11 @@ class MapScreenSearchHandler {
     final filteredResults =
         _performAdvancedCategoryFiltering(allFeatures, query);
 
-    if (kDebugMode) {
-      print("🔍 [DEBUG] Filtered results: ${filteredResults.length}");
-    }
-
-    // Standard-Suchergebnisse für Dropdown
     controller.setSearchResults(filteredResults);
     controller.setShowSearchResults(true);
-
-    // ✅ Search-First Navigation: Sichtbare POIs setzen
     controller.setVisibleSearchResults(filteredResults);
-
-    if (kDebugMode) {
-      print(
-          "🔍 [DEBUG] Search state set - Results visible: ${controller.showSearchResults}");
-    }
-
-    _logSearchActivity("Suche '$query': ${filteredResults.length} Ergebnisse");
   }
 
-  // ✅ NEU: Erweiterte Kategorie-basierte Filterung
   List<SearchableFeature> _performAdvancedCategoryFiltering(
       List<SearchableFeature> allFeatures, String query) {
     final String cleanQuery = query.trim().toLowerCase();
@@ -197,8 +115,6 @@ class MapScreenSearchHandler {
       final accommodationResults =
           _searchAccommodationByNumber(allFeatures, cleanQuery);
       if (accommodationResults.isNotEmpty) {
-        _logSearchActivity(
-            "Unterkunft-Nummer gefunden: ${accommodationResults.length}");
         return accommodationResults;
       }
     }
@@ -208,8 +124,6 @@ class MapScreenSearchHandler {
     if (matchedCategory != null) {
       final categoryResults = _searchByCategory(allFeatures, matchedCategory);
       if (categoryResults.isNotEmpty) {
-        _logSearchActivity(
-            "Kategorie '${matchedCategory.displayName}' gefunden: ${categoryResults.length}");
         return _prioritizeCategoryResults(categoryResults, matchedCategory);
       }
     }
@@ -217,55 +131,45 @@ class MapScreenSearchHandler {
     // 3. OSM-TYPE MATCHING
     final osmResults = _searchByOsmType(allFeatures, cleanQuery);
     if (osmResults.isNotEmpty) {
-      _logSearchActivity("OSM-Type gefunden: ${osmResults.length}");
       return osmResults;
     }
 
     // 4. FALLBACK: Name-Suche
     final nameResults = _searchByName(allFeatures, cleanQuery);
-    _logSearchActivity("Name-Suche Fallback: ${nameResults.length}");
     return nameResults;
   }
 
-  // ✅ Verbesserte Unterkunft-Nummern-Suche
   List<SearchableFeature> _searchAccommodationByNumber(
       List<SearchableFeature> features, String query) {
-    // Extrahiere alle Zahlen aus der Anfrage
     final numberMatches = RegExp(r'\d+').allMatches(query);
     if (numberMatches.isEmpty) return [];
 
     final searchNumbers = numberMatches.map((m) => m.group(0)!).toList();
-
     final results = <SearchableFeature>[];
 
     for (final searchNum in searchNumbers) {
-      // ✅ KORRIGIERT: num → searchNum
       final numberResults = features.where((feature) {
         if (!_isAccommodationType(feature.type)) return false;
 
         final name = feature.name.toLowerCase();
 
-        // Verschiedene Matching-Strategien
-        return name == searchNum || // Exakte Nummer
-            name.contains(' $searchNum ') || // Nummer mit Leerzeichen
-            name.startsWith('$searchNum ') || // Nummer am Anfang
-            name.endsWith(' $searchNum') || // Nummer am Ende
-            RegExp(r'\b' + searchNum + r'\b').hasMatch(name) || // Wortgrenze
-            RegExp(r'^' + searchNum + r'[a-z]?$')
-                .hasMatch(name); // Mit Buchstabe (247a)
+        return name == searchNum ||
+            name.contains(' $searchNum ') ||
+            name.startsWith('$searchNum ') ||
+            name.endsWith(' $searchNum') ||
+            RegExp(r'\b' + searchNum + r'\b').hasMatch(name) ||
+            RegExp(r'^' + searchNum + r'[a-z]?).hasMatch(name);
       }).toList();
 
       results.addAll(numberResults);
     }
 
-    // Duplikate entfernen und nach Relevanz sortieren
     final uniqueResults = results.toSet().toList();
     uniqueResults.sort((a, b) {
-      // Exakte Treffer zuerst
       final aExact = searchNumbers.any((searchNum) =>
-          a.name.toLowerCase() == searchNum); // ✅ KORRIGIERT: num → searchNum
+          a.name.toLowerCase() == searchNum);
       final bExact = searchNumbers.any((searchNum) =>
-          b.name.toLowerCase() == searchNum); // ✅ KORRIGIERT: num → searchNum
+          b.name.toLowerCase() == searchNum);
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
       return a.name.compareTo(b.name);
@@ -274,11 +178,9 @@ class MapScreenSearchHandler {
     return uniqueResults;
   }
 
-  // ✅ Kategorie-basierte Suche
   List<SearchableFeature> _searchByCategory(
       List<SearchableFeature> features, CampingSearchCategory category) {
     return features.where((feature) {
-      // OSM-Type matching
       for (final osmType in category.osmTypes) {
         if (feature.type.toLowerCase() == osmType.toLowerCase() ||
             feature.type.toLowerCase().contains(osmType.toLowerCase()) ||
@@ -287,7 +189,6 @@ class MapScreenSearchHandler {
         }
       }
 
-      // Name-Keyword matching (für falsch klassifizierte POIs)
       final featureName = feature.name.toLowerCase();
       for (final keyword in category.keywords) {
         if (featureName.contains(keyword.toLowerCase())) {
@@ -299,7 +200,6 @@ class MapScreenSearchHandler {
     }).toList();
   }
 
-  // ✅ OSM-Type direkte Suche
   List<SearchableFeature> _searchByOsmType(
       List<SearchableFeature> features, String query) {
     return features
@@ -309,33 +209,27 @@ class MapScreenSearchHandler {
         .toList();
   }
 
-  // ✅ Prioritäts-basierte Ergebnis-Sortierung
   List<SearchableFeature> _prioritizeCategoryResults(
       List<SearchableFeature> results, CampingSearchCategory category) {
-    // Sortiere nach Kategorie-Priorität und Namens-Relevanz
     results.sort((a, b) {
-      // Zuerst nach exakter Type-Übereinstimmung
       final aExactType = category.osmTypes.contains(a.type.toLowerCase());
       final bExactType = category.osmTypes.contains(b.type.toLowerCase());
 
       if (aExactType && !bExactType) return -1;
       if (!aExactType && bExactType) return 1;
 
-      // Dann alphabetisch
       return a.name.compareTo(b.name);
     });
 
     return results;
   }
 
-  // ✅ Standard Name-Suche (Fallback)
   List<SearchableFeature> _searchByName(
       List<SearchableFeature> features, String query) {
     final results = features
         .where((feature) => feature.name.toLowerCase().contains(query))
         .toList();
 
-    // Sortiere nach Relevanz (kürzere Namen zuerst)
     results.sort((a, b) {
       final aStarts = a.name.toLowerCase().startsWith(query);
       final bStarts = b.name.toLowerCase().startsWith(query);
@@ -349,17 +243,9 @@ class MapScreenSearchHandler {
     return results;
   }
 
-  // ✅ Hilfsmethoden für Typ-Erkennung (erweitert)
   bool _isAccommodationType(String type) {
     final category = CampingSearchCategories.getCategoryByOsmType(type);
     return category?.category == CampingPOICategory.accommodation;
-  }
-
-  // ✅ Such-Aktivität Logging
-  void _logSearchActivity(String message) {
-    if (kDebugMode) {
-      print("[CampingSearchHandler] $message");
-    }
   }
 
   void selectFeatureAndSetPoint(SearchableFeature feature) {
@@ -378,11 +264,8 @@ class MapScreenSearchHandler {
     }
 
     controller.setShowSearchResults(false);
-
-    // ✅ Feature weiterhin sichtbar lassen nach Auswahl
     controller.setVisibleSearchResults([feature]);
 
-    // Trigger route calculation if both points are set
     if (_onRouteCalculationNeeded != null) {
       _onRouteCalculationNeeded!();
     }
@@ -390,21 +273,16 @@ class MapScreenSearchHandler {
 
   void setStartToCurrentLocation() {
     if (controller.currentGpsPosition == null) {
-      if (kDebugMode) {
-        print("Aktuelle Position unbekannt.");
-      }
       return;
     }
 
     controller.startSearchController.text = "Aktueller Standort";
     controller.setStartLatLng(controller.currentGpsPosition);
-    controller.startMarker = null; // Kein Marker für die aktuelle Position
+    controller.startMarker = null;
     controller.startFocusNode.unfocus();
 
-    // ✅ Bei "Aktueller Standort" keine POIs anzeigen
     controller.clearVisibleSearchResults();
 
-    // Trigger route calculation if both points are set
     if (_onRouteCalculationNeeded != null) {
       _onRouteCalculationNeeded!();
     }
@@ -413,7 +291,6 @@ class MapScreenSearchHandler {
   void swapStartAndEnd() {
     controller.swapStartAndEnd();
 
-    // Trigger route calculation if both points are set
     if (_onRouteCalculationNeeded != null) {
       _onRouteCalculationNeeded!();
     }
@@ -430,16 +307,13 @@ class MapScreenSearchHandler {
       controller.endMarker = null;
     }
 
-    // ✅ POIs ausblenden beim Löschen der Suche
     controller.clearVisibleSearchResults();
 
-    // Clear route if needed
     if (_onRouteClearNeeded != null) {
       _onRouteClearNeeded!();
     }
   }
 
-  // Callback for when route calculation is needed - set by RouteHandler
   void Function()? _onRouteCalculationNeeded;
   void Function()? _onRouteClearNeeded;
 
@@ -452,7 +326,6 @@ class MapScreenSearchHandler {
   }
 
   void dispose() {
-    // ✅ FIX: Timer cleanup hinzugefügt
     _hideResultsTimer?.cancel();
 
     controller.startSearchController.removeListener(_onStartSearchChanged);

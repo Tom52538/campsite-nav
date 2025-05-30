@@ -1,9 +1,8 @@
-// lib/main.dart - MIT DEBUG ROUTE
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/screens/map_screen.dart';
-import 'package:camping_osm_navi/debug/keyboard_debug_screen.dart'; // NEU
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
@@ -37,12 +36,7 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      // ✅ NEU: Routen für Debug
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const MapScreen(),
-        '/debug': (context) => const KeyboardDebugScreen(),
-      },
+      home: const MapScreen(),
       debugShowCheckedModeBanner: false,
     );
   }
