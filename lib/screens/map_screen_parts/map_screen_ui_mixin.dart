@@ -49,7 +49,7 @@ mixin MapScreenUiMixin {
         clearRoute,
     required void Function(String, {int durationSeconds}) showSnackbar,
     required VoidCallback setStartToCurrentLocation,
-  ) {
+  }) {
     final double? displayDistance = remainingRouteDistance ?? routeDistance;
     final int? displayTime = remainingRouteTimeMinutes ?? routeTimeMinutes;
     final String timeLabelPrefix =
