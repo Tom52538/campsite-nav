@@ -16,9 +16,10 @@ const double kCompactCardHeight = 65.0;
 const double kMarkerWidth = 40.0;
 const double kMarkerHeight = 40.0;
 
-// Mixin wird auf MapScreenState angewendet
-mixin MapScreenUiMixin on State {
-  Widget buildSearchInputCard({
+// Mixin für UI-Methoden - KEIN generischer State-Typ mehr
+mixin MapScreenUiMixin {
+  Widget buildSearchInputCard(
+    BuildContext context, {
     required Key key,
     required GlobalKey fullSearchCardKey,
     required double fullSearchCardHeight,
@@ -42,17 +43,17 @@ mixin MapScreenUiMixin on State {
     required FocusNode endFocusNode,
     required LatLng? endLatLng,
     required Marker? endMarker,
-    required void Function() swapStartAndEnd,
-    required void Function() calculateAndDisplayRoute,
-    required void Function({bool showConfirmation, bool clearMarkers}) clearRoute,
+    required VoidCallback swapStartAndEnd,
+    required VoidCallback calculateAndDisplayRoute,
+    required void Function({bool showConfirmation, bool clearMarkers})
+        clearRoute,
     required void Function(String, {int durationSeconds}) showSnackbar,
-    required void Function() setStartToCurrentLocation, // ✅ PARAMETER HINZUGEFÜGT
+    required VoidCallback setStartToCurrentLocation,
   }) {
     final double? displayDistance = remainingRouteDistance ?? routeDistance;
     final int? displayTime = remainingRouteTimeMinutes ?? routeTimeMinutes;
     final String timeLabelPrefix =
         remainingRouteDistance != null ? "Rest: ~ " : "~ ";
-
     final String displayTimeString = displayTime?.toString() ?? '?';
 
     return Container(
@@ -68,6 +69,7 @@ mixin MapScreenUiMixin on State {
             key: fullSearchCardKey,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // START-EINGABEFELD
               Container(
                 decoration: BoxDecoration(
                   border: startFocusNode.hasFocus
@@ -119,13 +121,15 @@ mixin MapScreenUiMixin on State {
                           iconSize: 22,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          onPressed: setStartToCurrentLocation, // ✅ DIREKTE VERWENDUNG
+                          onPressed: setStartToCurrentLocation,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
+
+              // SWAP-BUTTON SEKTION
               SizedBox(
                 height: kDividerAndSwapButtonHeight,
                 child: Row(
@@ -159,6 +163,8 @@ mixin MapScreenUiMixin on State {
                   ],
                 ),
               ),
+
+              // ZIEL-EINGABEFELD
               Container(
                 decoration: BoxDecoration(
                   border: endFocusNode.hasFocus
@@ -200,6 +206,8 @@ mixin MapScreenUiMixin on State {
                   ),
                 ),
               ),
+
+              // ROUTE-INFO
               if (displayDistance != null && displayTime != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
@@ -245,7 +253,8 @@ mixin MapScreenUiMixin on State {
     );
   }
 
-  Widget buildCompactRouteInfoCard({
+  Widget buildCompactRouteInfoCard(
+    BuildContext context, {
     required Key key,
     required double? remainingRouteDistance,
     required double? routeDistance,
@@ -264,7 +273,6 @@ mixin MapScreenUiMixin on State {
         remainingRouteDistance != null && routePolyline != null
             ? "Rest: ~ "
             : "~ ";
-
     final String displayTimeString = displayTime?.toString() ?? '?';
 
     return Container(
@@ -330,6 +338,7 @@ mixin MapScreenUiMixin on State {
     );
   }
 
+  // HILFSMETHODEN
   Marker createMarker(
       LatLng position, Color color, IconData icon, String tooltip,
       {double size = 30.0}) {
@@ -345,67 +354,6 @@ mixin MapScreenUiMixin on State {
     );
   }
 
-  void showSnackbar(String message, {int durationSeconds = 3}) {
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).removeCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: Duration(seconds: durationSeconds),
-        behavior: SnackBarBehavior.fixed,
-      ),
-    );
-  }
-
-  void showErrorDialog(String message) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text("Fehler"),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
-                child: const Text("OK"),
-                onPressed: () => Navigator.of(dialogContext).pop()),
-          ],
-        );
-      },
-    );
-  }
-
-  void showConfirmationDialog(
-      String title, String content, VoidCallback onConfirm) {
-    if (!mounted || (ModalRoute.of(context)?.isCurrent == false)) {
-      return;
-    }
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(content),
-          actions: <Widget>[
-            TextButton(
-                child: const Text("Abbrechen"),
-                onPressed: () => Navigator.of(dialogContext).pop()),
-            TextButton(
-                child: const Text("Bestätigen"),
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  onConfirm();
-                }),
-          ],
-        );
-      },
-    );
-  }
-
   String formatDistance(double? distanceMeters) {
     if (distanceMeters == null) {
       return "";
@@ -452,61 +400,4 @@ mixin MapScreenUiMixin on State {
         return Icons.location_pin;
     }
   }
-} () {
-                  Navigator.of(dialogContext).pop();
-                  onConfirm();
-                }),
-          ],
-        );
-      },
-    );
-  }
-
-  String formatDistance(double? distanceMeters) {
-    if (distanceMeters == null) {
-      return "";
-    }
-    if (distanceMeters < 1000) {
-      return "${distanceMeters.round()} m";
-    } else {
-      return "${(distanceMeters / 1000).toStringAsFixed(1)} km";
-    }
-  }
-
-  IconData getIconForFeatureType(String type) {
-    switch (type.toLowerCase()) {
-      case 'parking':
-        return Icons.local_parking;
-      case 'building':
-        return Icons.business;
-      case 'shop':
-        return Icons.store;
-      case 'amenity':
-        return Icons.place;
-      case 'tourism':
-        return Icons.attractions;
-      case 'reception':
-      case 'information':
-        return Icons.room_service;
-      case 'sanitary':
-      case 'toilets':
-        return Icons.wc;
-      case 'restaurant':
-      case 'cafe':
-      case 'bar':
-        return Icons.restaurant;
-      case 'playground':
-        return Icons.child_friendly;
-      case 'pitch':
-      case 'camp_pitch':
-        return Icons.holiday_village;
-      case 'water_point':
-        return Icons.water_drop;
-      case 'waste_disposal':
-        return Icons.recycling;
-      default:
-        return Icons.location_pin;
-    }
-  }
-}
 }
