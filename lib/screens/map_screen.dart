@@ -359,8 +359,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   }
 
   double _getMarkerWidthForFeature(SearchableFeature feature) {
-    if (_isAccommodationType(feature.type))
+    if (_isAccommodationType(feature.type)) {
       return 160.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
+    }
     return 140.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
   }
 
@@ -402,6 +403,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
         type.toLowerCase().contains('wellness');
   }
 
+  // ✅ KORRIGIERTE Zeile 363: Geschweifte Klammern hinzugefügt
   Color _getBackgroundColorForPOIType(String type) {
     return _getColorForPOIType(type).withValues(alpha: 0.1);
   }
