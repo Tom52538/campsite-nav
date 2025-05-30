@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_controller.dart - ERWEITERT für Keyboard Handling
+// lib/screens/map_screen/map_screen_controller.dart - FOCUS FIX VERSION
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -59,11 +59,12 @@ class MapScreenController with ChangeNotifier {
   double fullSearchCardHeight = 0;
   String _maptilerUrlTemplate = '';
 
-  // ✅ NEU: Keyboard Handling
+  // ✅ FIX: Stabilere Keyboard-Erkennung
   bool _isKeyboardVisible = false;
   double _keyboardHeight = 0;
   bool _compactSearchMode = false;
   bool _showHorizontalPOIStrip = false;
+  bool _preventNotificationLoop = false; // ✅ NEU: Loop-Preventer
 
   // Constants
   static const double followGpsZoomLevel = 17.5;
@@ -78,8 +79,6 @@ class MapScreenController with ChangeNotifier {
   bool get isInRouteOverviewMode => _isInRouteOverviewMode;
   bool get isRerouting => _isRerouting;
   String get maptilerUrlTemplate => _maptilerUrlTemplate;
-
-  // ✅ NEU: Keyboard Getters
   bool get isKeyboardVisible => _isKeyboardVisible;
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
@@ -91,10 +90,12 @@ class MapScreenController with ChangeNotifier {
   }
 
   void _initializeListeners() {
-    startSearchController.addListener(_onStartSearchChanged);
-    endSearchController.addListener(_onEndSearchChanged);
-    startFocusNode.addListener(_onStartFocusChanged);
-    endFocusNode.addListener(_onEndFocusChanged);
+    // ✅ FIX: Stabilere Focus-Listener ohne sofortige Benachrichtigung
+    startFocusNode.addListener(_onStartFocusChangedStable);
+    endFocusNode.addListener(_onEndFocusChangedStable);
+
+    // Search Controller Listener werden vom SearchHandler gesetzt
+    // NICHT hier, um Konflikte zu vermeiden
   }
 
   void initializeMaptilerUrl(String? apiKey) {
@@ -109,31 +110,43 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // ✅ NEU: Keyboard Handling Methoden
+  // ✅ FIX: Stabilere Keyboard-Behandlung ohne Loops
   void updateKeyboardVisibility(bool visible, double height) {
+    if (_preventNotificationLoop) return;
+
     final wasVisible = _isKeyboardVisible;
-    _isKeyboardVisible = visible;
-    _keyboardHeight = height;
+    final heightChanged = (height - _keyboardHeight).abs() > 10;
 
-    if (kDebugMode) {
-      print("[MapScreenController] Keyboard: visible=$visible, height=$height");
+    if (visible != wasVisible || heightChanged) {
+      _isKeyboardVisible = visible;
+      _keyboardHeight = height;
+
+      if (kDebugMode) {
+        print(
+            "[MapScreenController] Keyboard stable: visible=$visible, height=$height");
+      }
+
+      // ✅ FIX: Verzögerte UI-Updates um Focus-Konflikte zu vermeiden
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!_preventNotificationLoop) {
+          _updateUIForKeyboardState(visible, wasVisible);
+        }
+      });
     }
+  }
 
-    // Auto-Compact Suchfeld wenn Tastatur erscheint
+  void _updateUIForKeyboardState(bool visible, bool wasVisible) {
     if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
       setCompactSearchMode(true);
-
-      // Zeige horizontale POI-Leiste wenn Suchergebnisse vorhanden
       if (visibleSearchResults.isNotEmpty) {
         setShowHorizontalPOIStrip(true);
       }
     } else if (!visible && wasVisible) {
-      // Tastatur versteckt - zurück zu normaler Ansicht
       setCompactSearchMode(false);
       setShowHorizontalPOIStrip(false);
     }
 
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void setCompactSearchMode(bool compact) {
@@ -142,7 +155,7 @@ class MapScreenController with ChangeNotifier {
       if (kDebugMode) {
         print("[MapScreenController] Compact Search Mode: $compact");
       }
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -152,46 +165,51 @@ class MapScreenController with ChangeNotifier {
       if (kDebugMode) {
         print("[MapScreenController] Horizontal POI Strip: $show");
       }
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
-  // ✅ ERWEITERT: Visible Search Results Management
+  // ✅ FIX: Sichere NotifyListeners Methode
+  void _safeNotifyListeners() {
+    if (!_preventNotificationLoop) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_preventNotificationLoop) {
+          notifyListeners();
+        }
+      });
+    }
+  }
+
   void setVisibleSearchResults(List<SearchableFeature> results) {
     visibleSearchResults = results;
 
-    // Auto-zeige horizontale POI-Leiste wenn Tastatur sichtbar und Ergebnisse vorhanden
     if (isKeyboardVisible && results.isNotEmpty) {
       setShowHorizontalPOIStrip(true);
     } else if (results.isEmpty) {
       setShowHorizontalPOIStrip(false);
     }
 
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   void clearVisibleSearchResults() {
     visibleSearchResults.clear();
     setShowHorizontalPOIStrip(false);
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
-  // ✅ NEU: Auto-Zoom für Tastatur-Modus
   void autoZoomToPOIsWithKeyboard(BuildContext context) {
     if (!isKeyboardVisible || visibleSearchResults.isEmpty) return;
 
     final results = visibleSearchResults;
 
     if (results.length == 1) {
-      // Einzelnes POI: Zentrieren mit moderatem Zoom
       mapController.move(results.first.center, 18.0);
-
       if (kDebugMode) {
         print(
             "[MapScreenController] Auto-Zoom zu einzelnem POI: ${results.first.name}");
       }
     } else {
-      // Multiple POIs: Bounds mit verfügbarer Höhe
       try {
         final points = results.map((f) => f.center).toList();
         final bounds = _calculateBoundsForPoints(points);
@@ -200,8 +218,8 @@ class MapScreenController with ChangeNotifier {
           CameraFit.bounds(
             bounds: bounds,
             padding: EdgeInsets.only(
-              top: 120, // Header + Suchfeld
-              bottom: keyboardHeight + 120, // Tastatur + POI-Strip + Puffer
+              top: 120,
+              bottom: keyboardHeight + 120,
               left: 30,
               right: 30,
             ),
@@ -220,7 +238,6 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // ✅ Hilfsmethode: Bounds-Berechnung
   LatLngBounds _calculateBoundsForPoints(List<LatLng> points) {
     if (points.isEmpty) {
       return LatLngBounds(fallbackInitialCenter, fallbackInitialCenter);
@@ -242,6 +259,66 @@ class MapScreenController with ChangeNotifier {
       LatLng(minLat, minLng),
       LatLng(maxLat, maxLng),
     );
+  }
+
+  // ✅ FIX: Stabilere Focus-Handler ohne sofortige Updates
+  void _onStartFocusChangedStable() {
+    // ✅ FIX: Kurze Verzögerung um Race Conditions zu vermeiden
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (startFocusNode.hasFocus) {
+        activeSearchField = ActiveSearchField.start;
+        isRouteActiveForCardSwitch = false;
+        if (kDebugMode) {
+          print("[MapScreenController] Start Focus GAINED - stable");
+        }
+      } else {
+        if (activeSearchField == ActiveSearchField.start) {
+          activeSearchField = ActiveSearchField.none;
+        }
+        if (kDebugMode) {
+          print("[MapScreenController] Start Focus LOST - stable");
+        }
+      }
+      _safeNotifyListeners();
+    });
+  }
+
+  void _onEndFocusChangedStable() {
+    // ✅ FIX: Kurze Verzögerung um Race Conditions zu vermeiden
+    Future.delayed(const Duration(milliseconds: 50), () {
+      if (endFocusNode.hasFocus) {
+        activeSearchField = ActiveSearchField.end;
+        isRouteActiveForCardSwitch = false;
+        if (kDebugMode) {
+          print("[MapScreenController] End Focus GAINED - stable");
+        }
+      } else {
+        if (activeSearchField == ActiveSearchField.end) {
+          activeSearchField = ActiveSearchField.none;
+        }
+        if (kDebugMode) {
+          print("[MapScreenController] End Focus LOST - stable");
+        }
+      }
+      _safeNotifyListeners();
+    });
+  }
+
+  // ✅ FIX: Sichere Focus-Request Methode
+  void requestFocusStable(ActiveSearchField field) {
+    _preventNotificationLoop = true;
+
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (field == ActiveSearchField.start && !startFocusNode.hasFocus) {
+        startFocusNode.requestFocus();
+      } else if (field == ActiveSearchField.end && !endFocusNode.hasFocus) {
+        endFocusNode.requestFocus();
+      }
+
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _preventNotificationLoop = false;
+      });
+    });
   }
 
   // Bestehende Methoden bleiben unverändert...
@@ -523,50 +600,17 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // Focus and Search Listeners
-  void _onStartSearchChanged() {
-    // This will be handled by SearchHandler
-  }
-
-  void _onEndSearchChanged() {
-    // This will be handled by SearchHandler
-  }
-
-  void _onStartFocusChanged() {
-    if (startFocusNode.hasFocus) {
-      activeSearchField = ActiveSearchField.start;
-      isRouteActiveForCardSwitch = false;
-    } else {
-      if (activeSearchField == ActiveSearchField.start) {
-        activeSearchField = ActiveSearchField.none;
-      }
-    }
-    notifyListeners();
-  }
-
-  void _onEndFocusChanged() {
-    if (endFocusNode.hasFocus) {
-      activeSearchField = ActiveSearchField.end;
-      isRouteActiveForCardSwitch = false;
-    } else {
-      if (activeSearchField == ActiveSearchField.end) {
-        activeSearchField = ActiveSearchField.none;
-      }
-    }
-    notifyListeners();
-  }
-
   @override
   void dispose() {
+    _preventNotificationLoop = true; // ✅ FIX: Verhindere Updates beim Dispose
+
     mapController.dispose();
     ttsService.stop();
-    startSearchController.removeListener(_onStartSearchChanged);
     startSearchController.dispose();
-    endSearchController.removeListener(_onEndSearchChanged);
     endSearchController.dispose();
-    startFocusNode.removeListener(_onStartFocusChanged);
+    startFocusNode.removeListener(_onStartFocusChangedStable);
     startFocusNode.dispose();
-    endFocusNode.removeListener(_onEndFocusChanged);
+    endFocusNode.removeListener(_onEndFocusChangedStable);
     endFocusNode.dispose();
     super.dispose();
   }
