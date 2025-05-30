@@ -337,7 +337,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ FIX: Verbesserte kompakte Suchleiste
+  // ✅ MINIMAL: Kompakte Suchleiste
   Widget _buildCompactSearchBar(bool isUiReady) {
     if (!isUiReady) return const SizedBox.shrink();
 
@@ -378,11 +378,6 @@ class MapScreenState extends State<MapScreen>
               child: TextField(
                 controller: activeController,
                 focusNode: activeFocusNode,
-                // ✅ FIX: Stabilere Konfiguration
-                autocorrect: false,
-                enableSuggestions: false,
-                keyboardType: TextInputType.text,
-                textInputAction: TextInputAction.done,
                 decoration: InputDecoration(
                   hintText: hintText,
                   prefixIcon: Icon(
@@ -395,17 +390,6 @@ class MapScreenState extends State<MapScreen>
                   contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
                 style: const TextStyle(fontSize: 16),
-                onTapOutside: (event) {
-                  // ✅ FIX: Kein automatisches Unfocus
-                },
-                onSubmitted: (value) {
-                  // ✅ FIX: Bei Enter Route berechnen wenn möglich
-                  if (controller.startLatLng != null &&
-                      controller.endLatLng != null) {
-                    FocusScope.of(context).unfocus();
-                    routeHandler.calculateRouteIfPossible();
-                  }
-                },
               ),
             ),
             if (activeController.text.isNotEmpty)
@@ -419,7 +403,6 @@ class MapScreenState extends State<MapScreen>
             IconButton(
               icon: const Icon(Icons.keyboard_hide, color: Colors.deepOrange),
               onPressed: () {
-                // ✅ FIX: Explizite Focus-Entfernung
                 FocusScope.of(context).unfocus();
               },
             ),
