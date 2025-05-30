@@ -1,7 +1,6 @@
 // lib/screens/map_screen/map_screen_search_handler.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
