@@ -90,35 +90,37 @@ mixin MapScreenUiMixin {
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: startSearchController,
-                          focusNode: startFocusNode,
-                          enabled: true,
-                          readOnly: false,
-                          canRequestFocus: true,
-                          decoration: InputDecoration(
-                            hintText: "Startpunkt wählen",
-                            prefixIcon: const Icon(Icons.trip_origin),
-                            suffixIcon: startSearchController.text.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    iconSize: 20,
-                                    onPressed: () {
-                                      startSearchController.clear();
-                                      clearRoute();
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8.0, horizontal: 8.0),
-                          ),
+                        child: GestureDetector(
                           onTap: () {
                             if (!startFocusNode.hasFocus) {
                               startFocusNode.requestFocus();
                             }
                           },
+                          child: TextField(
+                            controller: startSearchController,
+                            focusNode: startFocusNode,
+                            enabled: true,
+                            readOnly: false,
+                            canRequestFocus: true,
+                            decoration: InputDecoration(
+                              hintText: "Startpunkt wählen",
+                              prefixIcon: const Icon(Icons.trip_origin),
+                              suffixIcon: startSearchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      iconSize: 20,
+                                      onPressed: () {
+                                        startSearchController.clear();
+                                        clearRoute();
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 8.0, horizontal: 8.0),
+                            ),
+                          ),
                         ),
                       ),
                       Tooltip(
@@ -190,35 +192,40 @@ mixin MapScreenUiMixin {
                 ),
                 child: SizedBox(
                   height: kSearchInputRowHeight,
-                  child: TextField(
-                    controller: endSearchController,
-                    focusNode: endFocusNode,
-                    enabled: true,
-                    readOnly: false,
-                    canRequestFocus: true,
-                    decoration: InputDecoration(
-                      hintText: "Ziel wählen",
-                      prefixIcon: const Icon(Icons.flag_outlined),
-                      suffixIcon: endSearchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              iconSize: 20,
-                              onPressed: () {
-                                endSearchController.clear();
-                                clearRoute();
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 8.0, horizontal: 8.0),
-                    ),
+                  child: GestureDetector(
                     onTap: () {
                       if (!endFocusNode.hasFocus) {
                         endFocusNode.requestFocus();
                       }
                     },
+                    child: TextField(
+                      controller: endSearchController,
+                      focusNode: endFocusNode,
+                      enabled: true,
+                      readOnly: false,
+                      canRequestFocus: true,
+                      autofocus: false,
+                      enableInteractiveSelection:
+                          true, // ✅ FIX: Erlaubt persistente Selektion
+                      decoration: InputDecoration(
+                        hintText: "Ziel wählen",
+                        prefixIcon: const Icon(Icons.flag_outlined),
+                        suffixIcon: endSearchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                iconSize: 20,
+                                onPressed: () {
+                                  endSearchController.clear();
+                                  clearRoute();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 8.0),
+                      ),
+                    ),
                   ),
                 ),
               ),

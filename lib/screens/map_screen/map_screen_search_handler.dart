@@ -107,7 +107,8 @@ class MapScreenSearchHandler {
     }
 
     _hideResultsTimer?.cancel();
-    _hideResultsTimer = Timer(const Duration(milliseconds: 300), () {
+    _hideResultsTimer = Timer(const Duration(milliseconds: 1500), () {
+      // ✅ FIX: Längere Verzögerung!
       if (kDebugMode) {
         print(
             "🔍 [DEBUG] Timer executed - Start Focus: ${controller.startFocusNode.hasFocus}, End Focus: ${controller.endFocusNode.hasFocus}");
