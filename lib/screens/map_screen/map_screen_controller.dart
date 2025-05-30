@@ -165,13 +165,26 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ SCHÖNE CAMPING-MARKER
   void updateCurrentLocationMarker() {
     if (currentGpsPosition != null) {
       currentLocationMarker = Marker(
         width: 80.0,
         height: 80.0,
         point: currentGpsPosition!,
-        child: const Icon(Icons.my_location, color: Colors.blueAccent),
+        alignment: Alignment.center,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.blue, width: 3.0),
+          ),
+          child: const Icon(
+            Icons.my_location,
+            color: Colors.blue,
+            size: 28.0,
+          ),
+        ),
       );
       notifyListeners();
     }
@@ -184,7 +197,25 @@ class MapScreenController with ChangeNotifier {
         point: startLatLng!,
         width: 80,
         height: 80,
-        child: const Icon(Icons.play_circle_fill, color: Colors.green),
+        alignment: Alignment.center,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.green.withOpacity(0.9),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.green.withOpacity(0.3),
+                blurRadius: 8.0,
+                spreadRadius: 2.0,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.play_arrow,
+            color: Colors.white,
+            size: 32.0,
+          ),
+        ),
       );
     } else {
       startMarker = null;
@@ -198,7 +229,25 @@ class MapScreenController with ChangeNotifier {
         point: endLatLng!,
         width: 80,
         height: 80,
-        child: const Icon(Icons.flag_circle, color: Colors.red),
+        alignment: Alignment.center,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.red.withOpacity(0.9),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(0.3),
+                blurRadius: 8.0,
+                spreadRadius: 2.0,
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.flag,
+            color: Colors.white,
+            size: 32.0,
+          ),
+        ),
       );
     } else {
       endMarker = null;
