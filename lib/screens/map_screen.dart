@@ -1,10 +1,11 @@
-// lib/screens/map_screen.dart
+// lib/screens/map_screen.dart - KEYBOARD FIX VERSION
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
+import 'package:latlong2/latlong.dart';
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
@@ -244,12 +245,10 @@ class MapScreenState extends State<MapScreen>
       LocationInfo? selectedLocation, bool isLoading) {
     return Stack(
       children: [
-        GestureDetector(
-          onTap: () {
-            FocusScope.of(context).unfocus();
-          },
-          child: _buildMap(isUiReady, mapTheme, selectedLocation),
-        ),
+        // ✅ FIX 1: Kein GestureDetector um die Map - Hauptproblem gelöst!
+        _buildMap(isUiReady, mapTheme, selectedLocation),
+
+        // UI-Elemente können weiterhin Focus haben
         if (!controller.compactSearchMode) _buildSearchCard(isUiReady),
         if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady),
         _buildInstructionCard(isUiReady),
@@ -350,7 +349,8 @@ class MapScreenState extends State<MapScreen>
           controller.updateEndMarker();
         }
 
-        FocusScope.of(context).unfocus();
+        // ✅ FIX 2: Kein automatischer unfocus bei POI-Auswahl
+        // FocusScope.of(context).unfocus(); // ENTFERNT
 
         Future.delayed(const Duration(milliseconds: 200), () {
           routeHandler.calculateRouteIfPossible();
@@ -370,7 +370,12 @@ class MapScreenState extends State<MapScreen>
         initialZoom: 17.0,
         minZoom: 13.0,
         maxZoom: 20.0,
-        onTap: isUiReady ? routeHandler.handleMapTap : null,
+        onTap: isUiReady
+            ? (tapPosition, point) {
+                // ✅ FIX 3: Smarte Map-Tap Behandlung
+                _handleMapTap(tapPosition, point);
+              }
+            : null,
         onMapEvent: _handleMapEvent,
         onMapReady: _onMapReady,
       ),
@@ -381,6 +386,35 @@ class MapScreenState extends State<MapScreen>
         if (isUiReady) _buildMarkerLayer(),
       ],
     );
+  }
+
+  // ✅ FIX 4: Neue smarte Map-Tap Behandlung
+  void _handleMapTap(TapPosition tapPosition, LatLng point) {
+    // Nur unfocus wenn TextField aktiv ist UND wirklich auf leere Map geklickt
+    if (controller.startFocusNode.hasFocus ||
+        controller.endFocusNode.hasFocus) {
+      // Prüfe ob auf POI/Marker geklickt wurde
+      bool hitPOI = false;
+
+      // Prüfe Distanz zu sichtbaren POIs
+      for (final feature in controller.visibleSearchResults) {
+        const Distance distance = Distance();
+        final distanceToFeature = distance.distance(point, feature.center);
+        if (distanceToFeature < 50) {
+          // 50m Toleranz
+          hitPOI = true;
+          break;
+        }
+      }
+
+      // Nur unfocus wenn NICHT auf POI geklickt
+      if (!hitPOI) {
+        FocusScope.of(context).unfocus();
+      }
+    }
+
+    // Normale Map-Tap Behandlung für Route-Erstellung
+    routeHandler.handleMapTap(tapPosition, point);
   }
 
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
@@ -904,7 +938,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // Event Handlers
+  // ✅ FIX 5: Map-Events ohne automatischen unfocus - Problem behoben!
   void _handleMapEvent(MapEvent mapEvent) {
     if (mapEvent is MapEventMove &&
         (mapEvent.source == MapEventSource.dragStart ||
@@ -915,13 +949,14 @@ class MapScreenState extends State<MapScreen>
       }
     }
 
-    if (mapEvent is MapEventMove &&
-        (mapEvent.source == MapEventSource.dragStart ||
-            mapEvent.source == MapEventSource.flingAnimationController) &&
-        (controller.startFocusNode.hasFocus ||
-            controller.endFocusNode.hasFocus)) {
-      FocusScope.of(context).unfocus();
-    }
+    // ❌ ENTFERNT: Automatischer unfocus bei Map-Drag - Das war der Hauptverursacher!
+    // if (mapEvent is MapEventMove &&
+    //     (mapEvent.source == MapEventSource.dragStart ||
+    //         mapEvent.source == MapEventSource.flingAnimationController) &&
+    //     (controller.startFocusNode.hasFocus ||
+    //         controller.endFocusNode.hasFocus)) {
+    //   FocusScope.of(context).unfocus();
+    // }
   }
 
   void _onMapReady() {
