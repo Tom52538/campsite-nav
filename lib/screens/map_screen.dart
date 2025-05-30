@@ -303,13 +303,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: Colors.white.withValues(alpha: 0.95),
                   borderRadius: BorderRadius.circular(12.0),
                   border: Border.all(
                       color: _getColorForPOIType(feature.type), width: 2.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 4.0,
                       offset: const Offset(0, 2),
                     ),
