@@ -561,6 +561,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       calculateAndDisplayRoute: routeHandler.calculateRouteIfPossible,
       clearRoute: routeHandler.clearRoute,
       showSnackbar: showSnackbar,
+      setStartToCurrentLocation: setStartToCurrentLocation, // ✅ PARAMETER HINZUGEFÜGT
     );
   }
 
