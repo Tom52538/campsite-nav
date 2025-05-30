@@ -24,13 +24,13 @@ class MapScreenSearchHandler {
   void _onStartSearchChanged() {
     if (controller.startFocusNode.hasFocus &&
         controller.startSearchController.text != "Aktueller Standort") {
-      _filterFeatures(controller.startSearchController.text);
+      _performIntelligentSearch(controller.startSearchController.text);
     }
   }
 
   void _onEndSearchChanged() {
     if (controller.endFocusNode.hasFocus) {
-      _filterFeatures(controller.endSearchController.text);
+      _performIntelligentSearch(controller.endSearchController.text);
     }
   }
 
@@ -39,7 +39,7 @@ class MapScreenSearchHandler {
       controller.setActiveSearchField(ActiveSearchField.start);
       controller.setRouteActiveForCardSwitch(false);
       if (controller.startSearchController.text != "Aktueller Standort") {
-        _filterFeatures(controller.startSearchController.text);
+        _performIntelligentSearch(controller.startSearchController.text);
       }
     } else {
       if (controller.activeSearchField == ActiveSearchField.start) {
@@ -53,7 +53,7 @@ class MapScreenSearchHandler {
     if (controller.endFocusNode.hasFocus) {
       controller.setActiveSearchField(ActiveSearchField.end);
       controller.setRouteActiveForCardSwitch(false);
-      _filterFeatures(controller.endSearchController.text);
+      _performIntelligentSearch(controller.endSearchController.text);
     } else {
       if (controller.activeSearchField == ActiveSearchField.end) {
         controller.setActiveSearchField(ActiveSearchField.none);
@@ -62,24 +62,211 @@ class MapScreenSearchHandler {
     }
   }
 
-  void _filterFeatures(String query) {
+  // ✅ NEU: Intelligente Such-Filterung
+  void _performIntelligentSearch(String query) {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final allFeatures = locationProvider.currentSearchableFeatures;
 
     if (query.isEmpty) {
-      controller.setSearchResults(allFeatures);
-      controller.setShowSearchResults(true);
+      // Keine Suche = keine POIs anzeigen (Search-First Prinzip)
+      controller.setSearchResults([]);
+      controller.setShowSearchResults(false);
+      controller.clearVisibleSearchResults();
+      if (kDebugMode) {
+        print("[SearchHandler] Leere Suche - alle POIs ausgeblendet");
+      }
       return;
     }
 
-    final filteredResults = allFeatures
-        .where((feature) =>
-            feature.name.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+    final filteredResults = _filterBySearchType(allFeatures, query);
 
+    // Standard-Suchergebnisse für Dropdown
     controller.setSearchResults(filteredResults);
     controller.setShowSearchResults(true);
+
+    // ✅ NEU: Sichtbare POIs auf der Karte (Search-First Navigation)
+    controller.setVisibleSearchResults(filteredResults);
+
+    if (kDebugMode) {
+      print(
+          "[SearchHandler] Suche '$query': ${filteredResults.length} Ergebnisse gefunden");
+    }
+  }
+
+  // ✅ NEU: Intelligente Filterlogik nach Such-Typ
+  List<SearchableFeature> _filterBySearchType(
+      List<SearchableFeature> allFeatures, String query) {
+    final String cleanQuery = query.trim().toLowerCase();
+
+    // 1. NUMERISCHE SUCHE - Unterkunft-Nummern
+    if (_isNumericAccommodationSearch(cleanQuery)) {
+      return _searchAccommodationByNumber(allFeatures, cleanQuery);
+    }
+
+    // 2. KATEGORIE-SUCHE - Sanitär, Gastronomie, etc.
+    final categoryResults = _searchByCategory(allFeatures, cleanQuery);
+    if (categoryResults.isNotEmpty) {
+      return categoryResults;
+    }
+
+    // 3. NAME-SUCHE - Klassische Textsuche
+    return _searchByName(allFeatures, cleanQuery);
+  }
+
+  // ✅ Prüfung auf numerische Unterkunft-Suche
+  bool _isNumericAccommodationSearch(String query) {
+    // Reine Zahlen oder Zahlen mit typischen Unterkunft-Präfixen
+    return RegExp(r'^\d+$').hasMatch(query) ||
+        RegExp(r'^(nr|no|nummer|house|haus|platz|pitch|stelle)\s*\.?\s*\d+$')
+            .hasMatch(query) ||
+        RegExp(r'^\d+[a-z]?$').hasMatch(query); // z.B. "247" oder "247a"
+  }
+
+  // ✅ Unterkunft nach Nummer suchen
+  List<SearchableFeature> _searchAccommodationByNumber(
+      List<SearchableFeature> features, String query) {
+    // Extrahiere die Nummer aus verschiedenen Formaten
+    final numberMatch = RegExp(r'\d+').firstMatch(query);
+    if (numberMatch == null) return [];
+
+    final searchNumber = numberMatch.group(0)!;
+
+    final results = features.where((feature) {
+      // Suche in accommodations und buildings mit Nummern
+      if (!_isAccommodationType(feature.type)) return false;
+
+      // Verschiedene Namensformate berücksichtigen
+      final name = feature.name.toLowerCase();
+      return name.contains(searchNumber) ||
+          name == searchNumber ||
+          name.endsWith(' $searchNumber') ||
+          name.startsWith('$searchNumber ') ||
+          RegExp(r'\b' + searchNumber + r'\b').hasMatch(name);
+    }).toList();
+
+    if (kDebugMode) {
+      print(
+          "[SearchHandler] Unterkunft-Suche '$searchNumber': ${results.length} gefunden");
+    }
+
+    return results;
+  }
+
+  // ✅ Kategorie-basierte Suche
+  List<SearchableFeature> _searchByCategory(
+      List<SearchableFeature> features, String query) {
+    final Map<String, List<String>> categoryMappings = {
+      'toilets': [
+        'wc',
+        'toilet',
+        'toilette',
+        'sanitär',
+        'sanitary',
+        'bad',
+        'dusche',
+        'shower'
+      ],
+      'parking': ['parking', 'parkplatz', 'stellplatz', 'auto', 'car'],
+      'amenity': [
+        'rezeption',
+        'reception',
+        'empfang',
+        'büro',
+        'office',
+        'info',
+        'information'
+      ],
+      'shop': ['shop', 'laden', 'geschäft', 'supermarkt', 'market', 'kiosk'],
+      'restaurant': [
+        'restaurant',
+        'cafe',
+        'bar',
+        'gastronomie',
+        'essen',
+        'food',
+        'snack'
+      ],
+      'playground': ['spielplatz', 'playground', 'kinder', 'children', 'spiel'],
+      'industrial': [
+        'technik',
+        'technical',
+        'service',
+        'wartung',
+        'maintenance'
+      ],
+      'tourism': ['sehenswürdigkeit', 'attraction', 'tourism', 'sightseeing'],
+      'building': ['gebäude', 'building', 'haus', 'house'],
+    };
+
+    for (final category in categoryMappings.keys) {
+      final keywords = categoryMappings[category]!;
+
+      if (keywords.any((keyword) => query.contains(keyword))) {
+        final results = features
+            .where((feature) =>
+                feature.type.toLowerCase() == category ||
+                feature.type.toLowerCase().contains(category) ||
+                (category == 'amenity' && _isAmenityType(feature.type)))
+            .toList();
+
+        if (results.isNotEmpty) {
+          if (kDebugMode) {
+            print(
+                "[SearchHandler] Kategorie-Suche '$category': ${results.length} gefunden");
+          }
+          return results;
+        }
+      }
+    }
+
+    return [];
+  }
+
+  // ✅ Standard Name-Suche (Fallback)
+  List<SearchableFeature> _searchByName(
+      List<SearchableFeature> features, String query) {
+    final results = features
+        .where((feature) => feature.name.toLowerCase().contains(query))
+        .toList();
+
+    if (kDebugMode) {
+      print("[SearchHandler] Name-Suche '$query': ${results.length} gefunden");
+    }
+
+    return results;
+  }
+
+  // ✅ Hilfsmethoden für Typ-Erkennung
+  bool _isAccommodationType(String type) {
+    final accommodationTypes = [
+      'accommodation',
+      'building',
+      'house',
+      'pitch',
+      'camp_pitch',
+      'holiday_home',
+      'chalet',
+      'bungalow',
+      'lodge',
+      'cabin'
+    ];
+    return accommodationTypes.contains(type.toLowerCase()) ||
+        type.toLowerCase().contains('comfort') ||
+        type.toLowerCase().contains('wellness') ||
+        type.toLowerCase().contains('luxury');
+  }
+
+  bool _isAmenityType(String type) {
+    final amenityTypes = [
+      'reception',
+      'information',
+      'office',
+      'service_point',
+      'tourist_info',
+      'admin'
+    ];
+    return amenityTypes.contains(type.toLowerCase());
   }
 
   void _hideSearchResultsAfterDelay() {
@@ -87,6 +274,8 @@ class MapScreenSearchHandler {
       if (!controller.startFocusNode.hasFocus &&
           !controller.endFocusNode.hasFocus) {
         controller.setShowSearchResults(false);
+        // ✅ NEU: Auch sichtbare POIs ausblenden wenn kein Focus
+        controller.clearVisibleSearchResults();
       }
     });
   }
@@ -108,6 +297,9 @@ class MapScreenSearchHandler {
 
     controller.setShowSearchResults(false);
 
+    // ✅ NEU: Feature weiterhin sichtbar lassen nach Auswahl
+    controller.setVisibleSearchResults([feature]);
+
     // Trigger route calculation if both points are set
     if (_onRouteCalculationNeeded != null) {
       _onRouteCalculationNeeded!();
@@ -126,6 +318,9 @@ class MapScreenSearchHandler {
     controller.setStartLatLng(controller.currentGpsPosition);
     controller.startMarker = null; // Kein Marker für die aktuelle Position
     controller.startFocusNode.unfocus();
+
+    // ✅ NEU: Bei "Aktueller Standort" keine POIs anzeigen
+    controller.clearVisibleSearchResults();
 
     // Trigger route calculation if both points are set
     if (_onRouteCalculationNeeded != null) {
@@ -152,6 +347,9 @@ class MapScreenSearchHandler {
       controller.setEndLatLng(null);
       controller.endMarker = null;
     }
+
+    // ✅ NEU: POIs ausblenden beim Löschen der Suche
+    controller.clearVisibleSearchResults();
 
     // Clear route if needed
     if (_onRouteClearNeeded != null) {
