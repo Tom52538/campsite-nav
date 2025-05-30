@@ -359,7 +359,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   List<SearchableFeature> _removeOverlappingPOIs(
       List<SearchableFeature> features) {
     final List<SearchableFeature> result = [];
-    const double minDistanceMeters = 50.0; // Mindestabstand
+    const double minDistanceMeters = 100.0; // ✅ Vergrößert: 100m statt 50m
 
     for (final feature in features) {
       bool tooClose = false;
