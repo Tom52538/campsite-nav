@@ -18,6 +18,9 @@ class MapScreenRouteHandler {
   static const Distance _distanceCalculator = Distance();
   static const double maneuverReachedThreshold = 15.0;
 
+  // ✅ NEU: Für schöne UI-Updates
+  double? _currentDistanceToManeuver;
+
   MapScreenRouteHandler(this.controller, this.context);
 
   Future<void> calculateRouteIfPossible() async {
@@ -55,8 +58,13 @@ class MapScreenRouteHandler {
 
     if (pathPoints != null && pathPoints.isNotEmpty) {
       final maneuvers = RoutingService.analyzeRouteForTurns(pathPoints);
-      final polyline =
-          Polyline(points: pathPoints, color: Colors.blue, strokeWidth: 5.0);
+      final polyline = Polyline(
+        points: pathPoints,
+        color: Colors.blue.shade600, // ✅ Schönere Farbe
+        strokeWidth: 6.0, // ✅ Dicker für bessere Sichtbarkeit
+        borderColor: Colors.white, // ✅ Weißer Rand
+        borderStrokeWidth: 2.0, // ✅ Rand für Kontrast
+      );
 
       controller.setCurrentManeuvers(maneuvers);
       controller.setRoutePolyline(polyline);
@@ -142,7 +150,12 @@ class MapScreenRouteHandler {
 
         if (newRoutePoints != null && newRoutePoints.isNotEmpty) {
           final newPolyline = Polyline(
-              points: newRoutePoints, color: Colors.blue, strokeWidth: 5.0);
+            points: newRoutePoints,
+            color: Colors.orange.shade600, // ✅ Orange für Rerouting
+            strokeWidth: 6.0,
+            borderColor: Colors.white,
+            borderStrokeWidth: 2.0,
+          );
 
           controller.setRoutePolyline(newPolyline);
           controller.setCurrentManeuvers(
@@ -212,6 +225,9 @@ class MapScreenRouteHandler {
           controller.updateCurrentDisplayedManeuver(nextManeuverToDisplay);
         }
 
+        // ✅ NEU: Distanz für UI speichern
+        _currentDistanceToManeuver = distanceToManeuver;
+
         // ✅ NEU: Erweiterte Sprachanweisungen mit Distanzangaben
         controller.ttsService.speakNavigationInstruction(
             nextManeuverToDisplay, distanceToManeuver);
@@ -220,6 +236,9 @@ class MapScreenRouteHandler {
       }
     }
   }
+
+  // ✅ NEU: Getter für aktuelle Distanz (für UI)
+  double? get currentDistanceToManeuver => _currentDistanceToManeuver;
 
   void _toggleRouteOverview({bool? zoomOut, double delaySeconds = 0.0}) {
     Future.delayed(Duration(milliseconds: (delaySeconds * 1000).toInt()), () {
