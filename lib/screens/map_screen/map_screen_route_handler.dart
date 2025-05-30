@@ -215,7 +215,9 @@ class MapScreenRouteHandler {
   void _toggleRouteOverview({bool? zoomOut, double delaySeconds = 0.0}) {
     Future.delayed(Duration(milliseconds: (delaySeconds * 1000).toInt()), () {
       if (controller.routePolyline == null ||
-          controller.routePolyline!.points.isEmpty) return;
+          controller.routePolyline!.points.isEmpty) {
+        return;
+      }
 
       bool shouldZoomOut = zoomOut ?? !controller.isInRouteOverviewMode;
 
