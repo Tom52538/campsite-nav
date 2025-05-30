@@ -1,356 +1,358 @@
-// lib/screens/map_screen/map_screen_route_handler.dart
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+// lib/services/routing_service.dart
+import 'dart:math' as math;
+import 'package:collection/collection.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
-import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/graph_node.dart';
+import 'package:camping_osm_navi/models/routing_graph.dart';
+import 'package:flutter/foundation.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
-import 'package:camping_osm_navi/services/routing_service.dart';
-import 'package:camping_osm_navi/providers/location_provider.dart';
-import 'map_screen_controller.dart';
 
-class MapScreenRouteHandler {
-  final MapScreenController controller;
-  final BuildContext context;
-
+class RoutingService {
+  static const double averageWalkingSpeedKmh = 4.5;
   static const Distance _distanceCalculator = Distance();
-  static const double maneuverReachedThreshold = 15.0;
 
-  MapScreenRouteHandler(this.controller, this.context);
+  static const double slightTurnThreshold = 35.0;
+  static const double normalTurnThreshold = 75.0;
+  static const double sharpTurnThreshold = 135.0;
+  static const double uTurnAngleThreshold = 165.0;
 
-  Future<void> calculateRouteIfPossible() async {
-    if (controller.startLatLng == null || controller.endLatLng == null) {
-      return;
-    }
+  // ✅ NEU: Rerouting Konstanten
+  static const double offRouteThresholdMeters = 30.0;
+  static const int rerouteDelaySeconds = 3;
 
-    controller.setCalculatingRoute(true);
-
-    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
-    final graph = locationProvider.currentRoutingGraph;
-
-    if (graph == null) {
+  static Future<List<LatLng>?> findPath(
+      RoutingGraph graph, GraphNode startNode, GraphNode endNode) async {
+    try {
+      return _dijkstra(graph, startNode, endNode);
+    } catch (e, stacktrace) {
       if (kDebugMode) {
-        print("Routing-Graph ist nicht geladen.");
+        print("[RoutingService.findPath] Fehler während Dijkstra: $e");
+        print("[RoutingService.findPath] Stacktrace: $stacktrace");
       }
-      controller.setCalculatingRoute(false);
-      return;
+      return null;
+    }
+  }
+
+  static List<LatLng>? _dijkstra(
+      RoutingGraph graph, GraphNode startNode, GraphNode endNode) {
+    final priorityQueue =
+        PriorityQueue<GraphNode>((a, b) => a.gCost.compareTo(b.gCost));
+
+    startNode.gCost = 0;
+    priorityQueue.add(startNode);
+
+    final Set<String> visitedNodes = {};
+
+    while (priorityQueue.isNotEmpty) {
+      GraphNode currentNode;
+      try {
+        if (priorityQueue.isEmpty) {
+          break;
+        }
+        currentNode = priorityQueue.removeFirst();
+      } catch (e) {
+        if (kDebugMode) {
+          print(
+              "[RoutingService._dijkstra] Fehler beim Holen aus PriorityQueue: $e");
+        }
+        continue;
+      }
+
+      if (visitedNodes.contains(currentNode.id)) {
+        continue;
+      }
+      visitedNodes.add(currentNode.id);
+
+      if (currentNode.id == endNode.id) {
+        return _reconstructPath(endNode);
+      }
+
+      for (final edge in currentNode.edges) {
+        final GraphNode neighborNode = edge.toNode;
+
+        if (visitedNodes.contains(neighborNode.id)) {
+          continue;
+        }
+
+        final double tentativeGCost = currentNode.gCost + edge.weight;
+
+        if (tentativeGCost < neighborNode.gCost) {
+          neighborNode.parent = currentNode;
+          neighborNode.gCost = tentativeGCost;
+          priorityQueue.add(neighborNode);
+        }
+      }
     }
 
-    final startNode = _findNearestNode(controller.startLatLng!, graph);
-    final endNode = _findNearestNode(controller.endLatLng!, graph);
+    return null;
+  }
+
+  static List<LatLng>? _reconstructPath(GraphNode endNode) {
+    final List<LatLng> path = [];
+    GraphNode? currentNode = endNode;
+    int safetyBreak = 0;
+    const int maxPathLength = 10000;
+
+    while (currentNode != null && safetyBreak < maxPathLength) {
+      path.add(currentNode.position);
+      currentNode = currentNode.parent;
+      safetyBreak++;
+    }
+
+    if (safetyBreak >= maxPathLength && kDebugMode) {
+      // print(
+      //     "[RoutingService._reconstructPath] WARNUNG: Pfadrekonstruktion abgebrochen (maximale Länge $maxPathLength erreicht). Möglicherweise Kreis im Parent-Graph oder sehr langer Pfad?");
+    }
+
+    if (path.isEmpty) {
+      return null;
+    } else {
+      final reversedPath = path.reversed.toList();
+      return reversedPath;
+    }
+  }
+
+  static double calculateTotalDistance(List<LatLng> routePoints) {
+    double totalDistance = 0.0;
+    if (routePoints.length < 2) {
+      return totalDistance;
+    }
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      totalDistance += _distanceCalculator(routePoints[i], routePoints[i + 1]);
+    }
+    return totalDistance;
+  }
+
+  static int estimateWalkingTimeMinutes(double totalDistanceMeters,
+      {double speedKmh = averageWalkingSpeedKmh}) {
+    if (totalDistanceMeters <= 0 || speedKmh <= 0) {
+      return 0;
+    }
+    final double distanceKm = totalDistanceMeters / 1000.0;
+    final double timeHours = distanceKm / speedKmh;
+    final double timeMinutes = timeHours * 60;
+    return timeMinutes.round();
+  }
+
+  // ✅ NEU: Echtzeit-Aktualisierung von Zeit und Entfernung
+  static ({double remainingDistance, int remainingTimeMinutes})?
+      calculateRemainingRouteInfo(
+          LatLng currentPosition, List<LatLng> routePoints) {
+    if (routePoints.isEmpty) return null;
+
+    // Finde nächstgelegenen Punkt auf der Route
+    int nearestPointIndex =
+        _findNearestPointOnRoute(currentPosition, routePoints);
+    if (nearestPointIndex == -1) return null;
+
+    // Berechne verbleibende Distanz ab nächstem Routenpunkt
+    double remainingDistance = 0.0;
+    for (int i = nearestPointIndex; i < routePoints.length - 1; i++) {
+      remainingDistance +=
+          _distanceCalculator(routePoints[i], routePoints[i + 1]);
+    }
+
+    // Addiere Distanz von aktueller Position zum nächsten Routenpunkt
+    if (nearestPointIndex < routePoints.length) {
+      remainingDistance +=
+          _distanceCalculator(currentPosition, routePoints[nearestPointIndex]);
+    }
+
+    int remainingTimeMinutes = estimateWalkingTimeMinutes(remainingDistance);
+
+    return (
+      remainingDistance: remainingDistance,
+      remainingTimeMinutes: remainingTimeMinutes
+    );
+  }
+
+  // ✅ NEU: Off-Route Erkennung
+  static bool isOffRoute(LatLng currentPosition, List<LatLng> routePoints,
+      {double thresholdMeters = offRouteThresholdMeters}) {
+    if (routePoints.isEmpty) return false;
+
+    double minDistanceToRoute = double.infinity;
+
+    // Prüfe Distanz zu allen Routensegmenten
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      double distanceToSegment = _distanceToLineSegment(
+          currentPosition, routePoints[i], routePoints[i + 1]);
+      minDistanceToRoute = math.min(minDistanceToRoute, distanceToSegment);
+    }
+
+    return minDistanceToRoute > thresholdMeters;
+  }
+
+  // ✅ NEU: Automatische Routenneuberechnung
+  static Future<List<LatLng>?> recalculateRoute(
+      RoutingGraph graph, LatLng currentPosition, LatLng destination) async {
+    // Finde nächste Knoten für aktuelle Position und Ziel
+    final startNode = graph.findNearestNode(currentPosition);
+    final endNode = graph.findNearestNode(destination);
 
     if (startNode == null || endNode == null) {
       if (kDebugMode) {
-        print("Start- oder Endpunkt liegt außerhalb des Wegnetzes.");
+        print(
+            "[RoutingService.recalculateRoute] Start- oder Endknoten nicht gefunden");
       }
-      controller.setCalculatingRoute(false);
-      return;
+      return null;
     }
 
-    final List<LatLng>? pathPoints = await RoutingService.findPath(graph, startNode, endNode);
+    // Graph-Kosten zurücksetzen vor neuer Berechnung
+    graph.resetAllNodeCosts();
 
-    if (pathPoints != null && pathPoints.isNotEmpty) {
-      final maneuvers = RoutingService.analyzeRouteForTurns(pathPoints);
-      final polyline = Polyline(
-        points: pathPoints, 
-        color: Colors.blue, 
-        strokeWidth: 5.0
-      );
-      
-      controller.setCurrentManeuvers(maneuvers);
-      controller.setRoutePolyline(polyline);
-      controller.updateRouteMetrics(pathPoints);
-      
-      updateCurrentManeuverOnGpsUpdate(
-        controller.currentGpsPosition ?? pathPoints.first
-      );
-
-      if (kDebugMode) {
-        print("Route berechnet. Distanz: ${controller.routeDistance?.toStringAsFixed(2)}m");
-      }
-      
-      controller.setRouteActiveForCardSwitch(true);
-      _toggleRouteOverview(zoomOut: true, delaySeconds: 0.5);
-    } else {
-      if (kDebugMode) {
-        print("Keine Route zwischen den Punkten gefunden.");
-      }
-      controller.resetRouteAndNavigation();
+    if (kDebugMode) {
+      print(
+          "[RoutingService.recalculateRoute] Neuberechnung von ${startNode.id} zu ${endNode.id}");
     }
-    
-    controller.setCalculatingRoute(false);
+
+    return await findPath(graph, startNode, endNode);
   }
 
-  GraphNode? _findNearestNode(LatLng point, RoutingGraph graph) {
-    GraphNode? nearestNode;
+  // ✅ HILFSMETHODEN
+  static int _findNearestPointOnRoute(
+      LatLng currentPosition, List<LatLng> routePoints) {
+    if (routePoints.isEmpty) return -1;
+
     double minDistance = double.infinity;
-    
-    for (var node in graph.nodes.values) {
-      final d = _distanceCalculator.distance(point, node.position);
-      if (d < minDistance) {
-        minDistance = d;
-        nearestNode = node;
+    int nearestIndex = 0;
+
+    for (int i = 0; i < routePoints.length; i++) {
+      double distance = _distanceCalculator(currentPosition, routePoints[i]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = i;
       }
     }
-    return nearestNode;
+
+    return nearestIndex;
   }
 
-  void updateNavigationOnGpsChange(LatLng newGpsPosition) {
-    if (controller.routePolyline == null || controller.routePolyline!.points.isEmpty) {
-      return;
-    }
-
-    final routePoints = controller.routePolyline!.points;
-
-    // 1. Aktualisiere verbleibende Zeit/Distanz
-    final remainingInfo = RoutingService.calculateRemainingRouteInfo(
-      newGpsPosition, 
-      routePoints
-    );
-    
-    if (remainingInfo != null) {
-      controller.updateRemainingRouteInfo(
-        remainingInfo.remainingDistance,
-        remainingInfo.remainingTimeMinutes
-      );
-    }
-
-    // 2. Prüfe auf Off-Route und führe ggf. Rerouting durch
-    if (!controller.isRerouting && controller.endLatLng != null) {
-      final isOffRoute = RoutingService.isOffRoute(newGpsPosition, routePoints);
-      
-      if (isOffRoute && controller.shouldTriggerReroute()) {
-        _performRerouting(newGpsPosition);
-      }
-    }
+  static double _distanceToLineSegment(
+      LatLng point, LatLng lineStart, LatLng lineEnd) {
+    // Vereinfachte Implementierung: Distanz zum nächsten Endpunkt
+    double distToStart = _distanceCalculator(point, lineStart);
+    double distToEnd = _distanceCalculator(point, lineEnd);
+    return math.min(distToStart, distToEnd);
   }
 
-  Future<void> _performRerouting(LatLng currentPosition) async {
-    if (controller.isRerouting || controller.endLatLng == null) return;
-
-    controller.setRerouting(true);
-
-    try {
-      final locationProvider = Provider.of<LocationProvider>(context, listen: false);
-      final graph = locationProvider.currentRoutingGraph;
-      
-      if (graph != null) {
-        final newRoutePoints = await RoutingService.recalculateRoute(
-          graph, 
-          currentPosition, 
-          controller.endLatLng!
-        );
-        
-        if (newRoutePoints != null && newRoutePoints.isNotEmpty) {
-          final newPolyline = Polyline(
-            points: newRoutePoints, 
-            color: Colors.blue, 
-            strokeWidth: 5.0
-          );
-          
-          controller.setRoutePolyline(newPolyline);
-          controller.setCurrentManeuvers(
-            RoutingService.analyzeRouteForTurns(newRoutePoints)
-          );
-          controller.updateRouteMetrics(newRoutePoints);
-          updateCurrentManeuverOnGpsUpdate(currentPosition);
-          
-          if (kDebugMode) {
-            print("Route neu berechnet");
-          }
-        } else {
-          if (kDebugMode) {
-            print("Neue Route konnte nicht berechnet werden");
-          }
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print("Fehler beim Rerouting: $e");
-      }
-    } finally {
-      controller.setRerouting(false);
+  static String _getInstructionTextForTurnType(TurnType turnType) {
+    switch (turnType) {
+      case TurnType.depart:
+        return "Route starten";
+      case TurnType.slightLeft:
+        return "Leicht links halten";
+      case TurnType.slightRight:
+        return "Leicht rechts halten";
+      case TurnType.turnLeft:
+        return "Links abbiegen";
+      case TurnType.turnRight:
+        return "Rechts abbiegen";
+      case TurnType.sharpLeft:
+        return "Scharf links abbiegen";
+      case TurnType.sharpRight:
+        return "Scharf rechts abbiegen";
+      case TurnType.uTurnLeft:
+        return "Bitte wenden (linksherum)";
+      case TurnType.uTurnRight:
+        return "Bitte wenden (rechtsherum)";
+      case TurnType.straight:
+        return "Geradeaus weiter";
+      case TurnType.arrive:
+        return "Sie haben Ihr Ziel erreicht";
     }
   }
 
-  void updateCurrentManeuverOnGpsUpdate(LatLng currentPos) {
-    if (controller.currentManeuvers.isEmpty) return;
-
-    int startIndex = 0;
-    if (controller.currentDisplayedManeuver != null) {
-      startIndex = controller.currentManeuvers.indexWhere((m) =>
-          m.point.latitude == controller.currentDisplayedManeuver!.point.latitude &&
-          m.point.longitude == controller.currentDisplayedManeuver!.point.longitude &&
-          m.turnType == controller.currentDisplayedManeuver!.turnType);
-    }
-    if (startIndex == -1) {
-      startIndex = 0;
+  static List<Maneuver> analyzeRouteForTurns(List<LatLng> routePoints) {
+    if (routePoints.length < 2) {
+      return [];
     }
 
-    for (int i = startIndex; i < controller.currentManeuvers.length; i++) {
-      final Maneuver potentialNextManeuver = controller.currentManeuvers[i];
-      final LatLng maneuverPoint = potentialNextManeuver.point;
+    final List<Maneuver> maneuvers = [];
+    maneuvers.add(Maneuver(
+        point: routePoints.first,
+        turnType: TurnType.depart,
+        instructionText: _getInstructionTextForTurnType(TurnType.depart)));
 
-      final double distanceToManeuver = _distanceCalculator.distance(currentPos, maneuverPoint);
+    if (routePoints.length < 3) {
+      if (routePoints.length == 2) {
+        maneuvers.add(Maneuver(
+            point: routePoints.last,
+            turnType: TurnType.arrive,
+            instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
+      }
+      return maneuvers;
+    }
 
-      if (i < controller.currentManeuvers.length - 1 &&
-          distanceToManeuver < maneuverReachedThreshold) {
+    for (int i = 0; i < routePoints.length - 2; i++) {
+      final LatLng p1 = routePoints[i];
+      final LatLng p2 = routePoints[i + 1];
+      final LatLng p3 = routePoints[i + 2];
+
+      if (p1 == p2 || p2 == p3) {
         continue;
-      } else {
-        Maneuver nextManeuverToDisplay = potentialNextManeuver;
+      }
 
-        bool isNewDisplay = controller.currentDisplayedManeuver == null ||
-            (nextManeuverToDisplay.point.latitude !=
-                    controller.currentDisplayedManeuver!.point.latitude ||
-                nextManeuverToDisplay.point.longitude !=
-                    controller.currentDisplayedManeuver!.point.longitude ||
-                nextManeuverToDisplay.turnType !=
-                    controller.currentDisplayedManeuver!.turnType);
+      double dx1 = p2.longitude - p1.longitude;
+      double dy1 = p2.latitude - p1.latitude;
+      double angle1 = math.atan2(dy1, dx1);
 
-        if (isNewDisplay) {
-          controller.ttsService.speak(nextManeuverToDisplay.instructionText ?? '');
-          controller.updateCurrentDisplayedManeuver(nextManeuverToDisplay);
+      double dx2 = p3.longitude - p2.longitude;
+      double dy2 = p3.latitude - p2.latitude;
+      double angle2 = math.atan2(dy2, dx2);
+
+      double angleDiff = angle2 - angle1;
+      while (angleDiff <= -math.pi) {
+        angleDiff += 2 * math.pi;
+      }
+      while (angleDiff > math.pi) {
+        angleDiff -= 2 * math.pi;
+      }
+      double angleDegrees = angleDiff * 180 / math.pi;
+
+      TurnType turnType = TurnType.straight;
+
+      if (angleDegrees > slightTurnThreshold &&
+          angleDegrees <= normalTurnThreshold) {
+        turnType = TurnType.slightRight;
+      } else if (angleDegrees > normalTurnThreshold &&
+          angleDegrees <= sharpTurnThreshold) {
+        turnType = TurnType.turnRight;
+      } else if (angleDegrees > sharpTurnThreshold &&
+          angleDegrees < uTurnAngleThreshold) {
+        turnType = TurnType.sharpRight;
+      } else if (angleDegrees >= uTurnAngleThreshold ||
+          angleDegrees <= -uTurnAngleThreshold) {
+        if (angleDegrees > 0) {
+          turnType = TurnType.uTurnRight;
+        } else {
+          turnType = TurnType.uTurnLeft;
         }
-        break;
+      } else if (angleDegrees < -slightTurnThreshold &&
+          angleDegrees >= -normalTurnThreshold) {
+        turnType = TurnType.slightLeft;
+      } else if (angleDegrees < -normalTurnThreshold &&
+          angleDegrees >= -sharpTurnThreshold) {
+        turnType = TurnType.turnLeft;
+      } else if (angleDegrees < -sharpTurnThreshold &&
+          angleDegrees > -uTurnAngleThreshold) {
+        turnType = TurnType.sharpLeft;
+      }
+
+      if (turnType != TurnType.straight) {
+        final maneuver = Maneuver(
+            point: p2,
+            turnType: turnType,
+            instructionText: _getInstructionTextForTurnType(turnType));
+        maneuvers.add(maneuver);
       }
     }
-  }
 
-  void _toggleRouteOverview({bool? zoomOut, double delaySeconds = 0.0}) {
-    Future.delayed(Duration(milliseconds: (delaySeconds * 1000).toInt()), () {
-      if (controller.routePolyline == null || controller.routePolyline!.points.isEmpty) return;
+    maneuvers.add(Maneuver(
+        point: routePoints.last,
+        turnType: TurnType.arrive,
+        instructionText: _getInstructionTextForTurnType(TurnType.arrive)));
 
-      bool shouldZoomOut = zoomOut ?? !controller.isInRouteOverviewMode;
-
-      if (shouldZoomOut) {
-        controller.mapController.fitCamera(
-          CameraFit.bounds(
-            bounds: LatLngBounds.fromPoints(controller.routePolyline!.points),
-            padding: const EdgeInsets.all(50.0),
-          ),
-        );
-        controller.setRouteOverviewMode(true);
-        controller.setFollowGps(false);
-      } else {
-        _centerOnGps();
-        controller.setRouteOverviewMode(false);
-      }
-    });
-  }
-
-  void _centerOnGps() {
-    if (controller.currentGpsPosition != null) {
-      controller.setFollowGps(true);
-      controller.mapController.move(
-        controller.currentGpsPosition!, 
-        MapScreenController.followGpsZoomLevel
-      );
-    }
-  }
-
-  void toggleRouteOverview() {
-    _toggleRouteOverview();
-  }
-
-  void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
-    if (showConfirmation) {
-      _showConfirmationDialog(
-        "Route löschen", 
-        "Möchten Sie die aktuelle Route wirklich löschen?",
-        () => _performClearRoute(clearMarkers)
-      );
-    } else {
-      _performClearRoute(clearMarkers);
-    }
-  }
-
-  void _performClearRoute(bool clearMarkers) {
-    controller.resetRouteAndNavigation();
-    if (clearMarkers) {
-      controller.startMarker = null;
-      controller.endMarker = null;
-    }
-  }
-
-  void _showConfirmationDialog(String title, String content, VoidCallback onConfirm) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(title),
-          content: Text(content),
-          actions: <Widget>[
-            TextButton(
-              child: const Text("Abbrechen"),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-            TextButton(
-              child: const Text("Bestätigen"),
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                onConfirm();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void handleMapTap(TapPosition tapPos, LatLng latlng) {
-    if (controller.isCalculatingRoute) return;
-
-    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
-    final graph = locationProvider.currentRoutingGraph;
-    if (graph == null) return;
-
-    final nearestNode = _findNearestNode(latlng, graph);
-    if (nearestNode == null) {
-      if (kDebugMode) {
-        print("Kein Weg in der Nähe gefunden.");
-      }
-      return;
-    }
-      return;
-    }
-
-    final pointOnGraph = nearestNode.position;
-    const pointName = "Punkt auf Karte";
-
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.play_arrow),
-                title: const Text('Als Startpunkt'),
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.startSearchController.text = pointName;
-                  controller.setStartLatLng(pointOnGraph);
-                  controller.updateStartMarker();
-                  calculateRouteIfPossible();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.flag),
-                title: const Text('Als Ziel'),
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.endSearchController.text = pointName;
-                  controller.setEndLatLng(pointOnGraph);
-                  controller.updateEndMarker();
-                  calculateRouteIfPossible();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    return maneuvers;
   }
 }
