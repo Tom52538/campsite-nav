@@ -141,14 +141,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
           tooltip: 'Test TTS',
           onPressed: isUiReady ? controller.ttsService.testSpeak : null,
         ),
-        // ✅ GEÄNDERT: POI Toggle jetzt für Search-First Navigation
         IconButton(
           icon: Icon(
             controller.showPOILabels ? Icons.search : Icons.search_off,
             color: controller.showPOILabels ? Colors.white : Colors.white70,
           ),
-          tooltip: controller.showPOILabels 
-              ? 'Search-Navigation aktiv' 
+          tooltip: controller.showPOILabels
+              ? 'Search-Navigation aktiv'
               : 'Search-Navigation inaktiv',
           onPressed: isUiReady
               ? () {
@@ -272,11 +271,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
   }
 
-  // ✅ KOMPLETT ÜBERARBEITET: Search-First Navigation Marker-Layer
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
-    // 1. IMMER: GPS, Start, Ziel Marker
+    // Standard-Marker (GPS, Start, Ziel)
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
@@ -287,24 +285,26 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
-    // 2. ✅ SEARCH-FIRST: Nur sichtbare Suchergebnisse anzeigen
-    if (controller.showPOILabels && controller.visibleSearchResults.isNotEmpty) {
+    // Search-First Navigation: Nur sichtbare Suchergebnisse
+    if (controller.showPOILabels &&
+        controller.visibleSearchResults.isNotEmpty) {
       final currentZoom = controller.mapController.camera.zoom;
-      
+
       for (final feature in controller.visibleSearchResults) {
         activeMarkers.add(_createSearchResultMarker(feature, currentZoom));
       }
 
       if (kDebugMode) {
-        print("[MapScreen] ${controller.visibleSearchResults.length} Search-POIs angezeigt");
+        print(
+            "[MapScreen] ${controller.visibleSearchResults.length} Search-POIs angezeigt");
       }
     }
 
     return MarkerLayer(markers: activeMarkers);
   }
 
-  // ✅ NEU: Spezieller Marker für Suchergebnisse
-  Marker _createSearchResultMarker(SearchableFeature feature, double currentZoom) {
+  Marker _createSearchResultMarker(
+      SearchableFeature feature, double currentZoom) {
     return Marker(
       width: _getMarkerWidthForFeature(feature),
       height: _getMarkerHeightForFeature(feature),
@@ -359,9 +359,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     );
   }
 
-  // ✅ Hilfsmethoden für dynamische Marker-Gestaltung
   double _getMarkerWidthForFeature(SearchableFeature feature) {
-    if (_isAccommodationType(feature.type)) return 140.0; // Unterkünfte breiter
+    if (_isAccommodationType(feature.type)) return 140.0;
     return 120.0;
   }
 
@@ -376,7 +375,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   }
 
   bool _shouldShowTextForZoom(double zoom) {
-    return zoom >= 16.0; // Text erst ab Zoom 16
+    return zoom >= 16.0;
   }
 
   double _getFontSizeForZoom(double zoom) {
@@ -387,12 +386,20 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
 
   bool _isAccommodationType(String type) {
     final accommodationTypes = [
-      'accommodation', 'building', 'house', 'pitch', 'camp_pitch', 
-      'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin'
+      'accommodation',
+      'building',
+      'house',
+      'pitch',
+      'camp_pitch',
+      'holiday_home',
+      'chalet',
+      'bungalow',
+      'lodge',
+      'cabin'
     ];
     return accommodationTypes.contains(type.toLowerCase()) ||
-           type.toLowerCase().contains('comfort') ||
-           type.toLowerCase().contains('wellness');
+        type.toLowerCase().contains('comfort') ||
+        type.toLowerCase().contains('wellness');
   }
 
   Color _getBackgroundColorForPOIType(String type) {
@@ -510,15 +517,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     );
   }
 
-  double _calculateDefaultCardHeight() {
-    return (kSearchInputRowHeight * 2) +
-        kDividerAndSwapButtonHeight +
-        (kCardInternalVerticalPadding * 2) +
-        (controller.routeDistance != null ? kRouteInfoHeight : 0);
-  }
-
   Widget _buildCompactCard() {
     return buildCompactRouteInfoCard(
+      context,
       key: const ValueKey('compactCard'),
       remainingRouteDistance: controller.remainingRouteDistance,
       routeDistance: controller.routeDistance,
@@ -534,6 +535,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
 
   Widget _buildFullSearchCard() {
     return buildSearchInputCard(
+      context,
       key: const ValueKey('searchInputCard'),
       fullSearchCardKey: fullSearchCardKey,
       fullSearchCardHeight: controller.fullSearchCardHeight,
@@ -561,7 +563,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       calculateAndDisplayRoute: routeHandler.calculateRouteIfPossible,
       clearRoute: routeHandler.clearRoute,
       showSnackbar: showSnackbar,
-      setStartToCurrentLocation: setStartToCurrentLocation, // ✅ PARAMETER HINZUGEFÜGT
+      setStartToCurrentLocation: setStartToCurrentLocation,
     );
   }
 
@@ -602,6 +604,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
         : controller.fullSearchCardHeight > 0
             ? controller.fullSearchCardHeight
             : _calculateDefaultCardHeight();
+  }
+
+  double _calculateDefaultCardHeight() {
+    return (kSearchInputRowHeight * 2) +
+        kDividerAndSwapButtonHeight +
+        (kCardInternalVerticalPadding * 2) +
+        (controller.routeDistance != null ? kRouteInfoHeight : 0);
   }
 
   Widget _buildSearchResults(bool isUiReady) {
@@ -697,10 +706,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
             children: [
               CircularProgressIndicator(color: Colors.orange),
               SizedBox(height: 8),
-              Text(
-                "Route wird neu berechnet...",
-                style: TextStyle(color: Colors.white),
-              ),
+              Text("Route wird neu berechnet...",
+                  style: TextStyle(color: Colors.white)),
             ],
           ),
         ),
@@ -816,7 +823,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       showSnackbar("Kein Standort ausgewählt, kann Modus nicht wechseln.");
       return;
     }
-
     gpsHandler.toggleMockLocation(selectedLocation);
   }
 
@@ -835,3 +841,49 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
             "Du bist zu weit vom Campingplatz entfernt, um zu zentrieren.");
       }
     }
+  }
+
+  void showSnackbar(String message, {int durationSeconds = 3}) {
+    if (mounted && context.mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && context.mounted) {
+          try {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                duration: Duration(seconds: durationSeconds),
+              ),
+            );
+          } catch (e) {
+            if (kDebugMode) {
+              print("SNACKBAR: $message");
+            }
+          }
+        }
+      });
+    } else {
+      if (kDebugMode) {
+        print("SNACKBAR (no context): $message");
+      }
+    }
+  }
+
+  // Public methods für Handler
+  void setStartToCurrentLocation() {
+    searchHandler.setStartToCurrentLocation();
+  }
+
+  void calculateAndDisplayRoute() {
+    routeHandler.calculateRouteIfPossible();
+  }
+
+  void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
+    routeHandler.clearRoute(
+        showConfirmation: showConfirmation, clearMarkers: clearMarkers);
+  }
+
+  void swapStartAndEnd() {
+    searchHandler.swapStartAndEnd();
+  }
+}
