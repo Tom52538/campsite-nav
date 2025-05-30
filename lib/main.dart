@@ -1,13 +1,13 @@
-// lib/main.dart
+// lib/main.dart - MIT DEBUG ROUTE
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/screens/map_screen.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // HINZUGEFÜGT
+import 'package:camping_osm_navi/debug/keyboard_debug_screen.dart'; // NEU
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> main() async {
-  // Geändert zu async
-  await dotenv.load(fileName: ".env"); // HINZUGEFÜGT: Lädt die .env-Datei
+  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
   runApp(
     ChangeNotifierProvider(
@@ -37,7 +37,12 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const MapScreen(), // Verwendet jetzt den importierten MapScreen
+      // ✅ NEU: Routen für Debug
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const MapScreen(),
+        '/debug': (context) => const KeyboardDebugScreen(),
+      },
       debugShowCheckedModeBanner: false,
     );
   }
