@@ -11,6 +11,7 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
+import 'package:camping_osm_navi/debug/keyboard_debug_screen.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen_parts/horizontal_poi_strip.dart';
@@ -974,6 +975,25 @@ class MapScreenState extends State<MapScreen>
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        // ✅ NEU: DEBUG BUTTON (temporär)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: FloatingActionButton(
+            heroTag: "debugBtn",
+            backgroundColor: Colors.red,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const KeyboardDebugScreen(),
+                ),
+              );
+            },
+            tooltip: "Keyboard Debug",
+            child: const Icon(Icons.bug_report, color: Colors.white),
+          ),
+        ),
+
         if (isUiReady && controller.routePolyline != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
