@@ -561,7 +561,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       calculateAndDisplayRoute: routeHandler.calculateRouteIfPossible,
       clearRoute: routeHandler.clearRoute,
       showSnackbar: showSnackbar,
-    );
+    )..setSetStartToCurrentLocationCallback(() => setStartToCurrentLocation()); // ✅ CALLBACK SETUP
   }
 
   Widget _buildInstructionCard(bool isUiReady) {
