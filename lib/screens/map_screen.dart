@@ -373,6 +373,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
         child: TurnInstructionCard(
           maneuver: controller.currentDisplayedManeuver!,
           maxWidth: kSearchCardMaxWidth + 50,
+          distanceToManeuver: routeHandler.currentDistanceToManeuver, // ✅ NEU
         ),
       ),
     );
