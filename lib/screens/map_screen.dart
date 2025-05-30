@@ -35,7 +35,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   late SearchManager _searchManager;
 
   // State
-  bool _isLoading = false;
   String _maptilerUrlTemplate = '';
   LocationInfo? _lastProcessedLocation;
 
@@ -101,7 +100,8 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   void didChangeMetrics() {
     super.didChangeMetrics();
     // ✅ KRITISCH: Keine Keyboard-Interferenz mehr!
-    // Lassen wir das System das Keyboard verwalten
+    // Keyboard-Events werden vom System und den TextFields selbst verwaltet
+    // Keine manuellen Checks oder Updates nötig
   }
 
   @override
@@ -237,7 +237,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       ),
       children: [
         _buildMapLayer(isReady, mapTheme),
-        // TODO: Hier können später Marker, Routen etc. hinzugefügt werden
+        // Marker, Routen und andere Map-Layers werden hier später hinzugefügt
       ],
     );
   }
@@ -270,7 +270,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   Widget _buildLoadingOverlay(LocationInfo? selectedLocation) {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withOpacity(0.7),
+        color: Colors.black.withValues(alpha: 0.7),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
