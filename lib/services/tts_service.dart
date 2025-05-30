@@ -212,7 +212,7 @@ class TtsService {
 
   Future<void> _speakWithLogging(String instruction) async {
     if (kDebugMode) {
-      print("[TtsService] Spreche: '$instruction'");
+      if (kDebugMode) print("[TtsService] Spreche: '$instruction'");
     }
 
     if (_currentLanguage != null) {
@@ -221,7 +221,8 @@ class TtsService {
 
     var result = await _flutterTts.speak(instruction);
     if (result != 1 && kDebugMode) {
-      print("[TtsService] Fehler beim Starten der Ansage für: $instruction");
+      if (kDebugMode)
+        print("[TtsService] Fehler beim Starten der Ansage für: $instruction");
     }
   }
 
@@ -276,7 +277,7 @@ class TtsService {
     _lastSpokenInstruction = null;
     _lastInstructionTime = null;
     if (kDebugMode) {
-      print("[TtsService] TTS für neue Route zurückgesetzt");
+      if (kDebugMode) print("[TtsService] TTS für neue Route zurückgesetzt");
     }
   }
 }
