@@ -17,6 +17,10 @@ class RoutingService {
   static const double sharpTurnThreshold = 135.0;
   static const double uTurnAngleThreshold = 165.0;
 
+  // ✅ NEU: Rerouting Konstanten
+  static const double offRouteThresholdMeters = 30.0;
+  static const int rerouteDelaySeconds = 3;
+
   static Future<List<LatLng>?> findPath(
       RoutingGraph graph, GraphNode startNode, GraphNode endNode) async {
     try {
@@ -156,6 +160,108 @@ class RoutingService {
     final double timeHours = distanceKm / speedKmh;
     final double timeMinutes = timeHours * 60;
     return timeMinutes.round();
+  }
+
+  // ✅ NEU: Echtzeit-Aktualisierung von Zeit und Entfernung
+  static ({double remainingDistance, int remainingTimeMinutes})?
+      calculateRemainingRouteInfo(
+          LatLng currentPosition, List<LatLng> routePoints) {
+    if (routePoints.isEmpty) return null;
+
+    // Finde nächstgelegenen Punkt auf der Route
+    int nearestPointIndex =
+        _findNearestPointOnRoute(currentPosition, routePoints);
+    if (nearestPointIndex == -1) return null;
+
+    // Berechne verbleibende Distanz ab nächstem Routenpunkt
+    double remainingDistance = 0.0;
+    for (int i = nearestPointIndex; i < routePoints.length - 1; i++) {
+      remainingDistance +=
+          _distanceCalculator(routePoints[i], routePoints[i + 1]);
+    }
+
+    // Addiere Distanz von aktueller Position zum nächsten Routenpunkt
+    if (nearestPointIndex < routePoints.length) {
+      remainingDistance +=
+          _distanceCalculator(currentPosition, routePoints[nearestPointIndex]);
+    }
+
+    int remainingTimeMinutes = estimateWalkingTimeMinutes(remainingDistance);
+
+    return (
+      remainingDistance: remainingDistance,
+      remainingTimeMinutes: remainingTimeMinutes
+    );
+  }
+
+  // ✅ NEU: Off-Route Erkennung
+  static bool isOffRoute(LatLng currentPosition, List<LatLng> routePoints,
+      {double thresholdMeters = offRouteThresholdMeters}) {
+    if (routePoints.isEmpty) return false;
+
+    double minDistanceToRoute = double.infinity;
+
+    // Prüfe Distanz zu allen Routensegmenten
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      double distanceToSegment = _distanceToLineSegment(
+          currentPosition, routePoints[i], routePoints[i + 1]);
+      minDistanceToRoute = math.min(minDistanceToRoute, distanceToSegment);
+    }
+
+    return minDistanceToRoute > thresholdMeters;
+  }
+
+  // ✅ NEU: Automatische Routenneuberechnung
+  static Future<List<LatLng>?> recalculateRoute(
+      RoutingGraph graph, LatLng currentPosition, LatLng destination) async {
+    // Finde nächste Knoten für aktuelle Position und Ziel
+    final startNode = graph.findNearestNode(currentPosition);
+    final endNode = graph.findNearestNode(destination);
+
+    if (startNode == null || endNode == null) {
+      if (kDebugMode) {
+        print(
+            "[RoutingService.recalculateRoute] Start- oder Endknoten nicht gefunden");
+      }
+      return null;
+    }
+
+    // Graph-Kosten zurücksetzen vor neuer Berechnung
+    graph.resetAllNodeCosts();
+
+    if (kDebugMode) {
+      print(
+          "[RoutingService.recalculateRoute] Neuberechnung von ${startNode.id} zu ${endNode.id}");
+    }
+
+    return await findPath(graph, startNode, endNode);
+  }
+
+  // ✅ HILFSMETHODEN
+  static int _findNearestPointOnRoute(
+      LatLng currentPosition, List<LatLng> routePoints) {
+    if (routePoints.isEmpty) return -1;
+
+    double minDistance = double.infinity;
+    int nearestIndex = 0;
+
+    for (int i = 0; i < routePoints.length; i++) {
+      double distance = _distanceCalculator(currentPosition, routePoints[i]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestIndex = i;
+      }
+    }
+
+    return nearestIndex;
+  }
+
+  static double _distanceToLineSegment(
+      LatLng point, LatLng lineStart, LatLng lineEnd) {
+    // Vereinfachte Implementierung: Distanz zum nächsten Endpunkt
+    double distToStart = _distanceCalculator(point, lineStart);
+    double distToEnd = _distanceCalculator(point, lineEnd);
+    return math.min(distToStart, distToEnd);
   }
 
   static String _getInstructionTextForTurnType(TurnType turnType) {
