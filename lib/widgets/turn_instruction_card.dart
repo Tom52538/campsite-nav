@@ -67,7 +67,8 @@ class TurnInstructionCard extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.0), // ✅ Rundere Ecken
           side: BorderSide(
-            color: getColorForTurnType(maneuver.turnType).withOpacity(0.3),
+            color:
+                getColorForTurnType(maneuver.turnType).withValues(alpha: 0.3),
             width: 2.0,
           ),
         ),
@@ -80,7 +81,7 @@ class TurnInstructionCard extends StatelessWidget {
               end: Alignment.bottomRight,
               colors: [
                 Colors.white,
-                getColorForTurnType(maneuver.turnType).withOpacity(0.05),
+                getColorForTurnType(maneuver.turnType).withValues(alpha: 0.05),
               ],
             ),
           ),
@@ -97,8 +98,8 @@ class TurnInstructionCard extends StatelessWidget {
                   width: 60.0,
                   height: 60.0,
                   decoration: BoxDecoration(
-                    color:
-                        getColorForTurnType(maneuver.turnType).withOpacity(0.1),
+                    color: getColorForTurnType(maneuver.turnType)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(30.0),
                     border: Border.all(
                       color: getColorForTurnType(maneuver.turnType),
@@ -126,7 +127,7 @@ class TurnInstructionCard extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: getColorForTurnType(maneuver.turnType)
-                                .withOpacity(0.2),
+                                .withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                           child: Text(
@@ -163,7 +164,7 @@ class TurnInstructionCard extends StatelessWidget {
                             vertical: 2.0,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.2),
+                            color: Colors.red.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                           child: const Text(
@@ -232,9 +233,6 @@ class _CampingIconPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 3;
-
     switch (turnType) {
       case TurnType.depart:
         // Camping-Zelt Icon
@@ -266,7 +264,7 @@ class _CampingIconPainter extends CustomPainter {
     path.close();
 
     paint.style = PaintingStyle.fill;
-    paint.color = paint.color.withOpacity(0.3);
+    paint.color = paint.color.withValues(alpha: 0.3);
     canvas.drawPath(path, paint);
 
     paint.style = PaintingStyle.stroke;
@@ -296,7 +294,7 @@ class _CampingIconPainter extends CustomPainter {
     flagPath.close();
 
     paint.style = PaintingStyle.fill;
-    paint.color = paint.color.withOpacity(0.7);
+    paint.color = paint.color.withValues(alpha: 0.7);
     canvas.drawPath(flagPath, paint);
   }
 
