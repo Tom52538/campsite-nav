@@ -303,17 +303,6 @@ class MapScreenSearchHandler {
     );
   }
 
-  void _hideSearchResultsAfterDelay() {
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (!controller.startFocusNode.hasFocus &&
-          !controller.endFocusNode.hasFocus) {
-        controller.setShowSearchResults(false);
-        // ✅ Search-First: POIs auch ausblenden wenn kein Focus
-        controller.clearVisibleSearchResults();
-      }
-    });
-  }
-
   void selectFeatureAndSetPoint(SearchableFeature feature) {
     final point = feature.center;
 

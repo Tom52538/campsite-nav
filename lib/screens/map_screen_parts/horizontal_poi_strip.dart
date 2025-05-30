@@ -41,7 +41,7 @@ class HorizontalPOIStrip extends StatelessWidget with MapScreenUiMixin {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 12,
+              blurRadius: 12.0,
               offset: const Offset(0, -4),
             ),
           ],
@@ -125,13 +125,13 @@ class HorizontalPOIStrip extends StatelessWidget with MapScreenUiMixin {
           boxShadow: [
             BoxShadow(
               color: color.withValues(alpha: 0.2),
-              blurRadius: 4,
+              blurRadius: 4.0,
               offset: const Offset(0, 2),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(8.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -153,14 +153,14 @@ class HorizontalPOIStrip extends StatelessWidget with MapScreenUiMixin {
                             horizontal: 4, vertical: 1),
                         decoration: BoxDecoration(
                           color: Colors.orange,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white, width: 1),
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(color: Colors.white, width: 1.0),
                         ),
                         child: Text(
                           _extractNumber(feature.name)!,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 9,
+                            fontSize: 9.0,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -168,12 +168,12 @@ class HorizontalPOIStrip extends StatelessWidget with MapScreenUiMixin {
                     ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 6.0),
               // ✅ Name mit intelligenter Kürzung
               Text(
                 _shortenPOIName(feature.name),
                 style: TextStyle(
-                  fontSize: isAccommodation ? 11 : 10,
+                  fontSize: isAccommodation ? 11.0 : 10.0,
                   fontWeight: FontWeight.bold,
                   color: color,
                   height: 1.1,
