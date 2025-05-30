@@ -9,6 +9,7 @@ import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
+import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
@@ -140,6 +141,21 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
           tooltip: 'Test TTS',
           onPressed: isUiReady ? controller.ttsService.testSpeak : null,
         ),
+        // ✅ NEU: POI Toggle
+        IconButton(
+          icon: Icon(
+            controller.showPOILabels ? Icons.label : Icons.label_off,
+            color: controller.showPOILabels ? Colors.white : Colors.white70,
+          ),
+          tooltip: 'POI-Labels ein/ausblenden',
+          onPressed: isUiReady
+              ? () {
+                  setState(() {
+                    controller.togglePOILabels();
+                  });
+                }
+              : null,
+        ),
         if (availableLocations.isNotEmpty && selectedLocation != null)
           _buildLocationDropdown(
               availableLocations, selectedLocation, isLoading),
@@ -254,9 +270,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
   }
 
+  // ✅ NEUE _buildMarkerLayer() Methode mit POI-Labels
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
+    // Bestehende Marker (GPS, Start, Ziel)
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
@@ -267,7 +285,155 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
+    // ✅ NEU: POI-Labels mit Namen hinzufügen (nur wenn aktiviert)
+    if (controller.showPOILabels) {
+      final locationProvider = Provider.of<LocationProvider>(context);
+      final searchableFeatures = locationProvider.currentSearchableFeatures;
+
+      for (final feature in searchableFeatures) {
+        activeMarkers.add(
+          Marker(
+            width: 200.0, // Breiter für Text
+            height: 40.0, // Höher für Text
+            point: feature.center,
+            alignment: Alignment.center,
+            child: GestureDetector(
+              onTap: () => _showPOIActions(feature),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(12.0),
+                  border: Border.all(
+                      color: _getColorForPOIType(feature.type), width: 2.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 4.0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      getIconForFeatureType(feature.type),
+                      size: 16.0,
+                      color: _getColorForPOIType(feature.type),
+                    ),
+                    const SizedBox(width: 4.0),
+                    Flexible(
+                      child: Text(
+                        feature.name,
+                        style: TextStyle(
+                          fontSize: 12.0,
+                          fontWeight: FontWeight.bold,
+                          color: _getColorForPOIType(feature.type),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
     return MarkerLayer(markers: activeMarkers);
+  }
+
+  // ✅ NEU: POI-Aktionen beim Antippen
+  void _showPOIActions(SearchableFeature feature) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: Icon(
+                  getIconForFeatureType(feature.type),
+                  color: _getColorForPOIType(feature.type),
+                ),
+                title: Text(feature.name),
+                subtitle: Text('Typ: ${feature.type}'),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.play_arrow, color: Colors.green),
+                title: const Text('Als Startpunkt verwenden'),
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.startSearchController.text = feature.name;
+                  controller.setStartLatLng(feature.center);
+                  controller.updateStartMarker();
+                  routeHandler.calculateRouteIfPossible();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.flag, color: Colors.red),
+                title: const Text('Als Ziel verwenden'),
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.endSearchController.text = feature.name;
+                  controller.setEndLatLng(feature.center);
+                  controller.updateEndMarker();
+                  routeHandler.calculateRouteIfPossible();
+                },
+              ),
+              ListTile(
+                leading:
+                    const Icon(Icons.center_focus_strong, color: Colors.blue),
+                title: const Text('Karte zentrieren'),
+                onTap: () {
+                  Navigator.pop(context);
+                  controller.mapController.move(feature.center, 18.0);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ✅ NEU: Farbzuordnung für POI-Typen
+  Color _getColorForPOIType(String type) {
+    switch (type.toLowerCase()) {
+      case 'industrial':
+        return Colors.deepPurple;
+      case 'bus_stop':
+        return Colors.blue;
+      case 'parking':
+        return Colors.indigo;
+      case 'building':
+        return Colors.brown;
+      case 'shop':
+        return Colors.purple;
+      case 'amenity':
+        return Colors.green;
+      case 'tourism':
+        return Colors.orange;
+      case 'restaurant':
+      case 'cafe':
+        return Colors.red;
+      case 'reception':
+      case 'information':
+        return Colors.teal;
+      case 'toilets':
+      case 'sanitary':
+        return Colors.cyan;
+      case 'playground':
+        return Colors.pink;
+      default:
+        return Colors.grey.shade600;
+    }
   }
 
   Widget _buildSearchCard(bool isUiReady) {
@@ -373,7 +539,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
         child: TurnInstructionCard(
           maneuver: controller.currentDisplayedManeuver!,
           maxWidth: kSearchCardMaxWidth + 50,
-          distanceToManeuver: routeHandler.currentDistanceToManeuver, // ✅ NEU
+          distanceToManeuver: routeHandler.currentDistanceToManeuver,
         ),
       ),
     );
