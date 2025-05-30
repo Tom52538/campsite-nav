@@ -49,7 +49,7 @@ mixin MapScreenUiMixin {
         clearRoute,
     required void Function(String, {int durationSeconds}) showSnackbar,
     required VoidCallback setStartToCurrentLocation,
-  }) {
+  ) {
     final double? displayDistance = remainingRouteDistance ?? routeDistance;
     final int? displayTime = remainingRouteTimeMinutes ?? routeTimeMinutes;
     final String timeLabelPrefix =
@@ -93,6 +93,9 @@ mixin MapScreenUiMixin {
                         child: TextField(
                           controller: startSearchController,
                           focusNode: startFocusNode,
+                          enabled: true,
+                          readOnly: false,
+                          canRequestFocus: true,
                           decoration: InputDecoration(
                             hintText: "Startpunkt wählen",
                             prefixIcon: const Icon(Icons.trip_origin),
@@ -111,6 +114,11 @@ mixin MapScreenUiMixin {
                             contentPadding: const EdgeInsets.symmetric(
                                 vertical: 8.0, horizontal: 8.0),
                           ),
+                          onTap: () {
+                            if (!startFocusNode.hasFocus) {
+                              startFocusNode.requestFocus();
+                            }
+                          },
                         ),
                       ),
                       Tooltip(
@@ -185,6 +193,9 @@ mixin MapScreenUiMixin {
                   child: TextField(
                     controller: endSearchController,
                     focusNode: endFocusNode,
+                    enabled: true,
+                    readOnly: false,
+                    canRequestFocus: true,
                     decoration: InputDecoration(
                       hintText: "Ziel wählen",
                       prefixIcon: const Icon(Icons.flag_outlined),
@@ -203,6 +214,11 @@ mixin MapScreenUiMixin {
                       contentPadding: const EdgeInsets.symmetric(
                           vertical: 8.0, horizontal: 8.0),
                     ),
+                    onTap: () {
+                      if (!endFocusNode.hasFocus) {
+                        endFocusNode.requestFocus();
+                      }
+                    },
                   ),
                 ),
               ),
