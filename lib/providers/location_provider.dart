@@ -54,8 +54,8 @@ class LocationProvider with ChangeNotifier {
         id: "kamperland",
         name: "Camping Resort Kamperland",
         geojsonAssetPath: "assets/data/export_kamperland.geojson",
-        initialLatitude: 51.5833,
-        initialLongitude: 3.6333,
+        initialLatitude: 51.58986626085254, // ✅ KORRIGIERT
+        initialLongitude: 3.7213346769915763, // ✅ KORRIGIERT
         radiusInMeters: 1500.0,
         styleId: "maptiler_streets_kamperland",
         styleUrl:
