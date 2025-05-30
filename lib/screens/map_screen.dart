@@ -311,38 +311,25 @@ class MapScreenState extends State<MapScreen>
 
   Widget _buildBody(bool isUiReady, dynamic mapTheme,
       LocationInfo? selectedLocation, bool isLoading) {
-    return GestureDetector(
-      // ✅ FIX: Tap-Handling für bessere Focus-Kontrolle
-      onTap: () {
-        // ✅ FIX: Nur Map-Taps entfernen Focus, nicht jeder Body-Tap
-        final RenderBox? mapRenderBox =
-            context.findRenderObject() as RenderBox?;
-        if (mapRenderBox != null) {
-          // Nur wenn außerhalb der Suchkarten getappt wird
-          FocusScope.of(context).unfocus();
-        }
-      },
-      child: Stack(
-        children: [
-          _buildMap(isUiReady, mapTheme, selectedLocation),
+    return Stack(
+      children: [
+        // ✅ FIX: GestureDetector nur um die MAP, nicht um alles!
+        GestureDetector(
+          onTap: () {
+            // Nur bei Map-Taps unfocus
+            FocusScope.of(context).unfocus();
+          },
+          child: _buildMap(isUiReady, mapTheme, selectedLocation),
+        ),
 
-          // ✅ FIX: Conditional Search Card (kompakt wenn Tastatur)
-          if (!controller.compactSearchMode) _buildSearchCard(isUiReady),
-
-          // ✅ FIX: Kompakte Suchleiste wenn Tastatur sichtbar
-          if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady),
-
-          _buildInstructionCard(isUiReady),
-
-          // ✅ FIX: Klassische Suchergebnisse nur wenn KEINE Tastatur
-          if (!controller.isKeyboardVisible) _buildSearchResults(isUiReady),
-
-          // ✅ FIX: Horizontale POI-Leiste
-          if (controller.showHorizontalPOIStrip) _buildHorizontalPOIStrip(),
-
-          _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
-        ],
-      ),
+        // UI-Elemente AUSSERHALB des GestureDetectors
+        if (!controller.compactSearchMode) _buildSearchCard(isUiReady),
+        if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady),
+        _buildInstructionCard(isUiReady),
+        if (!controller.isKeyboardVisible) _buildSearchResults(isUiReady),
+        if (controller.showHorizontalPOIStrip) _buildHorizontalPOIStrip(),
+        _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
+      ],
     );
   }
 
