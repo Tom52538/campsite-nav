@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_controller.dart
+// lib/screens/map_screen/map_screen_controller.dart - ERWEITERT für Keyboard Handling
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -31,8 +31,6 @@ class MapScreenController with ChangeNotifier {
   bool isMapReady = false;
   bool followGps = false;
   bool isRouteActiveForCardSwitch = false;
-
-  // ✅ GEÄNDERT: POI-Labels standardmäßig AUS für Search-First Navigation
   bool showPOILabels = false;
 
   LocationInfo? lastProcessedLocation;
@@ -49,8 +47,6 @@ class MapScreenController with ChangeNotifier {
   bool _isRerouting = false;
 
   List<SearchableFeature> searchResults = [];
-
-  // ✅ NEU: Nur sichtbare POIs (durch Suche gefiltert)
   List<SearchableFeature> visibleSearchResults = [];
 
   ActiveSearchField activeSearchField = ActiveSearchField.none;
@@ -62,6 +58,12 @@ class MapScreenController with ChangeNotifier {
 
   double fullSearchCardHeight = 0;
   String _maptilerUrlTemplate = '';
+
+  // ✅ NEU: Keyboard Handling
+  bool _isKeyboardVisible = false;
+  double _keyboardHeight = 0;
+  bool _compactSearchMode = false;
+  bool _showHorizontalPOIStrip = false;
 
   // Constants
   static const double followGpsZoomLevel = 17.5;
@@ -76,6 +78,12 @@ class MapScreenController with ChangeNotifier {
   bool get isInRouteOverviewMode => _isInRouteOverviewMode;
   bool get isRerouting => _isRerouting;
   String get maptilerUrlTemplate => _maptilerUrlTemplate;
+
+  // ✅ NEU: Keyboard Getters
+  bool get isKeyboardVisible => _isKeyboardVisible;
+  double get keyboardHeight => _keyboardHeight;
+  bool get compactSearchMode => _compactSearchMode;
+  bool get showHorizontalPOIStrip => _showHorizontalPOIStrip;
 
   MapScreenController() {
     ttsService = TtsService();
@@ -101,6 +109,147 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
+  // ✅ NEU: Keyboard Handling Methoden
+  void updateKeyboardVisibility(bool visible, double height) {
+    final wasVisible = _isKeyboardVisible;
+    _isKeyboardVisible = visible;
+    _keyboardHeight = height;
+
+    if (kDebugMode) {
+      print("[MapScreenController] Keyboard: visible=$visible, height=$height");
+    }
+
+    // Auto-Compact Suchfeld wenn Tastatur erscheint
+    if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
+      setCompactSearchMode(true);
+
+      // Zeige horizontale POI-Leiste wenn Suchergebnisse vorhanden
+      if (visibleSearchResults.isNotEmpty) {
+        setShowHorizontalPOIStrip(true);
+      }
+    } else if (!visible && wasVisible) {
+      // Tastatur versteckt - zurück zu normaler Ansicht
+      setCompactSearchMode(false);
+      setShowHorizontalPOIStrip(false);
+    }
+
+    notifyListeners();
+  }
+
+  void setCompactSearchMode(bool compact) {
+    if (_compactSearchMode != compact) {
+      _compactSearchMode = compact;
+      if (kDebugMode) {
+        print("[MapScreenController] Compact Search Mode: $compact");
+      }
+      notifyListeners();
+    }
+  }
+
+  void setShowHorizontalPOIStrip(bool show) {
+    if (_showHorizontalPOIStrip != show) {
+      _showHorizontalPOIStrip = show;
+      if (kDebugMode) {
+        print("[MapScreenController] Horizontal POI Strip: $show");
+      }
+      notifyListeners();
+    }
+  }
+
+  // ✅ ERWEITERT: Visible Search Results Management
+  void setVisibleSearchResults(List<SearchableFeature> results) {
+    visibleSearchResults = results;
+
+    // Auto-zeige horizontale POI-Leiste wenn Tastatur sichtbar und Ergebnisse vorhanden
+    if (isKeyboardVisible && results.isNotEmpty) {
+      setShowHorizontalPOIStrip(true);
+    } else if (results.isEmpty) {
+      setShowHorizontalPOIStrip(false);
+    }
+
+    notifyListeners();
+  }
+
+  void clearVisibleSearchResults() {
+    visibleSearchResults.clear();
+    setShowHorizontalPOIStrip(false);
+    notifyListeners();
+  }
+
+  // ✅ NEU: Auto-Zoom für Tastatur-Modus
+  void autoZoomToPOIsWithKeyboard(BuildContext context) {
+    if (!isKeyboardVisible || visibleSearchResults.isEmpty) return;
+
+    final results = visibleSearchResults;
+
+    // Berechne verfügbare Kartenhöhe (ohne Tastatur und UI-Elemente)
+    final screenHeight = MediaQuery.of(context).size.height;
+    final availableHeight =
+        screenHeight - keyboardHeight - 200; // Header + POI-Strip Space
+
+    if (results.length == 1) {
+      // Einzelnes POI: Zentrieren mit moderatem Zoom
+      mapController.move(results.first.center, 18.0);
+
+      if (kDebugMode) {
+        print(
+            "[MapScreenController] Auto-Zoom zu einzelnem POI: ${results.first.name}");
+      }
+    } else {
+      // Multiple POIs: Bounds mit verfügbarer Höhe
+      try {
+        final points = results.map((f) => f.center).toList();
+        final bounds = _calculateBoundsForPoints(points);
+
+        mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: bounds,
+            padding: EdgeInsets.only(
+              top: 120, // Header + Suchfeld
+              bottom: keyboardHeight + 120, // Tastatur + POI-Strip + Puffer
+              left: 30,
+              right: 30,
+            ),
+          ),
+        );
+
+        if (kDebugMode) {
+          print(
+              "[MapScreenController] Auto-Zoom zu ${results.length} POIs mit Tastatur-Bounds");
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print("[MapScreenController] Fehler beim Auto-Zoom: $e");
+        }
+      }
+    }
+  }
+
+  // ✅ Hilfsmethode: Bounds-Berechnung
+  LatLngBounds _calculateBoundsForPoints(List<LatLng> points) {
+    if (points.isEmpty) {
+      return LatLngBounds(fallbackInitialCenter, fallbackInitialCenter);
+    }
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+
+    return LatLngBounds(
+      LatLng(minLat, minLng),
+      LatLng(maxLat, maxLng),
+    );
+  }
+
+  // Bestehende Methoden bleiben unverändert...
   void setMapReady() {
     isMapReady = true;
     notifyListeners();
@@ -124,33 +273,19 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ GEÄNDERT: POI Toggle jetzt für visibleSearchResults
   void togglePOILabels() {
     showPOILabels = !showPOILabels;
     if (!showPOILabels) {
-      // Wenn POIs ausgeblendet werden, auch visibleSearchResults leeren
       visibleSearchResults.clear();
+      setShowHorizontalPOIStrip(false);
     }
-    notifyListeners();
-  }
-
-  // ✅ NEU: Setter für sichtbare Suchergebnisse
-  void setVisibleSearchResults(List<SearchableFeature> results) {
-    visibleSearchResults = results;
-    notifyListeners();
-  }
-
-  // ✅ NEU: Suchergebnisse leeren
-  void clearVisibleSearchResults() {
-    visibleSearchResults.clear();
     notifyListeners();
   }
 
   bool shouldTriggerReroute() {
     if (_lastRerouteTime == null) return true;
     final timeSinceLastReroute = DateTime.now().difference(_lastRerouteTime!);
-    return timeSinceLastReroute.inSeconds >=
-        3; // RoutingService.rerouteDelaySeconds
+    return timeSinceLastReroute.inSeconds >= 3;
   }
 
   void updateCurrentGpsPosition(LatLng newPosition) {
@@ -194,7 +329,6 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ SCHÖNE CAMPING-MARKER
   void updateCurrentLocationMarker() {
     if (currentGpsPosition != null) {
       currentLocationMarker = Marker(
@@ -336,10 +470,8 @@ class MapScreenController with ChangeNotifier {
     endLatLng = null;
     startMarker = null;
     endMarker = null;
-
-    // ✅ NEU: Auch visibleSearchResults zurücksetzen
     visibleSearchResults.clear();
-
+    setShowHorizontalPOIStrip(false);
     notifyListeners();
   }
 

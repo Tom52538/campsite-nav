@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart
+// lib/screens/map_screen.dart - ERWEITERT mit Keyboard Handling
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -13,6 +13,7 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
+import 'map_screen_parts/horizontal_poi_strip.dart'; // ✅ NEU
 import 'map_screen/map_screen_controller.dart';
 import 'map_screen/map_screen_gps_handler.dart';
 import 'map_screen/map_screen_route_handler.dart';
@@ -25,7 +26,8 @@ class MapScreen extends StatefulWidget {
   MapScreenState createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
+class MapScreenState extends State<MapScreen>
+    with MapScreenUiMixin, WidgetsBindingObserver {
   late MapScreenController controller;
   late MapScreenGpsHandler gpsHandler;
   late MapScreenRouteHandler routeHandler;
@@ -36,6 +38,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   @override
   void initState() {
     super.initState();
+
+    // ✅ NEU: Keyboard Observer registrieren
+    WidgetsBinding.instance.addObserver(this);
 
     controller = MapScreenController();
     gpsHandler = MapScreenGpsHandler(controller);
@@ -57,6 +62,46 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateSearchCardHeight();
+      _setupKeyboardListener(); // ✅ NEU
+    });
+  }
+
+  // ✅ NEU: Keyboard Listener Setup
+  void _setupKeyboardListener() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _checkKeyboardVisibility();
+      }
+    });
+  }
+
+  // ✅ NEU: Keyboard Visibility Detection
+  void _checkKeyboardVisibility() {
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
+    final isKeyboardVisible =
+        keyboardHeight > 100; // Threshold für echte Tastatur
+
+    controller.updateKeyboardVisibility(isKeyboardVisible, keyboardHeight);
+
+    // Auto-Zoom wenn Tastatur erscheint und POIs sichtbar sind
+    if (isKeyboardVisible && controller.visibleSearchResults.isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted) {
+          controller.autoZoomToPOIsWithKeyboard(context);
+        }
+      });
+    }
+  }
+
+  // ✅ NEU: Observer für Keyboard Changes
+  @override
+  void didChangeMetrics() {
+    super.didChangeMetrics();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _checkKeyboardVisibility();
+      }
     });
   }
 
@@ -83,6 +128,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       _handleLocationChange(newLocationInfo);
       controller.lastProcessedLocation = newLocationInfo;
     }
+
+    // ✅ NEU: Keyboard Check bei Dependency Changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _checkKeyboardVisibility();
+      }
+    });
   }
 
   void _handleLocationChange(LocationInfo newLocation) {
@@ -95,6 +147,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
 
   @override
   void dispose() {
+    // ✅ NEU: Observer entfernen
+    WidgetsBinding.instance.removeObserver(this);
+
     gpsHandler.dispose();
     searchHandler.dispose();
     controller.dispose();
@@ -215,11 +270,128 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     return Stack(
       children: [
         _buildMap(isUiReady, mapTheme, selectedLocation),
-        _buildSearchCard(isUiReady),
+
+        // ✅ ERWEITERT: Conditional Search Card (kompakt wenn Tastatur)
+        if (!controller.compactSearchMode) _buildSearchCard(isUiReady),
+
+        // ✅ NEU: Kompakte Suchleiste wenn Tastatur sichtbar
+        if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady),
+
         _buildInstructionCard(isUiReady),
-        _buildSearchResults(isUiReady),
+
+        // ✅ ERWEITERT: Klassische Suchergebnisse nur wenn KEINE Tastatur
+        if (!controller.isKeyboardVisible) _buildSearchResults(isUiReady),
+
+        // ✅ NEU: Horizontale POI-Leiste
+        if (controller.showHorizontalPOIStrip) _buildHorizontalPOIStrip(),
+
         _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
       ],
+    );
+  }
+
+  // ✅ NEU: Kompakte Suchleiste für Tastatur-Modus
+  Widget _buildCompactSearchBar(bool isUiReady) {
+    if (!isUiReady) return const SizedBox.shrink();
+
+    final activeController =
+        controller.activeSearchField == ActiveSearchField.start
+            ? controller.startSearchController
+            : controller.endSearchController;
+
+    final hintText = controller.activeSearchField == ActiveSearchField.start
+        ? "Startpunkt eingeben..."
+        : "Ziel eingeben...";
+
+    return Positioned(
+      top: kSearchCardTopPadding,
+      left: kSearchCardHorizontalMargin,
+      right: kSearchCardHorizontalMargin,
+      child: Container(
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: activeController,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  prefixIcon: Icon(
+                    controller.activeSearchField == ActiveSearchField.start
+                        ? Icons.trip_origin
+                        : Icons.flag_outlined,
+                    color: Colors.deepOrange,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+            if (activeController.text.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.clear, color: Colors.grey),
+                onPressed: () {
+                  activeController.clear();
+                  if (controller.activeSearchField == ActiveSearchField.start) {
+                    routeHandler.clearRoute();
+                  } else {
+                    routeHandler.clearRoute();
+                  }
+                },
+              ),
+            IconButton(
+              icon: const Icon(Icons.keyboard_hide, color: Colors.deepOrange),
+              onPressed: () {
+                FocusScope.of(context).unfocus();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ NEU: Horizontale POI-Leiste
+  Widget _buildHorizontalPOIStrip() {
+    return HorizontalPOIStrip(
+      features: controller.visibleSearchResults,
+      keyboardHeight: controller.keyboardHeight,
+      isVisible: controller.showHorizontalPOIStrip,
+      onFeatureTap: (feature) {
+        // Feature als Ziel oder Start setzen je nach aktivem Feld
+        if (controller.activeSearchField == ActiveSearchField.start) {
+          controller.startSearchController.text = feature.name;
+          controller.setStartLatLng(feature.center);
+          controller.updateStartMarker();
+        } else {
+          controller.endSearchController.text = feature.name;
+          controller.setEndLatLng(feature.center);
+          controller.updateEndMarker();
+        }
+
+        // Tastatur schließen und Route berechnen
+        FocusScope.of(context).unfocus();
+        routeHandler.calculateRouteIfPossible();
+
+        // Karte auf gewähltes POI zentrieren
+        controller.mapController.move(feature.center, 18.0);
+
+        if (kDebugMode) {
+          print("[MapScreen] POI ausgewählt: ${feature.name}");
+        }
+      },
     );
   }
 
@@ -274,7 +446,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
-    // 1. IMMER: GPS, Start, Ziel Marker
+    // GPS, Start, Ziel Marker
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
@@ -285,8 +457,9 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
-    // 2. ✅ KORRIGIERT: Search-Results IMMER anzeigen wenn vorhanden
-    if (controller.visibleSearchResults.isNotEmpty) {
+    // ✅ ERWEITERT: POI-Marker nur wenn KEINE horizontale Leiste aktiv
+    if (controller.visibleSearchResults.isNotEmpty &&
+        !controller.showHorizontalPOIStrip) {
       final currentZoom = controller.mapController.camera.zoom;
 
       for (final feature in controller.visibleSearchResults) {
@@ -295,7 +468,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
 
       if (kDebugMode) {
         print(
-            "[MapScreen] ${controller.visibleSearchResults.length} Search-POIs angezeigt bei Zoom $currentZoom");
+            "[MapScreen] ${controller.visibleSearchResults.length} Karten-POIs angezeigt bei Zoom $currentZoom");
       }
     }
 
@@ -360,13 +533,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
 
   double _getMarkerWidthForFeature(SearchableFeature feature) {
     if (_isAccommodationType(feature.type)) {
-      return 160.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
+      return 160.0;
     }
-    return 140.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
+    return 140.0;
   }
 
   double _getMarkerHeightForFeature(SearchableFeature feature) {
-    return 35.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
+    return 35.0;
   }
 
   double _getIconSizeForZoom(double zoom) {
@@ -403,7 +576,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
         type.toLowerCase().contains('wellness');
   }
 
-  // ✅ KORRIGIERTE Zeile 363: Geschweifte Klammern hinzugefügt
   Color _getBackgroundColorForPOIType(String type) {
     return _getColorForPOIType(type).withValues(alpha: 0.1);
   }
@@ -582,8 +754,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       return const SizedBox.shrink();
     }
 
+    // ✅ ANGEPASST: Position je nach Modus
     final double instructionCardTop = kSearchCardTopPadding +
-        _calculateCurrentSearchCardHeight() +
+        (controller.compactSearchMode
+            ? 60
+            : _calculateCurrentSearchCardHeight()) +
         kInstructionCardSpacing;
 
     return Positioned(
@@ -806,7 +981,10 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _updateSearchCardHeight();
+      if (mounted) {
+        _updateSearchCardHeight();
+        _setupKeyboardListener(); // ✅ Auch hier Setup
+      }
     });
   }
 
