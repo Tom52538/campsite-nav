@@ -11,7 +11,7 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
-import 'package:camping_osm_navi/debug/keyboard_debug_screen.dart';
+import 'package:camping_osm_navi/debug/simple_keyboard_test.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen_parts/horizontal_poi_strip.dart';
@@ -985,7 +985,7 @@ class MapScreenState extends State<MapScreen>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const KeyboardDebugScreen(),
+                  builder: (context) => const SimpleKeyboardTest(),
                 ),
               );
             },
