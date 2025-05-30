@@ -31,6 +31,7 @@ class MapScreenController with ChangeNotifier {
   bool isMapReady = false;
   bool followGps = false;
   bool isRouteActiveForCardSwitch = false;
+  bool showPOILabels = true; // ✅ NEU: POI-Labels Kontrolle
 
   LocationInfo? lastProcessedLocation;
 
@@ -114,6 +115,12 @@ class MapScreenController with ChangeNotifier {
     if (rerouting) {
       _lastRerouteTime = DateTime.now();
     }
+    notifyListeners();
+  }
+
+  // ✅ NEU: POI Toggle Methode
+  void togglePOILabels() {
+    showPOILabels = !showPOILabels;
     notifyListeners();
   }
 
