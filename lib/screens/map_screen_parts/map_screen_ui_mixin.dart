@@ -121,9 +121,10 @@ mixin MapScreenUiMixin on State<MapScreen> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                            // ✅ KORRIGIERT: Callback verwenden statt direkte Methode
-                            if (_setStartToCurrentLocationCallback != null) {
-                              _setStartToCurrentLocationCallback!();
+                            // ✅ EINFACHE LÖSUNG: Direkter Cast und Aufruf
+                            final mapScreenState = this;
+                            if (mapScreenState is MapScreenState) {
+                              mapScreenState.setStartToCurrentLocation();
                             }
                           },
                         ),
@@ -458,11 +459,5 @@ mixin MapScreenUiMixin on State<MapScreen> {
         return Icons.location_pin;
     }
   }
-
-  // ✅ KORRIGIERT: Callback-Methode statt abstrakte Methode
-  void Function()? _setStartToCurrentLocationCallback;
-
-  void setSetStartToCurrentLocationCallback(void Function() callback) {
-    _setStartToCurrentLocationCallback = callback;
-  }
+}
 }
