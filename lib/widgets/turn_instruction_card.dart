@@ -63,7 +63,7 @@ class TurnInstructionCard extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Card(
         elevation: 8.0, // ✅ Mehr Tiefe
-        shadowColor: Colors.black.withOpacity(0.3), // ✅ Schönere Schatten
+        shadowColor: Colors.black.withValues(alpha: 0.3), // ✅ Schönere Schatten
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.0), // ✅ Rundere Ecken
           side: BorderSide(
