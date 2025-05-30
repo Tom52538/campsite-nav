@@ -270,7 +270,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
   }
 
-  // ✅ NEUE _buildMarkerLayer() Methode mit POI-Labels
+  // ✅ OSMAnd-Style POI-Labels
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
@@ -285,7 +285,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
-    // ✅ NEU: POI-Labels mit Namen hinzufügen (nur wenn aktiviert)
+    // ✅ OSMAnd-Style: Saubere Text-Labels
     if (controller.showPOILabels) {
       final locationProvider = Provider.of<LocationProvider>(context);
       final searchableFeatures = locationProvider.currentSearchableFeatures;
@@ -293,50 +293,36 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       for (final feature in searchableFeatures) {
         activeMarkers.add(
           Marker(
-            width: 200.0, // Breiter für Text
-            height: 40.0, // Höher für Text
+            width: 150.0,
+            height: 20.0,
             point: feature.center,
             alignment: Alignment.center,
             child: GestureDetector(
               onTap: () => _showPOIActions(feature),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                    const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(
-                      color: _getColorForPOIType(feature.type), width: 2.0),
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(8.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 4.0,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 2.0,
+                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      getIconForFeatureType(feature.type),
-                      size: 16.0,
-                      color: _getColorForPOIType(feature.type),
-                    ),
-                    const SizedBox(width: 4.0),
-                    Flexible(
-                      child: Text(
-                        feature.name,
-                        style: TextStyle(
-                          fontSize: 12.0,
-                          fontWeight: FontWeight.bold,
-                          color: _getColorForPOIType(feature.type),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  feature.name,
+                  style: TextStyle(
+                    fontSize: 11.0,
+                    fontWeight: FontWeight.w600,
+                    color: _getColorForPOIType(feature.type),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ),
