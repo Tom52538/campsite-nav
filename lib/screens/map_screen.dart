@@ -1,7 +1,7 @@
 // lib/screens/map_screen.dart - MODERNE GOOGLE MAPS STYLE VERSION
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map/flutter_map.dart'; // Ensure this import is present for LatLng
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
@@ -276,8 +276,10 @@ class MapScreenState extends State<MapScreen>
       child: Material(
         elevation: 8,
         borderRadius: BorderRadius.circular(16),
+        // Per diagnostic: Use .withValues() for shadowColor
         shadowColor: Colors.black.withValues(alpha: 0.3),
         child: Container(
+          key: fullSearchCardKey,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -296,7 +298,7 @@ class MapScreenState extends State<MapScreen>
               ),
 
               // Elegant separator with swap button
-              Container(
+              SizedBox(
                 height: 40,
                 child: Stack(
                   children: [
@@ -307,7 +309,7 @@ class MapScreenState extends State<MapScreen>
                       bottom: 0,
                       child: Container(
                         width: 2,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           gradient: LinearGradient(
                             colors: [Colors.green, Colors.red],
                             begin: Alignment.topCenter,
@@ -325,11 +327,13 @@ class MapScreenState extends State<MapScreen>
                           color: Colors.white,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.grey.shade300),
+                          // If Colors.black.withValues is not const, then BoxShadow and the list cannot be const.
                           boxShadow: [
                             BoxShadow(
+                              // Per diagnostic: Use .withValues()
                               color: Colors.black.withValues(alpha: 0.1),
                               blurRadius: 4,
-                              offset: const Offset(0, 2),
+                              offset: const Offset(0, 2), // Offset can be const
                             ),
                           ],
                         ),
@@ -381,6 +385,7 @@ class MapScreenState extends State<MapScreen>
           width: hasFocus ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),
+        // Per diagnostic: Use .withValues()
         color:
             hasFocus ? iconColor.withValues(alpha: 0.05) : Colors.grey.shade50,
       ),
@@ -390,6 +395,7 @@ class MapScreenState extends State<MapScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
+              // Per diagnostic: Use .withValues()
               color: hasFocus
                   ? iconColor.withValues(alpha: 0.1)
                   : Colors.transparent,
@@ -499,19 +505,18 @@ class MapScreenState extends State<MapScreen>
     if (!isUiReady) return const SizedBox.shrink();
 
     final activeController =
-        this.controller.activeSearchField == ActiveSearchField.start
-            ? this.controller.startSearchController
-            : this.controller.endSearchController;
+        controller.activeSearchField == ActiveSearchField.start
+            ? controller.startSearchController
+            : controller.endSearchController;
 
     final activeFocusNode =
-        this.controller.activeSearchField == ActiveSearchField.start
-            ? this.controller.startFocusNode
-            : this.controller.endFocusNode;
+        controller.activeSearchField == ActiveSearchField.start
+            ? controller.startFocusNode
+            : controller.endFocusNode;
 
-    final hintText =
-        this.controller.activeSearchField == ActiveSearchField.start
-            ? "Startpunkt eingeben..."
-            : "Ziel eingeben...";
+    final hintText = controller.activeSearchField == ActiveSearchField.start
+        ? "Startpunkt eingeben..."
+        : "Ziel eingeben...";
 
     return Positioned(
       top: 8,
@@ -530,7 +535,7 @@ class MapScreenState extends State<MapScreen>
             children: [
               const SizedBox(width: 16),
               Icon(
-                this.controller.activeSearchField == ActiveSearchField.start
+                controller.activeSearchField == ActiveSearchField.start
                     ? Icons.trip_origin
                     : Icons.flag,
                 color: Colors.deepOrange,
@@ -602,7 +607,7 @@ class MapScreenState extends State<MapScreen>
         maxZoom: 20.0,
         onTap: isUiReady
             ? (tapPosition, point) {
-                // Smart tap handling - only unfocus when tapping empty map areas
+                // 'point' is LatLng
                 _handleSmartMapTap(tapPosition, point);
               }
             : null,
@@ -619,6 +624,7 @@ class MapScreenState extends State<MapScreen>
   }
 
   void _handleSmartMapTap(TapPosition tapPosition, LatLng point) {
+    // LatLng type for point
     // Only handle route creation, never unfocus
     routeHandler.handleMapTap(tapPosition, point);
   }
@@ -692,6 +698,7 @@ class MapScreenState extends State<MapScreen>
             ),
             boxShadow: [
               BoxShadow(
+                // Per diagnostic: Use .withValues()
                 color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 4.0,
                 offset: const Offset(0, 2),
@@ -775,6 +782,7 @@ class MapScreenState extends State<MapScreen>
   }
 
   Color _getBackgroundColorForPOIType(String type) {
+    // Per diagnostic: Use .withValues()
     return _getColorForPOIType(type).withValues(alpha: 0.1);
   }
 
@@ -985,7 +993,7 @@ class MapScreenState extends State<MapScreen>
 
   Widget _buildSearchResultTile(SearchableFeature feature, int index) {
     final color = _getColorForPOIType(feature.type);
-    final isAccommodation = _isAccommodationType(feature.type);
+    // Unused variable 'isAccommodation' was removed in previous fix.
 
     return Material(
       color: Colors.transparent,
@@ -1001,8 +1009,10 @@ class MapScreenState extends State<MapScreen>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
+                  // Per diagnostic: Use .withValues()
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
+                  // Per diagnostic: Use .withValues()
                   border: Border.all(color: color.withValues(alpha: 0.3)),
                 ),
                 child: Icon(
@@ -1096,6 +1106,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildCalculatingOverlay() {
     return Positioned.fill(
       child: Container(
+        // Per diagnostic: Use .withValues()
         color: Colors.black.withValues(alpha: 0.3),
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
@@ -1107,6 +1118,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildReroutingOverlay() {
     return Positioned.fill(
       child: Container(
+        // Per diagnostic: Use .withValues()
         color: Colors.black.withValues(alpha: 0.2),
         child: const Center(
           child: Column(
@@ -1126,6 +1138,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildLoadingOverlay(LocationInfo? selectedLocation) {
     return Positioned.fill(
       child: Container(
+        // Per diagnostic: Use .withValues()
         color: Colors.black.withValues(alpha: 0.7),
         child: Center(
           child: Column(
