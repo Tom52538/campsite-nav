@@ -1,4 +1,4 @@
-// lib/screens/map_screen_parts/map_screen_ui_mixin.dart - FOCUS FIX VERSION
+// lib/screens/map_screen_parts/map_screen_ui_mixin.dart - MINIMAL TEXTFIELD FIX
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -68,7 +68,7 @@ mixin MapScreenUiMixin {
             key: fullSearchCardKey,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ✅ FIX: START-EINGABEFELD mit stabilem Focus
+              // ✅ MINIMAL START-EINGABEFELD
               Container(
                 decoration: BoxDecoration(
                   border: startFocusNode.hasFocus
@@ -89,52 +89,26 @@ mixin MapScreenUiMixin {
                   child: Row(
                     children: [
                       Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            // ✅ FIX: Explizite Focus-Anfrage
-                            if (!startFocusNode.hasFocus) {
-                              FocusScope.of(context)
-                                  .requestFocus(startFocusNode);
-                            }
-                          },
-                          child: TextField(
-                            controller: startSearchController,
-                            focusNode: startFocusNode,
-                            // ✅ FIX: Stabilere TextField-Konfiguration
-                            enabled: true,
-                            readOnly: false,
-                            canRequestFocus: true,
-                            enableInteractiveSelection: true,
-                            autocorrect: false,
-                            enableSuggestions: false,
-                            keyboardType: TextInputType.text,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                              hintText: "Startpunkt wählen",
-                              prefixIcon: const Icon(Icons.trip_origin),
-                              suffixIcon: startSearchController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear),
-                                      iconSize: 20,
-                                      onPressed: () {
-                                        startSearchController.clear();
-                                        clearRoute();
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 8.0, horizontal: 8.0),
-                            ),
-                            // ✅ FIX: Verhindere automatische Focus-Verluste
-                            onTapOutside: (event) {
-                              // Nicht automatisch unfocus - nur bei expliziter Aktion
-                            },
-                            onSubmitted: (value) {
-                              // ✅ FIX: Bei Enter zum nächsten Feld
-                              FocusScope.of(context).requestFocus(endFocusNode);
-                            },
+                        child: TextField(
+                          controller: startSearchController,
+                          focusNode: startFocusNode,
+                          decoration: InputDecoration(
+                            hintText: "Startpunkt wählen",
+                            prefixIcon: const Icon(Icons.trip_origin),
+                            suffixIcon: startSearchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear),
+                                    iconSize: 20,
+                                    onPressed: () {
+                                      startSearchController.clear();
+                                      clearRoute();
+                                    },
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8.0, horizontal: 8.0),
                           ),
                         ),
                       ),
@@ -189,7 +163,7 @@ mixin MapScreenUiMixin {
                 ),
               ),
 
-              // ✅ FIX: ZIEL-EINGABEFELD mit stabilem Focus
+              // ✅ MINIMAL ZIEL-EINGABEFELD
               Container(
                 decoration: BoxDecoration(
                   border: endFocusNode.hasFocus
@@ -207,54 +181,26 @@ mixin MapScreenUiMixin {
                 ),
                 child: SizedBox(
                   height: kSearchInputRowHeight,
-                  child: GestureDetector(
-                    onTap: () {
-                      // ✅ FIX: Explizite Focus-Anfrage
-                      if (!endFocusNode.hasFocus) {
-                        FocusScope.of(context).requestFocus(endFocusNode);
-                      }
-                    },
-                    child: TextField(
-                      controller: endSearchController,
-                      focusNode: endFocusNode,
-                      // ✅ FIX: Stabilere TextField-Konfiguration
-                      enabled: true,
-                      readOnly: false,
-                      canRequestFocus: true,
-                      enableInteractiveSelection: true,
-                      autocorrect: false,
-                      enableSuggestions: false,
-                      keyboardType: TextInputType.text,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        hintText: "Ziel wählen",
-                        prefixIcon: const Icon(Icons.flag_outlined),
-                        suffixIcon: endSearchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                iconSize: 20,
-                                onPressed: () {
-                                  endSearchController.clear();
-                                  clearRoute();
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8.0, horizontal: 8.0),
-                      ),
-                      // ✅ FIX: Verhindere automatische Focus-Verluste
-                      onTapOutside: (event) {
-                        // Nicht automatisch unfocus - nur bei expliziter Aktion
-                      },
-                      onSubmitted: (value) {
-                        // ✅ FIX: Bei Enter Focus entfernen und Route berechnen
-                        FocusScope.of(context).unfocus();
-                        if (startLatLng != null && endLatLng != null) {
-                          calculateAndDisplayRoute();
-                        }
-                      },
+                  child: TextField(
+                    controller: endSearchController,
+                    focusNode: endFocusNode,
+                    decoration: InputDecoration(
+                      hintText: "Ziel wählen",
+                      prefixIcon: const Icon(Icons.flag_outlined),
+                      suffixIcon: endSearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              iconSize: 20,
+                              onPressed: () {
+                                endSearchController.clear();
+                                clearRoute();
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 8.0, horizontal: 8.0),
                     ),
                   ),
                 ),
