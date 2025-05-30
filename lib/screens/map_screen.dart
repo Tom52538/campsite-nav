@@ -141,13 +141,15 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
           tooltip: 'Test TTS',
           onPressed: isUiReady ? controller.ttsService.testSpeak : null,
         ),
-        // ✅ NEU: POI Toggle
+        // ✅ GEÄNDERT: POI Toggle jetzt für Search-First Navigation
         IconButton(
           icon: Icon(
-            controller.showPOILabels ? Icons.label : Icons.label_off,
+            controller.showPOILabels ? Icons.search : Icons.search_off,
             color: controller.showPOILabels ? Colors.white : Colors.white70,
           ),
-          tooltip: 'POI-Labels ein/ausblenden',
+          tooltip: controller.showPOILabels 
+              ? 'Search-Navigation aktiv' 
+              : 'Search-Navigation inaktiv',
           onPressed: isUiReady
               ? () {
                   setState(() {
@@ -270,11 +272,11 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
     }
   }
 
-  // ✅ Intelligente POI-Anzeige mit Zoom-Level und Kollisionserkennung
+  // ✅ KOMPLETT ÜBERARBEITET: Search-First Navigation Marker-Layer
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
-    // Bestehende Marker (GPS, Start, Ziel)
+    // 1. IMMER: GPS, Start, Ziel Marker
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
@@ -285,107 +287,151 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
-    // ✅ Intelligente POI-Anzeige
-    if (controller.showPOILabels) {
-      final locationProvider = Provider.of<LocationProvider>(context);
-      final allFeatures = locationProvider.currentSearchableFeatures;
-
-      // Zoom-Level abhängige Filterung
+    // 2. ✅ SEARCH-FIRST: Nur sichtbare Suchergebnisse anzeigen
+    if (controller.showPOILabels && controller.visibleSearchResults.isNotEmpty) {
       final currentZoom = controller.mapController.camera.zoom;
-      final filteredFeatures =
-          _filterPOIsByImportanceAndZoom(allFeatures, currentZoom);
+      
+      for (final feature in controller.visibleSearchResults) {
+        activeMarkers.add(_createSearchResultMarker(feature, currentZoom));
+      }
 
-      // Kollisionserkennung
-      final nonOverlappingFeatures = _removeOverlappingPOIs(filteredFeatures);
-
-      for (final feature in nonOverlappingFeatures) {
-        activeMarkers.add(
-          Marker(
-            width: 100.0,
-            height: 12.0,
-            point: feature.center,
-            alignment: Alignment.center,
-            child: GestureDetector(
-              onTap: () => _showPOIActions(feature),
-              child: Text(
-                feature.name,
-                style: TextStyle(
-                  fontSize: _getFontSizeForZoom(currentZoom),
-                  fontWeight: FontWeight.w500,
-                  color: _getColorForPOIType(feature.type),
-                  shadows: [
-                    Shadow(
-                      color: Colors.white,
-                      blurRadius: 1.5,
-                    ),
-                  ],
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        );
+      if (kDebugMode) {
+        print("[MapScreen] ${controller.visibleSearchResults.length} Search-POIs angezeigt");
       }
     }
 
     return MarkerLayer(markers: activeMarkers);
   }
 
-  // ✅ Zoom-abhängige Filterung
-  List<SearchableFeature> _filterPOIsByImportanceAndZoom(
-      List<SearchableFeature> features, double zoom) {
-    if (zoom < 16.0) {
-      // Nur wichtigste POIs bei niedrigem Zoom
-      return features
-          .where((f) =>
-              f.type == 'bus_stop' ||
-              (f.type == 'industrial' && f.name.isNotEmpty) ||
-              f.type == 'parking')
-          .toList();
-    } else if (zoom < 18.0) {
-      // Mittlere Wichtigkeit
-      return features
-          .where((f) => f.name.isNotEmpty && f.name.length > 3)
-          .toList();
-    } else {
-      // Alle POIs bei hohem Zoom
-      return features;
-    }
+  // ✅ NEU: Spezieller Marker für Suchergebnisse
+  Marker _createSearchResultMarker(SearchableFeature feature, double currentZoom) {
+    return Marker(
+      width: _getMarkerWidthForFeature(feature),
+      height: _getMarkerHeightForFeature(feature),
+      point: feature.center,
+      alignment: Alignment.center,
+      child: GestureDetector(
+        onTap: () => _showPOIActions(feature),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _getBackgroundColorForPOIType(feature.type),
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(
+              color: _getColorForPOIType(feature.type),
+              width: 2.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 4.0,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                getIconForFeatureType(feature.type),
+                size: _getIconSizeForZoom(currentZoom),
+                color: _getColorForPOIType(feature.type),
+              ),
+              if (_shouldShowTextForZoom(currentZoom)) ...[
+                const SizedBox(width: 4.0),
+                Flexible(
+                  child: Text(
+                    feature.name,
+                    style: TextStyle(
+                      fontSize: _getFontSizeForZoom(currentZoom),
+                      fontWeight: FontWeight.bold,
+                      color: _getColorForPOIType(feature.type),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  // ✅ Kollisionserkennung
-  List<SearchableFeature> _removeOverlappingPOIs(
-      List<SearchableFeature> features) {
-    final List<SearchableFeature> result = [];
-    const double minDistanceMeters = 100.0; // ✅ Vergrößert: 100m statt 50m
-
-    for (final feature in features) {
-      bool tooClose = false;
-      for (final existing in result) {
-        final distance = MapScreenController.distanceCalculatorInstance
-            .distance(feature.center, existing.center);
-        if (distance < minDistanceMeters) {
-          tooClose = true;
-          break;
-        }
-      }
-      if (!tooClose) {
-        result.add(feature);
-      }
-    }
-    return result;
+  // ✅ Hilfsmethoden für dynamische Marker-Gestaltung
+  double _getMarkerWidthForFeature(SearchableFeature feature) {
+    if (_isAccommodationType(feature.type)) return 140.0; // Unterkünfte breiter
+    return 120.0;
   }
 
-  // ✅ Zoom-abhängige Schriftgröße
+  double _getMarkerHeightForFeature(SearchableFeature feature) {
+    return 30.0;
+  }
+
+  double _getIconSizeForZoom(double zoom) {
+    if (zoom < 16.0) return 14.0;
+    if (zoom < 18.0) return 16.0;
+    return 18.0;
+  }
+
+  bool _shouldShowTextForZoom(double zoom) {
+    return zoom >= 16.0; // Text erst ab Zoom 16
+  }
+
   double _getFontSizeForZoom(double zoom) {
-    if (zoom < 16.0) return 8.0;
-    if (zoom < 18.0) return 9.0;
-    return 10.0;
+    if (zoom < 17.0) return 10.0;
+    if (zoom < 18.0) return 11.0;
+    return 12.0;
   }
 
-  // ✅ NEU: POI-Aktionen beim Antippen
+  bool _isAccommodationType(String type) {
+    final accommodationTypes = [
+      'accommodation', 'building', 'house', 'pitch', 'camp_pitch', 
+      'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin'
+    ];
+    return accommodationTypes.contains(type.toLowerCase()) ||
+           type.toLowerCase().contains('comfort') ||
+           type.toLowerCase().contains('wellness');
+  }
+
+  Color _getBackgroundColorForPOIType(String type) {
+    return _getColorForPOIType(type).withValues(alpha: 0.1);
+  }
+
+  Color _getColorForPOIType(String type) {
+    switch (type.toLowerCase()) {
+      case 'industrial':
+        return Colors.deepPurple;
+      case 'bus_stop':
+        return Colors.blue;
+      case 'parking':
+        return Colors.indigo;
+      case 'building':
+      case 'accommodation':
+        return Colors.brown;
+      case 'shop':
+        return Colors.purple;
+      case 'amenity':
+        return Colors.green;
+      case 'tourism':
+        return Colors.orange;
+      case 'restaurant':
+      case 'cafe':
+        return Colors.red;
+      case 'reception':
+      case 'information':
+        return Colors.teal;
+      case 'toilets':
+      case 'sanitary':
+        return Colors.cyan;
+      case 'playground':
+        return Colors.pink;
+      default:
+        return Colors.grey.shade600;
+    }
+  }
+
   void _showPOIActions(SearchableFeature feature) {
     showModalBottomSheet(
       context: context,
@@ -438,39 +484,6 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
         );
       },
     );
-  }
-
-  // ✅ NEU: Farbzuordnung für POI-Typen
-  Color _getColorForPOIType(String type) {
-    switch (type.toLowerCase()) {
-      case 'industrial':
-        return Colors.deepPurple;
-      case 'bus_stop':
-        return Colors.blue;
-      case 'parking':
-        return Colors.indigo;
-      case 'building':
-        return Colors.brown;
-      case 'shop':
-        return Colors.purple;
-      case 'amenity':
-        return Colors.green;
-      case 'tourism':
-        return Colors.orange;
-      case 'restaurant':
-      case 'cafe':
-        return Colors.red;
-      case 'reception':
-      case 'information':
-        return Colors.teal;
-      case 'toilets':
-      case 'sanitary':
-        return Colors.cyan;
-      case 'playground':
-        return Colors.pink;
-      default:
-        return Colors.grey.shade600;
-    }
   }
 
   Widget _buildSearchCard(bool isUiReady) {
@@ -821,50 +834,3 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
             "Du bist zu weit vom Campingplatz entfernt, um zu zentrieren.");
       }
     }
-  }
-
-  @override
-  void showSnackbar(String message, {int durationSeconds = 3}) {
-    if (mounted && context.mounted) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && context.mounted) {
-          try {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                duration: Duration(seconds: durationSeconds),
-              ),
-            );
-          } catch (e) {
-            if (kDebugMode) {
-              print("SNACKBAR: $message");
-            }
-          }
-        }
-      });
-    } else {
-      if (kDebugMode) {
-        print("SNACKBAR (no context): $message");
-      }
-    }
-  }
-
-  // Public methods for UI Mixin compatibility
-  void setStartToCurrentLocation() {
-    searchHandler.setStartToCurrentLocation();
-  }
-
-  void calculateAndDisplayRoute() {
-    routeHandler.calculateRouteIfPossible();
-  }
-
-  void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
-    routeHandler.clearRoute(
-        showConfirmation: showConfirmation, clearMarkers: clearMarkers);
-  }
-
-  void swapStartAndEnd() {
-    searchHandler.swapStartAndEnd();
-  }
-}
