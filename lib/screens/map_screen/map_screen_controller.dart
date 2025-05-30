@@ -182,10 +182,6 @@ class MapScreenController with ChangeNotifier {
 
     final results = visibleSearchResults;
 
-    // Berechne verfügbare Kartenhöhe (ohne Tastatur und UI-Elemente)
-    final screenHeight = MediaQuery.of(context).size.height;
-    // Entfernt: availableHeight Variable da nicht verwendet
-
     if (results.length == 1) {
       // Einzelnes POI: Zentrieren mit moderatem Zoom
       mapController.move(results.first.center, 18.0);
