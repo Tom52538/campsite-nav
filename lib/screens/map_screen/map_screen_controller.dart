@@ -182,7 +182,7 @@ class MapScreenController with ChangeNotifier {
         alignment: Alignment.center,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.2),
+            color: Colors.blue.withValues(alpha: 0.2),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.blue, width: 3.0),
           ),
@@ -207,11 +207,11 @@ class MapScreenController with ChangeNotifier {
         alignment: Alignment.center,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.9),
+            color: Colors.green.withValues(alpha: 0.9),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.green.withOpacity(0.3),
+                color: Colors.green.withValues(alpha: 0.3),
                 blurRadius: 8.0,
                 spreadRadius: 2.0,
               ),
@@ -239,11 +239,11 @@ class MapScreenController with ChangeNotifier {
         alignment: Alignment.center,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.9),
+            color: Colors.red.withValues(alpha: 0.9),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.red.withOpacity(0.3),
+                color: Colors.red.withValues(alpha: 0.3),
                 blurRadius: 8.0,
                 spreadRadius: 2.0,
               ),
