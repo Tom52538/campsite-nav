@@ -274,7 +274,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
 
-    // Standard-Marker (GPS, Start, Ziel)
+    // 1. IMMER: GPS, Start, Ziel Marker
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
@@ -285,9 +285,8 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
       activeMarkers.add(controller.endMarker!);
     }
 
-    // Search-First Navigation: Nur sichtbare Suchergebnisse
-    if (controller.showPOILabels &&
-        controller.visibleSearchResults.isNotEmpty) {
+    // 2. ✅ KORRIGIERT: Search-Results IMMER anzeigen wenn vorhanden
+    if (controller.visibleSearchResults.isNotEmpty) {
       final currentZoom = controller.mapController.camera.zoom;
 
       for (final feature in controller.visibleSearchResults) {
@@ -296,7 +295,7 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
 
       if (kDebugMode) {
         print(
-            "[MapScreen] ${controller.visibleSearchResults.length} Search-POIs angezeigt");
+            "[MapScreen] ${controller.visibleSearchResults.length} Search-POIs angezeigt bei Zoom $currentZoom");
       }
     }
 
@@ -360,12 +359,13 @@ class MapScreenState extends State<MapScreen> with MapScreenUiMixin {
   }
 
   double _getMarkerWidthForFeature(SearchableFeature feature) {
-    if (_isAccommodationType(feature.type)) return 140.0;
-    return 120.0;
+    if (_isAccommodationType(feature.type))
+      return 160.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
+    return 140.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
   }
 
   double _getMarkerHeightForFeature(SearchableFeature feature) {
-    return 30.0;
+    return 35.0; // ✅ VERGRÖSSERT für bessere Sichtbarkeit
   }
 
   double _getIconSizeForZoom(double zoom) {

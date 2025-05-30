@@ -1,8 +1,12 @@
-// lib/screens/map_screen/map_screen_search_handler.dart
+// lib/screens/map_screen/map_screen_search_handler.dart (ERWEITERT)
+import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
+import 'package:camping_osm_navi/models/camping_search_categories.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'map_screen_controller.dart';
 
@@ -24,13 +28,13 @@ class MapScreenSearchHandler {
   void _onStartSearchChanged() {
     if (controller.startFocusNode.hasFocus &&
         controller.startSearchController.text != "Aktueller Standort") {
-      _performIntelligentSearch(controller.startSearchController.text);
+      _performCampingIntelligentSearch(controller.startSearchController.text);
     }
   }
 
   void _onEndSearchChanged() {
     if (controller.endFocusNode.hasFocus) {
-      _performIntelligentSearch(controller.endSearchController.text);
+      _performCampingIntelligentSearch(controller.endSearchController.text);
     }
   }
 
@@ -39,7 +43,7 @@ class MapScreenSearchHandler {
       controller.setActiveSearchField(ActiveSearchField.start);
       controller.setRouteActiveForCardSwitch(false);
       if (controller.startSearchController.text != "Aktueller Standort") {
-        _performIntelligentSearch(controller.startSearchController.text);
+        _performCampingIntelligentSearch(controller.startSearchController.text);
       }
     } else {
       if (controller.activeSearchField == ActiveSearchField.start) {
@@ -53,7 +57,7 @@ class MapScreenSearchHandler {
     if (controller.endFocusNode.hasFocus) {
       controller.setActiveSearchField(ActiveSearchField.end);
       controller.setRouteActiveForCardSwitch(false);
-      _performIntelligentSearch(controller.endSearchController.text);
+      _performCampingIntelligentSearch(controller.endSearchController.text);
     } else {
       if (controller.activeSearchField == ActiveSearchField.end) {
         controller.setActiveSearchField(ActiveSearchField.none);
@@ -62,165 +66,177 @@ class MapScreenSearchHandler {
     }
   }
 
-  // ✅ NEU: Intelligente Such-Filterung
-  void _performIntelligentSearch(String query) {
+  // ✅ ERWEITERT: Camping-spezifische intelligente Suche
+  void _performCampingIntelligentSearch(String query) {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final allFeatures = locationProvider.currentSearchableFeatures;
 
     if (query.isEmpty) {
-      // Keine Suche = keine POIs anzeigen (Search-First Prinzip)
+      // Search-First Prinzip: Keine Suche = keine POIs
       controller.setSearchResults([]);
       controller.setShowSearchResults(false);
       controller.clearVisibleSearchResults();
-      if (kDebugMode) {
-        print("[SearchHandler] Leere Suche - alle POIs ausgeblendet");
-      }
+      _logSearchActivity("Leere Suche - alle POIs ausgeblendet");
       return;
     }
 
-    final filteredResults = _filterBySearchType(allFeatures, query);
+    // ✅ Emoji-Shortcuts prüfen
+    final shortcutQuery = CampingSearchCategories.quickSearchShortcuts[query];
+    if (shortcutQuery != null) {
+      _performCampingIntelligentSearch(shortcutQuery);
+      return;
+    }
+
+    final filteredResults =
+        _performAdvancedCategoryFiltering(allFeatures, query);
 
     // Standard-Suchergebnisse für Dropdown
     controller.setSearchResults(filteredResults);
     controller.setShowSearchResults(true);
 
-    // ✅ NEU: Sichtbare POIs auf der Karte (Search-First Navigation)
+    // ✅ Search-First Navigation: Sichtbare POIs setzen
     controller.setVisibleSearchResults(filteredResults);
 
-    if (kDebugMode) {
-      print(
-          "[SearchHandler] Suche '$query': ${filteredResults.length} Ergebnisse gefunden");
-    }
+    _logSearchActivity("Suche '$query': ${filteredResults.length} Ergebnisse");
   }
 
-  // ✅ NEU: Intelligente Filterlogik nach Such-Typ
-  List<SearchableFeature> _filterBySearchType(
+  // ✅ NEU: Erweiterte Kategorie-basierte Filterung
+  List<SearchableFeature> _performAdvancedCategoryFiltering(
       List<SearchableFeature> allFeatures, String query) {
     final String cleanQuery = query.trim().toLowerCase();
 
-    // 1. NUMERISCHE SUCHE - Unterkunft-Nummern
-    if (_isNumericAccommodationSearch(cleanQuery)) {
-      return _searchAccommodationByNumber(allFeatures, cleanQuery);
+    // 1. UNTERKUNFT-NUMMER (höchste Priorität)
+    if (CampingSearchCategories.isAccommodationNumberSearch(cleanQuery)) {
+      final accommodationResults =
+          _searchAccommodationByNumber(allFeatures, cleanQuery);
+      if (accommodationResults.isNotEmpty) {
+        _logSearchActivity(
+            "Unterkunft-Nummer gefunden: ${accommodationResults.length}");
+        return accommodationResults;
+      }
     }
 
-    // 2. KATEGORIE-SUCHE - Sanitär, Gastronomie, etc.
-    final categoryResults = _searchByCategory(allFeatures, cleanQuery);
-    if (categoryResults.isNotEmpty) {
-      return categoryResults;
+    // 2. KATEGORIE-MATCHING
+    final matchedCategory = CampingSearchCategories.matchCategory(cleanQuery);
+    if (matchedCategory != null) {
+      final categoryResults = _searchByCategory(allFeatures, matchedCategory);
+      if (categoryResults.isNotEmpty) {
+        _logSearchActivity(
+            "Kategorie '${matchedCategory.displayName}' gefunden: ${categoryResults.length}");
+        return _prioritizeCategoryResults(categoryResults, matchedCategory);
+      }
     }
 
-    // 3. NAME-SUCHE - Klassische Textsuche
-    return _searchByName(allFeatures, cleanQuery);
+    // 3. OSM-TYPE MATCHING
+    final osmResults = _searchByOsmType(allFeatures, cleanQuery);
+    if (osmResults.isNotEmpty) {
+      _logSearchActivity("OSM-Type gefunden: ${osmResults.length}");
+      return osmResults;
+    }
+
+    // 4. FALLBACK: Name-Suche
+    final nameResults = _searchByName(allFeatures, cleanQuery);
+    _logSearchActivity("Name-Suche Fallback: ${nameResults.length}");
+    return nameResults;
   }
 
-  // ✅ Prüfung auf numerische Unterkunft-Suche
-  bool _isNumericAccommodationSearch(String query) {
-    // Reine Zahlen oder Zahlen mit typischen Unterkunft-Präfixen
-    return RegExp(r'^\d+$').hasMatch(query) ||
-        RegExp(r'^(nr|no|nummer|house|haus|platz|pitch|stelle)\s*\.?\s*\d+$')
-            .hasMatch(query) ||
-        RegExp(r'^\d+[a-z]?$').hasMatch(query); // z.B. "247" oder "247a"
-  }
-
-  // ✅ Unterkunft nach Nummer suchen
+  // ✅ Verbesserte Unterkunft-Nummern-Suche
   List<SearchableFeature> _searchAccommodationByNumber(
       List<SearchableFeature> features, String query) {
-    // Extrahiere die Nummer aus verschiedenen Formaten
-    final numberMatch = RegExp(r'\d+').firstMatch(query);
-    if (numberMatch == null) return [];
+    // Extrahiere alle Zahlen aus der Anfrage
+    final numberMatches = RegExp(r'\d+').allMatches(query);
+    if (numberMatches.isEmpty) return [];
 
-    final searchNumber = numberMatch.group(0)!;
+    final searchNumbers = numberMatches.map((m) => m.group(0)!).toList();
 
-    final results = features.where((feature) {
-      // Suche in accommodations und buildings mit Nummern
-      if (!_isAccommodationType(feature.type)) return false;
+    final results = <SearchableFeature>[];
 
-      // Verschiedene Namensformate berücksichtigen
-      final name = feature.name.toLowerCase();
-      return name.contains(searchNumber) ||
-          name == searchNumber ||
-          name.endsWith(' $searchNumber') ||
-          name.startsWith('$searchNumber ') ||
-          RegExp(r'\b' + searchNumber + r'\b').hasMatch(name);
-    }).toList();
+    for (final number in searchNumbers) {
+      final numberResults = features.where((feature) {
+        if (!_isAccommodationType(feature.type)) return false;
 
-    if (kDebugMode) {
-      print(
-          "[SearchHandler] Unterkunft-Suche '$searchNumber': ${results.length} gefunden");
+        final name = feature.name.toLowerCase();
+
+        // Verschiedene Matching-Strategien
+        return name == number || // Exakte Nummer
+            name.contains(' $number ') || // Nummer mit Leerzeichen
+            name.startsWith('$number ') || // Nummer am Anfang
+            name.endsWith(' $number') || // Nummer am Ende
+            RegExp(r'\b' + number + r'\b').hasMatch(name) || // Wortgrenze
+            RegExp(r'^' + number + r'[a-z]?$')
+                .hasMatch(name); // Mit Buchstabe (247a)
+      }).toList();
+
+      results.addAll(numberResults);
     }
 
-    return results;
+    // Duplikate entfernen und nach Relevanz sortieren
+    final uniqueResults = results.toSet().toList();
+    uniqueResults.sort((a, b) {
+      // Exakte Treffer zuerst
+      final aExact = searchNumbers.any((num) => a.name.toLowerCase() == num);
+      final bExact = searchNumbers.any((num) => b.name.toLowerCase() == num);
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+      return a.name.compareTo(b.name);
+    });
+
+    return uniqueResults;
   }
 
   // ✅ Kategorie-basierte Suche
   List<SearchableFeature> _searchByCategory(
-      List<SearchableFeature> features, String query) {
-    final Map<String, List<String>> categoryMappings = {
-      'toilets': [
-        'wc',
-        'toilet',
-        'toilette',
-        'sanitär',
-        'sanitary',
-        'bad',
-        'dusche',
-        'shower'
-      ],
-      'parking': ['parking', 'parkplatz', 'stellplatz', 'auto', 'car'],
-      'amenity': [
-        'rezeption',
-        'reception',
-        'empfang',
-        'büro',
-        'office',
-        'info',
-        'information'
-      ],
-      'shop': ['shop', 'laden', 'geschäft', 'supermarkt', 'market', 'kiosk'],
-      'restaurant': [
-        'restaurant',
-        'cafe',
-        'bar',
-        'gastronomie',
-        'essen',
-        'food',
-        'snack'
-      ],
-      'playground': ['spielplatz', 'playground', 'kinder', 'children', 'spiel'],
-      'industrial': [
-        'technik',
-        'technical',
-        'service',
-        'wartung',
-        'maintenance'
-      ],
-      'tourism': ['sehenswürdigkeit', 'attraction', 'tourism', 'sightseeing'],
-      'building': ['gebäude', 'building', 'haus', 'house'],
-    };
-
-    for (final category in categoryMappings.keys) {
-      final keywords = categoryMappings[category]!;
-
-      if (keywords.any((keyword) => query.contains(keyword))) {
-        final results = features
-            .where((feature) =>
-                feature.type.toLowerCase() == category ||
-                feature.type.toLowerCase().contains(category) ||
-                (category == 'amenity' && _isAmenityType(feature.type)))
-            .toList();
-
-        if (results.isNotEmpty) {
-          if (kDebugMode) {
-            print(
-                "[SearchHandler] Kategorie-Suche '$category': ${results.length} gefunden");
-          }
-          return results;
+      List<SearchableFeature> features, CampingSearchCategory category) {
+    return features.where((feature) {
+      // OSM-Type matching
+      for (final osmType in category.osmTypes) {
+        if (feature.type.toLowerCase() == osmType.toLowerCase() ||
+            feature.type.toLowerCase().contains(osmType.toLowerCase()) ||
+            osmType.toLowerCase().contains(feature.type.toLowerCase())) {
+          return true;
         }
       }
-    }
 
-    return [];
+      // Name-Keyword matching (für falsch klassifizierte POIs)
+      final featureName = feature.name.toLowerCase();
+      for (final keyword in category.keywords) {
+        if (featureName.contains(keyword.toLowerCase())) {
+          return true;
+        }
+      }
+
+      return false;
+    }).toList();
+  }
+
+  // ✅ OSM-Type direkte Suche
+  List<SearchableFeature> _searchByOsmType(
+      List<SearchableFeature> features, String query) {
+    return features
+        .where((feature) =>
+            feature.type.toLowerCase().contains(query) ||
+            query.contains(feature.type.toLowerCase()))
+        .toList();
+  }
+
+  // ✅ Prioritäts-basierte Ergebnis-Sortierung
+  List<SearchableFeature> _prioritizeCategoryResults(
+      List<SearchableFeature> results, CampingSearchCategory category) {
+    // Sortiere nach Kategorie-Priorität und Namens-Relevanz
+    results.sort((a, b) {
+      // Zuerst nach exakter Type-Übereinstimmung
+      final aExactType = category.osmTypes.contains(a.type.toLowerCase());
+      final bExactType = category.osmTypes.contains(b.type.toLowerCase());
+
+      if (aExactType && !bExactType) return -1;
+      if (!aExactType && bExactType) return 1;
+
+      // Dann alphabetisch
+      return a.name.compareTo(b.name);
+    });
+
+    return results;
   }
 
   // ✅ Standard Name-Suche (Fallback)
@@ -230,43 +246,87 @@ class MapScreenSearchHandler {
         .where((feature) => feature.name.toLowerCase().contains(query))
         .toList();
 
-    if (kDebugMode) {
-      print("[SearchHandler] Name-Suche '$query': ${results.length} gefunden");
-    }
+    // Sortiere nach Relevanz (kürzere Namen zuerst)
+    results.sort((a, b) {
+      final aStarts = a.name.toLowerCase().startsWith(query);
+      final bStarts = b.name.toLowerCase().startsWith(query);
+
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      return a.name.length.compareTo(b.name.length);
+    });
 
     return results;
   }
 
-  // ✅ Hilfsmethoden für Typ-Erkennung
+  // ✅ Hilfsmethoden für Typ-Erkennung (erweitert)
   bool _isAccommodationType(String type) {
-    final accommodationTypes = [
-      'accommodation',
-      'building',
-      'house',
-      'pitch',
-      'camp_pitch',
-      'holiday_home',
-      'chalet',
-      'bungalow',
-      'lodge',
-      'cabin'
-    ];
-    return accommodationTypes.contains(type.toLowerCase()) ||
-        type.toLowerCase().contains('comfort') ||
-        type.toLowerCase().contains('wellness') ||
-        type.toLowerCase().contains('luxury');
+    final category = CampingSearchCategories.getCategoryByOsmType(type);
+    return category?.category == CampingPOICategory.accommodation;
   }
 
-  bool _isAmenityType(String type) {
-    final amenityTypes = [
-      'reception',
-      'information',
-      'office',
-      'service_point',
-      'tourist_info',
-      'admin'
-    ];
-    return amenityTypes.contains(type.toLowerCase());
+  // ✅ Such-Aktivität Logging
+  void _logSearchActivity(String message) {
+    if (kDebugMode) {
+      print("[CampingSearchHandler] $message");
+    }
+  }
+
+  // ✅ NEU: Auto-Zoom zu Suchergebnissen
+  void _autoZoomToSearchResults(List<SearchableFeature> results) {
+    if (results.isEmpty) return;
+
+    try {
+      if (results.length == 1) {
+        // Einzelnes Ergebnis: Direkt hinzoomen
+        final feature = results.first;
+        controller.mapController.move(feature.center, 18.0);
+        _logSearchActivity("Auto-Zoom zu einzelnem POI: ${feature.name}");
+      } else {
+        // Multiple Ergebnisse: Alle POIs in Kamera-Bounds einpassen
+        final points = results.map((f) => f.center).toList();
+        final bounds = _calculateBounds(points);
+
+        controller.mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: bounds,
+            padding:
+                const EdgeInsets.all(80.0), // Mehr Padding für bessere Sicht
+          ),
+        );
+        _logSearchActivity("Auto-Zoom zu ${results.length} POIs mit Bounds");
+      }
+    } catch (e) {
+      _logSearchActivity("Fehler beim Auto-Zoom: $e");
+    }
+  }
+
+  // ✅ NEU: Berechne Bounds für mehrere POIs
+  LatLngBounds _calculateBounds(List<LatLng> points) {
+    if (points.isEmpty) {
+      return LatLngBounds(
+        const LatLng(0, 0),
+        const LatLng(0, 0),
+      );
+    }
+
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+
+    for (final point in points) {
+      minLat = math.min(minLat, point.latitude);
+      maxLat = math.max(maxLat, point.latitude);
+      minLng = math.min(minLng, point.longitude);
+      maxLng = math.max(maxLng, point.longitude);
+    }
+
+    return LatLngBounds(
+      LatLng(minLat, minLng),
+      LatLng(maxLat, maxLng),
+    );
   }
 
   void _hideSearchResultsAfterDelay() {
@@ -274,7 +334,7 @@ class MapScreenSearchHandler {
       if (!controller.startFocusNode.hasFocus &&
           !controller.endFocusNode.hasFocus) {
         controller.setShowSearchResults(false);
-        // ✅ NEU: Auch sichtbare POIs ausblenden wenn kein Focus
+        // ✅ Search-First: POIs auch ausblenden wenn kein Focus
         controller.clearVisibleSearchResults();
       }
     });
@@ -297,7 +357,7 @@ class MapScreenSearchHandler {
 
     controller.setShowSearchResults(false);
 
-    // ✅ NEU: Feature weiterhin sichtbar lassen nach Auswahl
+    // ✅ Feature weiterhin sichtbar lassen nach Auswahl
     controller.setVisibleSearchResults([feature]);
 
     // Trigger route calculation if both points are set
@@ -319,7 +379,7 @@ class MapScreenSearchHandler {
     controller.startMarker = null; // Kein Marker für die aktuelle Position
     controller.startFocusNode.unfocus();
 
-    // ✅ NEU: Bei "Aktueller Standort" keine POIs anzeigen
+    // ✅ Bei "Aktueller Standort" keine POIs anzeigen
     controller.clearVisibleSearchResults();
 
     // Trigger route calculation if both points are set
@@ -348,7 +408,7 @@ class MapScreenSearchHandler {
       controller.endMarker = null;
     }
 
-    // ✅ NEU: POIs ausblenden beim Löschen der Suche
+    // ✅ POIs ausblenden beim Löschen der Suche
     controller.clearVisibleSearchResults();
 
     // Clear route if needed
