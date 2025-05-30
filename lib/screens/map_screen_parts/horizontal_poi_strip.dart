@@ -72,8 +72,7 @@ class HorizontalPOIStrip extends StatelessWidget with MapScreenUiMixin {
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.swipe_horizontal,
-                      size: 12, color: Colors.grey[500]),
+                  Icon(Icons.swap_horiz, size: 12, color: Colors.grey[500]),
                   const SizedBox(width: 4),
                   Text(
                     "scrollen",
@@ -206,7 +205,7 @@ class HorizontalPOIStrip extends StatelessWidget with MapScreenUiMixin {
       if (words.length > 2) {
         return '${words.first} ${words[1]}';
       } else {
-        return shortened.substring(0, 17) + '...';
+        return "${shortened.substring(0, 17)}...";
       }
     }
 
