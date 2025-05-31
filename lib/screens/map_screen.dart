@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart'; // Ensure this import is present 
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
+import 'package:latlong2/latlong.dart';
 
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
