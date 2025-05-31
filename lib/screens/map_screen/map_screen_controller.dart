@@ -113,7 +113,8 @@ class MapScreenController with ChangeNotifier {
         _keyboardHeight = height;
 
         // if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) { // MODIFIED
-        if (visible) { // MODIFIED - Condition related to focus nodes removed
+        if (visible) {
+          // MODIFIED - Condition related to focus nodes removed
           setCompactSearchMode(true);
           // if (visibleSearchResults.isNotEmpty) { // REMOVED
           //   setShowHorizontalPOIStrip(true); // REMOVED
@@ -163,28 +164,7 @@ class MapScreenController with ChangeNotifier {
   // void autoZoomToPOIsWithKeyboard(BuildContext context) { // REMOVED
   // }
 
-  LatLngBounds _calculateBoundsForPoints(List<LatLng> points) {
-    if (points.isEmpty) {
-      return LatLngBounds(fallbackInitialCenter, fallbackInitialCenter);
-    }
-
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final point in points) {
-      if (point.latitude < minLat) minLat = point.latitude;
-      if (point.latitude > maxLat) maxLat = point.latitude;
-      if (point.longitude < minLng) minLng = point.longitude;
-      if (point.longitude > maxLng) maxLng = point.longitude;
-    }
-
-    return LatLngBounds(
-      LatLng(minLat, minLng),
-      LatLng(maxLat, maxLng),
-    );
-  }
+  // REMOVED: _calculateBoundsForPoints - unused method
 
   void setMapReady() {
     isMapReady = true;
