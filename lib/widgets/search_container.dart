@@ -1,6 +1,5 @@
-// lib/widgets/search_container.dart - NEUE SUCH-CONTAINER KOMPONENTE
+// lib/widgets/search_container.dart - UNUSED IMPORT REMOVED
 import 'package:flutter/material.dart';
-import 'package:camping_osm_navi/models/searchable_feature.dart';
 
 class SearchContainer extends StatefulWidget {
   final Widget? routeInfo;
