@@ -135,14 +135,28 @@ class MapScreenGpsHandler {
       _onGpsPositionChanged(newGpsLatLng);
 
       if (controller.followGps) {
-        controller.mapController
-            .move(newGpsLatLng, MapScreenController.followGpsZoomLevel);
+        if (!controller.isMapReady) {
+          if (kDebugMode) {
+            print(
+                "[MapScreenGpsHandler] Map not ready, cannot follow GPS in _handleNewGpsPosition");
+          }
+        } else {
+          controller.mapController
+              .move(newGpsLatLng, MapScreenController.followGpsZoomLevel);
+        }
       }
     }
   }
 
   // ✅ NEUE METHODE: Auto-Zentrierung mit Animation
   void _autoMoveToGpsPosition(LatLng gpsPosition) {
+    if (!controller.isMapReady) {
+      if (kDebugMode) {
+        print(
+            "[MapScreenGpsHandler] Map not ready, deferring _autoMoveToGpsPosition for position: ${gpsPosition.latitude}, ${gpsPosition.longitude}");
+      }
+      return;
+    }
     // Aktiviere Follow-GPS automatisch
     controller.setFollowGps(true);
 
@@ -196,6 +210,12 @@ class MapScreenGpsHandler {
 
   void centerOnGps() {
     if (controller.currentGpsPosition != null) {
+      if (!controller.isMapReady) {
+        if (kDebugMode) {
+          print("[MapScreenGpsHandler] Map not ready, cannot centerOnGps");
+        }
+        return;
+      }
       controller.setFollowGps(true);
       controller.mapController.move(controller.currentGpsPosition!,
           MapScreenController.followGpsZoomLevel);
