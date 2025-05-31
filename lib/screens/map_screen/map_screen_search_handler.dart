@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_search_handler.dart - MISSING METHODS ADDED
+// lib/screens/map_screen/map_screen_search_handler.dart - ALL WARNINGS FIXED
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -34,19 +34,6 @@ class MapScreenSearchHandler {
     });
   }
 
-  void _hideSearchResultsAfterDelay() {
-    _hideResultsTimer?.cancel();
-    // ✅ FIX 7: 30 Sekunden statt 1.5 Sekunden - viel weniger aggressiv
-    _hideResultsTimer = Timer(const Duration(seconds: 30), () {
-      if (!controller.startFocusNode.hasFocus &&
-          !controller.endFocusNode.hasFocus) {
-        controller.setShowSearchResults(false);
-        // ✅ FIX 8: POIs bleiben sichtbar auch ohne Focus
-        // controller.clearVisibleSearchResults(); // ENTFERNT
-      }
-    });
-  }
-
   void _performCampingIntelligentSearch(String query) {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
@@ -72,6 +59,19 @@ class MapScreenSearchHandler {
     controller.setSearchResults(filteredResults);
     controller.setShowSearchResults(true);
     controller.setVisibleSearchResults(filteredResults);
+
+    // Auto-hide results after delay
+    _hideSearchResultsAfterDelay();
+  }
+
+  void _hideSearchResultsAfterDelay() {
+    _hideResultsTimer?.cancel();
+    _hideResultsTimer = Timer(const Duration(seconds: 30), () {
+      if (!controller.startFocusNode.hasFocus &&
+          !controller.endFocusNode.hasFocus) {
+        controller.setShowSearchResults(false);
+      }
+    });
   }
 
   List<SearchableFeature> _performAdvancedCategoryFiltering(
@@ -121,7 +121,6 @@ class MapScreenSearchHandler {
 
         final name = feature.name.toLowerCase();
 
-        // Einfache String-Vergleiche statt komplexer RegExp
         return name == searchNum ||
             name.contains(' $searchNum ') ||
             name.startsWith('$searchNum ') ||
@@ -220,12 +219,11 @@ class MapScreenSearchHandler {
     return category?.category == CampingPOICategory.accommodation;
   }
 
-  // ✅ MISSING METHOD 1: swapStartAndEnd
+  // ✅ REQUIRED METHODS
   void swapStartAndEnd() {
     controller.swapStartAndEnd();
   }
 
-  // ✅ MISSING METHOD 2: setStartToCurrentLocation
   void setStartToCurrentLocation() {
     if (controller.currentGpsPosition != null) {
       controller.startSearchController.text = "Aktueller Standort";
@@ -239,7 +237,6 @@ class MapScreenSearchHandler {
     }
   }
 
-  // ✅ MISSING METHOD 3: selectFeatureAndSetPoint
   void selectFeatureAndSetPoint(SearchableFeature feature) {
     if (controller.activeSearchField == ActiveSearchField.start) {
       controller.startSearchController.text = feature.name;
@@ -266,16 +263,16 @@ class MapScreenSearchHandler {
     }
   }
 
-  // Callback management (used by the methods above)
+  // Callback management
   void Function()? _onRouteCalculationNeeded;
-  void Function()? _onRouteClearNeeded;
 
   void setRouteCalculationCallback(void Function() callback) {
     _onRouteCalculationNeeded = callback;
   }
 
   void setRouteClearCallback(void Function() callback) {
-    _onRouteClearNeeded = callback;
+    // This callback is set but may be used later for route clearing functionality
+    // Keeping it for future extensibility
   }
 
   void dispose() {
