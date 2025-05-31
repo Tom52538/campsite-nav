@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_gps_handler.dart
+// lib/screens/map_screen/map_screen_gps_handler.dart - AUTO-CENTER BEI GPS AKTIVIERUNG
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,6 +13,9 @@ class MapScreenGpsHandler {
   static const double _significantGpsChangeThreshold = 2.0;
   static const Distance _distanceCalculator = Distance();
 
+  // ✅ NEU: Flag um zu tracken ob GPS gerade aktiviert wurde
+  bool _gpsJustActivated = false;
+
   MapScreenGpsHandler(this.controller);
 
   void initializeGpsOrMock(LocationInfo location) {
@@ -25,11 +28,24 @@ class MapScreenGpsHandler {
 
   void _initializeMockGps(LocationInfo location) {
     _positionStreamSubscription?.cancel();
+
+    // ✅ NEUE LOGIK: GPS wurde gerade aktiviert (Mock-Modus)
+    final wasGpsActive = controller.currentGpsPosition != null;
+
     controller.updateCurrentGpsPosition(location.initialCenter);
     controller.updateCurrentLocationMarker();
 
-    if (kDebugMode) {
-      print("Mock-GPS aktiv an Position: ${location.name}");
+    // ✅ AUTO-CENTER: Wenn GPS gerade aktiviert wurde, zentriere auf Position
+    if (!wasGpsActive) {
+      _autoMoveToGpsPosition(location.initialCenter);
+      if (kDebugMode) {
+        print(
+            "Mock-GPS aktiviert und Karte automatisch zentriert auf: ${location.name}");
+      }
+    } else {
+      if (kDebugMode) {
+        print("Mock-GPS Position aktualisiert: ${location.name}");
+      }
     }
   }
 
@@ -60,6 +76,16 @@ class MapScreenGpsHandler {
         print("Standortberechtigung dauerhaft verweigert.");
       }
       return;
+    }
+
+    // ✅ NEUE LOGIK: Merke dass GPS gerade aktiviert wird
+    final wasGpsActive = controller.currentGpsPosition != null;
+    if (!wasGpsActive) {
+      _gpsJustActivated = true;
+      if (kDebugMode) {
+        print(
+            "Echtes GPS wird aktiviert - Auto-Center wird beim ersten Signal ausgeführt");
+      }
     }
 
     const LocationSettings locationSettings =
@@ -95,6 +121,16 @@ class MapScreenGpsHandler {
       controller.updateCurrentGpsPosition(newGpsLatLng);
       controller.updateCurrentLocationMarker();
 
+      // ✅ AUTO-CENTER: Wenn GPS gerade aktiviert wurde, zentriere automatisch
+      if (_gpsJustActivated) {
+        _autoMoveToGpsPosition(newGpsLatLng);
+        _gpsJustActivated = false; // Reset flag nach erstem Auto-Center
+        if (kDebugMode) {
+          print(
+              "Echtes GPS aktiviert und Karte automatisch zentriert auf: ${newGpsLatLng.latitude}, ${newGpsLatLng.longitude}");
+        }
+      }
+
       // Notify about GPS change for navigation updates
       _onGpsPositionChanged(newGpsLatLng);
 
@@ -102,6 +138,21 @@ class MapScreenGpsHandler {
         controller.mapController
             .move(newGpsLatLng, MapScreenController.followGpsZoomLevel);
       }
+    }
+  }
+
+  // ✅ NEUE METHODE: Auto-Zentrierung mit Animation
+  void _autoMoveToGpsPosition(LatLng gpsPosition) {
+    // Aktiviere Follow-GPS automatisch
+    controller.setFollowGps(true);
+
+    // Bewege Karte zur GPS-Position mit Animation
+    controller.mapController
+        .move(gpsPosition, MapScreenController.followGpsZoomLevel);
+
+    if (kDebugMode) {
+      print(
+          "Karte automatisch auf GPS-Position zentriert: ${gpsPosition.latitude}, ${gpsPosition.longitude}");
     }
   }
 
@@ -150,13 +201,37 @@ class MapScreenGpsHandler {
           MapScreenController.followGpsZoomLevel);
 
       if (kDebugMode) {
-        print("Follow-GPS Modus aktiviert.");
+        print("Follow-GPS Modus manuell aktiviert.");
       }
     }
   }
 
   void toggleMockLocation(LocationInfo selectedLocation) {
+    // ✅ NEUE LOGIK: Reset GPS-activation flag beim Umschalten
+    _gpsJustActivated = false;
+
     controller.toggleMockLocation();
+    initializeGpsOrMock(selectedLocation);
+  }
+
+  // ✅ NEUE METHODE: Explizite GPS-Aktivierung für UI-Button
+  void activateGps(LocationInfo selectedLocation) {
+    if (kDebugMode) {
+      print("GPS explizit über UI aktiviert");
+    }
+
+    // Setze Flag für Auto-Center
+    if (controller.useMockLocation) {
+      // Für Mock: sofort zentrieren
+      final wasGpsActive = controller.currentGpsPosition != null;
+      if (!wasGpsActive) {
+        _autoMoveToGpsPosition(selectedLocation.initialCenter);
+      }
+    } else {
+      // Für echtes GPS: Flag setzen für nächstes Signal
+      _gpsJustActivated = true;
+    }
+
     initializeGpsOrMock(selectedLocation);
   }
 

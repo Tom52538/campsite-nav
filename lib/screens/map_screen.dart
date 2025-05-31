@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart - FEHLER BEHOBEN
+// lib/screens/map_screen.dart - VOLLSTÄNDIG MIT GPS AUTO-CENTER
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; // Ensure this import is present for LatLng
@@ -285,7 +285,6 @@ class MapScreenState extends State<MapScreen>
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
-    // ✅ FEHLER BEHOBEN: startMarker und endMarker Referenzen entfernt
 
     return MarkerLayer(markers: activeMarkers);
   }
@@ -455,6 +454,7 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
+  // ✅ ANGEPASSTE METHODE: GPS Button mit Auto-Center
   void _toggleMockLocation() {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
@@ -463,7 +463,21 @@ class MapScreenState extends State<MapScreen>
       showSnackbar("Kein Standort ausgewählt, kann Modus nicht wechseln.");
       return;
     }
-    gpsHandler.toggleMockLocation(selectedLocation);
+
+    // ✅ NEU: Verwende activateGps für automatische Zentrierung
+    if (controller.useMockLocation) {
+      // Wechsel zu echtem GPS
+      controller.toggleMockLocation();
+      gpsHandler.activateGps(selectedLocation);
+      showSnackbar("Echtes GPS aktiviert und Karte zentriert.",
+          durationSeconds: 3);
+    } else {
+      // Wechsel zu Mock GPS
+      controller.toggleMockLocation();
+      gpsHandler.activateGps(selectedLocation);
+      showSnackbar("Mock-GPS aktiviert und Karte zentriert.",
+          durationSeconds: 3);
+    }
   }
 
   void _centerOnGps() {
@@ -475,7 +489,20 @@ class MapScreenState extends State<MapScreen>
       showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
     } else {
       if (controller.currentGpsPosition == null) {
-        showSnackbar("Aktuelle GPS-Position ist unbekannt.");
+        // ✅ NEU: Wenn GPS noch nicht aktiv ist, aktiviere es automatisch
+        if (selectedLocation != null) {
+          if (controller.useMockLocation) {
+            showSnackbar("GPS wird aktiviert und Karte zentriert...",
+                durationSeconds: 2);
+            gpsHandler.activateGps(selectedLocation);
+          } else {
+            showSnackbar("Echtes GPS wird aktiviert, bitte warten...",
+                durationSeconds: 3);
+            gpsHandler.activateGps(selectedLocation);
+          }
+        } else {
+          showSnackbar("Aktuelle GPS-Position ist unbekannt.");
+        }
       } else {
         showSnackbar(
             "Du bist zu weit vom Campingplatz entfernt, um zu zentrieren.");
@@ -505,7 +532,6 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  // ✅ FEHLER BEHOBEN: clearMarkers Parameter entfernt
   void clearRoute({bool showConfirmation = false}) {
     routeHandler.clearRoute(showConfirmation: showConfirmation);
   }
