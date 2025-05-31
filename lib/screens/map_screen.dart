@@ -10,15 +10,15 @@ import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
-import 'package:camping_osm_navi/models/searchable_feature.dart';
+// import 'package:camping_osm_navi/models/searchable_feature.dart'; // REMOVED
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
-import 'map_screen_parts/horizontal_poi_strip.dart';
+// import 'map_screen_parts/horizontal_poi_strip.dart'; // REMOVED
 import 'map_screen/map_screen_controller.dart';
 import 'map_screen/map_screen_gps_handler.dart';
 import 'map_screen/map_screen_route_handler.dart';
-import 'map_screen/map_screen_search_handler.dart';
+// import 'map_screen/map_screen_search_handler.dart'; // REMOVED
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -32,9 +32,7 @@ class MapScreenState extends State<MapScreen>
   late MapScreenController controller;
   late MapScreenGpsHandler gpsHandler;
   late MapScreenRouteHandler routeHandler;
-  late MapScreenSearchHandler searchHandler;
-
-  final GlobalKey fullSearchCardKey = GlobalKey();
+  // late MapScreenSearchHandler searchHandler; // REMOVED
 
   @override
   void initState() {
@@ -45,13 +43,13 @@ class MapScreenState extends State<MapScreen>
     controller = MapScreenController();
     gpsHandler = MapScreenGpsHandler(controller);
     routeHandler = MapScreenRouteHandler(controller, context);
-    searchHandler = MapScreenSearchHandler(controller, context);
+    // searchHandler = MapScreenSearchHandler(controller, context); // REMOVED
 
     // Setup callbacks between handlers
     gpsHandler.setOnGpsChangeCallback(routeHandler.updateNavigationOnGpsChange);
-    searchHandler
-        .setRouteCalculationCallback(routeHandler.calculateRouteIfPossible);
-    searchHandler.setRouteClearCallback(() => routeHandler.clearRoute());
+    // searchHandler
+    //     .setRouteCalculationCallback(routeHandler.calculateRouteIfPossible); // REMOVED
+    // searchHandler.setRouteClearCallback(() => routeHandler.clearRoute()); // REMOVED
 
     _initializeApp();
   }
@@ -60,9 +58,9 @@ class MapScreenState extends State<MapScreen>
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
     controller.initializeMaptilerUrl(apiKey);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _updateSearchCardHeight();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   _updateSearchCardHeight();
+    // });
   }
 
   @override
@@ -76,29 +74,19 @@ class MapScreenState extends State<MapScreen>
 
         controller.updateKeyboardVisibility(isKeyboardVisible, keyboardHeight);
 
-        // Smart auto-zoom only for active search
-        if (isKeyboardVisible &&
-            controller.visibleSearchResults.isNotEmpty &&
-            (controller.startFocusNode.hasFocus ||
-                controller.endFocusNode.hasFocus)) {
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (mounted && controller.visibleSearchResults.isNotEmpty) {
-              controller.autoZoomToPOIsWithKeyboard(context);
-            }
-          });
-        }
+        // Smart auto-zoom only for active search // REMOVED Block
+        // if (isKeyboardVisible &&
+        //     controller.visibleSearchResults.isNotEmpty &&
+        //     (controller.startFocusNode.hasFocus ||
+        //         controller.endFocusNode.hasFocus)) {
+        //   Future.delayed(const Duration(milliseconds: 300), () {
+        //     if (mounted && controller.visibleSearchResults.isNotEmpty) {
+        //       controller.autoZoomToPOIsWithKeyboard(context);
+        //     }
+        //   });
+        // }
       }
     });
-  }
-
-  void _updateSearchCardHeight() {
-    if (fullSearchCardKey.currentContext != null) {
-      final RenderBox? renderBox =
-          fullSearchCardKey.currentContext!.findRenderObject() as RenderBox?;
-      if (renderBox != null && mounted) {
-        controller.setFullSearchCardHeight(renderBox.size.height);
-      }
-    }
   }
 
   @override
@@ -128,7 +116,7 @@ class MapScreenState extends State<MapScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     gpsHandler.dispose();
-    searchHandler.dispose();
+    // searchHandler.dispose(); // REMOVED
     controller.dispose();
     super.dispose();
   }
@@ -250,15 +238,15 @@ class MapScreenState extends State<MapScreen>
         _buildMap(isUiReady, mapTheme, selectedLocation),
 
         // Modern Google Maps style search interface
-        if (!controller.compactSearchMode) _buildModernSearchCard(isUiReady),
-        if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady),
+        // if (!controller.compactSearchMode) _buildModernSearchCard(isUiReady), // REMOVED
+        // if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady), // REMOVED
 
         // Navigation instructions
         _buildInstructionCard(isUiReady),
 
         // Smart search results
-        if (!controller.isKeyboardVisible) _buildSearchResults(isUiReady),
-        if (controller.showHorizontalPOIStrip) _buildHorizontalPOIStrip(),
+        // if (!controller.isKeyboardVisible) _buildSearchResults(isUiReady), // REMOVED
+        // if (controller.showHorizontalPOIStrip) _buildHorizontalPOIStrip(), // REMOVED
 
         // Loading states
         _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
@@ -266,335 +254,9 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ MODERN GOOGLE MAPS STYLE SEARCH CARD
-  Widget _buildModernSearchCard(bool isUiReady) {
-    if (!isUiReady) return const SizedBox.shrink();
-
-    return Positioned(
-      top: 8,
-      left: 16,
-      right: 16,
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(16),
-        // Per diagnostic: Use .withValues() for shadowColor
-        shadowColor: Colors.black.withValues(alpha: 0.3),
-        child: Container(
-          key: fullSearchCardKey,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Start field
-              _buildModernTextField(
-                controller: controller.startSearchController,
-                focusNode: controller.startFocusNode,
-                icon: Icons.trip_origin,
-                iconColor: Colors.green,
-                hint: "Von wo startest du?",
-                isStart: true,
-              ),
-
-              // Elegant separator with swap button
-              SizedBox(
-                height: 40,
-                child: Stack(
-                  children: [
-                    // Line
-                    Positioned(
-                      left: 24,
-                      top: 0,
-                      bottom: 0,
-                      child: Container(
-                        width: 2,
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.green, Colors.red],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Swap button
-                    Center(
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.grey.shade300),
-                          // If Colors.black.withValues is not const, then BoxShadow and the list cannot be const.
-                          boxShadow: [
-                            BoxShadow(
-                              // Per diagnostic: Use .withValues()
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2), // Offset can be const
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.swap_vert, size: 18),
-                          onPressed: () => searchHandler.swapStartAndEnd(),
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Destination field
-              _buildModernTextField(
-                controller: controller.endSearchController,
-                focusNode: controller.endFocusNode,
-                icon: Icons.flag,
-                iconColor: Colors.red,
-                hint: "Wohin möchtest du?",
-                isStart: false,
-              ),
-
-              // Route info if available
-              if (controller.routeDistance != null) _buildRouteInfo(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernTextField({
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required IconData icon,
-    required Color iconColor,
-    required String hint,
-    required bool isStart,
-  }) {
-    final bool hasFocus = focusNode.hasFocus;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: hasFocus ? iconColor : Colors.grey.shade300,
-          width: hasFocus ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        // Per diagnostic: Use .withValues()
-        color:
-            hasFocus ? iconColor.withValues(alpha: 0.05) : Colors.grey.shade50,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              // Per diagnostic: Use .withValues()
-              color: hasFocus
-                  ? iconColor.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-              ),
-            ),
-            child: Icon(
-              icon,
-              color: hasFocus ? iconColor : Colors.grey.shade600,
-              size: 20,
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 16,
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-              ),
-              style: const TextStyle(fontSize: 16),
-              textInputAction: TextInputAction.search,
-            ),
-          ),
-          if (controller.text.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.clear, color: Colors.grey.shade600, size: 20),
-              onPressed: () {
-                controller.clear();
-                if (isStart) {
-                  this.controller.setStartLatLng(null);
-                  this.controller.startMarker = null;
-                } else {
-                  this.controller.setEndLatLng(null);
-                  this.controller.endMarker = null;
-                }
-                routeHandler.clearRoute();
-              },
-            ),
-          if (isStart)
-            IconButton(
-              icon: Icon(Icons.my_location, color: iconColor, size: 20),
-              onPressed: () => searchHandler.setStartToCurrentLocation(),
-              tooltip: "Aktueller Standort",
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRouteInfo() {
-    final distance =
-        controller.remainingRouteDistance ?? controller.routeDistance;
-    final time =
-        controller.remainingRouteTimeMinutes ?? controller.routeTimeMinutes;
-
-    if (distance == null || time == null) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blue.shade50,
-            Colors.green.shade50,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.directions_walk, color: Colors.blue.shade600, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            "${time}min • ${formatDistance(distance)}",
-            style: TextStyle(
-              color: Colors.blue.shade700,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            icon: Icon(Icons.close, color: Colors.grey.shade600, size: 18),
-            onPressed: () => routeHandler.clearRoute(),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompactSearchBar(bool isUiReady) {
-    if (!isUiReady) return const SizedBox.shrink();
-
-    final activeController =
-        controller.activeSearchField == ActiveSearchField.start
-            ? controller.startSearchController
-            : controller.endSearchController;
-
-    final activeFocusNode =
-        controller.activeSearchField == ActiveSearchField.start
-            ? controller.startFocusNode
-            : controller.endFocusNode;
-
-    final hintText = controller.activeSearchField == ActiveSearchField.start
-        ? "Startpunkt eingeben..."
-        : "Ziel eingeben...";
-
-    return Positioned(
-      top: 8,
-      left: 16,
-      right: 16,
-      child: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(
-            children: [
-              const SizedBox(width: 16),
-              Icon(
-                controller.activeSearchField == ActiveSearchField.start
-                    ? Icons.trip_origin
-                    : Icons.flag,
-                color: Colors.deepOrange,
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: activeController,
-                  focusNode: activeFocusNode,
-                  decoration: InputDecoration(
-                    hintText: hintText,
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
-                    border: InputBorder.none,
-                  ),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-              if (activeController.text.isNotEmpty)
-                IconButton(
-                  icon:
-                      Icon(Icons.clear, color: Colors.grey.shade600, size: 20),
-                  onPressed: () {
-                    activeController.clear();
-                    routeHandler.clearRoute();
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHorizontalPOIStrip() {
-    return HorizontalPOIStrip(
-      features: controller.visibleSearchResults,
-      keyboardHeight: controller.keyboardHeight,
-      isVisible: controller.showHorizontalPOIStrip,
-      onFeatureTap: (feature) {
-        if (controller.activeSearchField == ActiveSearchField.start) {
-          controller.startSearchController.text = feature.name;
-          controller.setStartLatLng(feature.center);
-          controller.updateStartMarker();
-        } else {
-          controller.endSearchController.text = feature.name;
-          controller.setEndLatLng(feature.center);
-          controller.updateEndMarker();
-        }
-
-        // Keep keyboard open for further editing
-        Future.delayed(const Duration(milliseconds: 200), () {
-          routeHandler.calculateRouteIfPossible();
-          controller.mapController.move(feature.center, 18.0);
-        });
-      },
-    );
-  }
+  // REMOVED _buildModernSearchCard, _buildModernTextField, _buildRouteInfo
+  // REMOVED _buildCompactSearchBar
+  // REMOVED _buildHorizontalPOIStrip
 
   Widget _buildMap(
       bool isUiReady, dynamic mapTheme, LocationInfo? selectedLocation) {
@@ -627,7 +289,7 @@ class MapScreenState extends State<MapScreen>
   void _handleSmartMapTap(TapPosition tapPosition, LatLng point) {
     // LatLng type for point
     // Only handle route creation, never unfocus
-    routeHandler.handleMapTap(tapPosition, point);
+    // routeHandler.handleMapTap(tapPosition, point); // REMOVED as handleMapTap was removed
   }
 
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
@@ -661,220 +323,29 @@ class MapScreenState extends State<MapScreen>
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
-    if (controller.startMarker != null) {
+    if (controller.startMarker != null) { // This state is already removed from controller, but kept for safety, will be caught by analyzer if truly unused
       activeMarkers.add(controller.startMarker!);
     }
-    if (controller.endMarker != null) {
+    if (controller.endMarker != null) { // This state is already removed from controller, but kept for safety, will be caught by analyzer if truly unused
       activeMarkers.add(controller.endMarker!);
     }
 
-    if (controller.visibleSearchResults.isNotEmpty &&
-        !controller.showHorizontalPOIStrip) {
-      final currentZoom = controller.mapController.camera.zoom;
-
-      for (final feature in controller.visibleSearchResults) {
-        activeMarkers.add(_createSearchResultMarker(feature, currentZoom));
-      }
-    }
+    // if (controller.visibleSearchResults.isNotEmpty && // REMOVED - visibleSearchResults and showHorizontalPOIStrip are removed from controller
+    //     !controller.showHorizontalPOIStrip) {
+    //   final currentZoom = controller.mapController.camera.zoom;
+    //
+    //   for (final feature in controller.visibleSearchResults) {
+    //     activeMarkers.add(_createSearchResultMarker(feature, currentZoom));
+    //   }
+    // }
 
     return MarkerLayer(markers: activeMarkers);
   }
 
-  Marker _createSearchResultMarker(
-      SearchableFeature feature, double currentZoom) {
-    return Marker(
-      width: _getMarkerWidthForFeature(feature),
-      height: _getMarkerHeightForFeature(feature),
-      point: feature.center,
-      alignment: Alignment.center,
-      child: GestureDetector(
-        onTap: () => _showPOIActions(feature),
-        child: Container(
-          decoration: BoxDecoration(
-            color: _getBackgroundColorForPOIType(feature.type),
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(
-              color: _getColorForPOIType(feature.type),
-              width: 2.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                // Per diagnostic: Use .withValues()
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 4.0,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                getIconForFeatureType(feature.type),
-                size: _getIconSizeForZoom(currentZoom),
-                color: _getColorForPOIType(feature.type),
-              ),
-              if (_shouldShowTextForZoom(currentZoom)) ...[
-                const SizedBox(width: 4.0),
-                Flexible(
-                  child: Text(
-                    feature.name,
-                    style: TextStyle(
-                      fontSize: _getFontSizeForZoom(currentZoom),
-                      fontWeight: FontWeight.bold,
-                      color: _getColorForPOIType(feature.type),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  double _getMarkerWidthForFeature(SearchableFeature feature) {
-    if (_isAccommodationType(feature.type)) {
-      return 160.0;
-    }
-    return 140.0;
-  }
-
-  double _getMarkerHeightForFeature(SearchableFeature feature) {
-    return 35.0;
-  }
-
-  double _getIconSizeForZoom(double zoom) {
-    if (zoom < 16.0) return 14.0;
-    if (zoom < 18.0) return 16.0;
-    return 18.0;
-  }
-
-  bool _shouldShowTextForZoom(double zoom) {
-    return zoom >= 16.0;
-  }
-
-  double _getFontSizeForZoom(double zoom) {
-    if (zoom < 17.0) return 10.0;
-    if (zoom < 18.0) return 11.0;
-    return 12.0;
-  }
-
-  bool _isAccommodationType(String type) {
-    final accommodationTypes = [
-      'accommodation',
-      'building',
-      'house',
-      'pitch',
-      'camp_pitch',
-      'holiday_home',
-      'chalet',
-      'bungalow',
-      'lodge',
-      'cabin'
-    ];
-    return accommodationTypes.contains(type.toLowerCase()) ||
-        type.toLowerCase().contains('comfort') ||
-        type.toLowerCase().contains('wellness');
-  }
-
-  Color _getBackgroundColorForPOIType(String type) {
-    // Per diagnostic: Use .withValues()
-    return _getColorForPOIType(type).withValues(alpha: 0.1);
-  }
-
-  Color _getColorForPOIType(String type) {
-    switch (type.toLowerCase()) {
-      case 'industrial':
-        return Colors.deepPurple;
-      case 'bus_stop':
-        return Colors.blue;
-      case 'parking':
-        return Colors.indigo;
-      case 'building':
-      case 'accommodation':
-        return Colors.brown;
-      case 'shop':
-        return Colors.purple;
-      case 'amenity':
-        return Colors.green;
-      case 'tourism':
-        return Colors.orange;
-      case 'restaurant':
-      case 'cafe':
-        return Colors.red;
-      case 'reception':
-      case 'information':
-        return Colors.teal;
-      case 'toilets':
-      case 'sanitary':
-        return Colors.cyan;
-      case 'playground':
-        return Colors.pink;
-      default:
-        return Colors.grey.shade600;
-    }
-  }
-
-  void _showPOIActions(SearchableFeature feature) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: Icon(
-                  getIconForFeatureType(feature.type),
-                  color: _getColorForPOIType(feature.type),
-                ),
-                title: Text(feature.name),
-                subtitle: Text('Typ: ${feature.type}'),
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.play_arrow, color: Colors.green),
-                title: const Text('Als Startpunkt verwenden'),
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.startSearchController.text = feature.name;
-                  controller.setStartLatLng(feature.center);
-                  controller.updateStartMarker();
-                  controller.startFocusNode.requestFocus();
-                  routeHandler.calculateRouteIfPossible();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.flag, color: Colors.red),
-                title: const Text('Als Ziel verwenden'),
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.endSearchController.text = feature.name;
-                  controller.setEndLatLng(feature.center);
-                  controller.updateEndMarker();
-                  controller.endFocusNode.requestFocus();
-                  routeHandler.calculateRouteIfPossible();
-                },
-              ),
-              ListTile(
-                leading:
-                    const Icon(Icons.center_focus_strong, color: Colors.blue),
-                title: const Text('Karte zentrieren'),
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.mapController.move(feature.center, 18.0);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // REMOVED _createSearchResultMarker and its helper methods:
+  // _getMarkerWidthForFeature, _getMarkerHeightForFeature, _getIconSizeForZoom,
+  // _shouldShowTextForZoom, _getFontSizeForZoom, _isAccommodationType,
+  // _getBackgroundColorForPOIType, _getColorForPOIType, _showPOIActions
 
   Widget _buildInstructionCard(bool isUiReady) {
     final bool instructionCardVisible = controller.currentDisplayedManeuver !=
@@ -892,7 +363,8 @@ class MapScreenState extends State<MapScreen>
     final double instructionCardTop = 8 +
         (controller.compactSearchMode
             ? 60
-            : _calculateCurrentSearchCardHeight()) +
+            // : _calculateCurrentSearchCardHeight()) + // REMOVED
+            : 200.0) + // Default height
         16;
 
     return Positioned(
@@ -907,192 +379,10 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  double _calculateCurrentSearchCardHeight() {
-    return controller.fullSearchCardHeight > 0
-        ? controller.fullSearchCardHeight
-        : 200; // Default height
-  }
-
-  Widget _buildSearchResults(bool isUiReady) {
-    if (!controller.showSearchResults ||
-        controller.searchResults.isEmpty ||
-        !isUiReady ||
-        controller.isRouteActiveForCardSwitch) {
-      return const SizedBox.shrink();
-    }
-
-    double searchResultsTopPosition =
-        8 + _calculateCurrentSearchCardHeight() + 16;
-
-    final bool instructionCardVisible = controller.currentDisplayedManeuver !=
-            null &&
-        controller.currentDisplayedManeuver!.turnType != TurnType.depart &&
-        !(controller.currentManeuvers.length <= 2 &&
-            controller.currentDisplayedManeuver!.turnType == TurnType.arrive);
-
-    if (instructionCardVisible) {
-      searchResultsTopPosition += 80.0 + 16;
-    }
-
-    return Positioned(
-      top: searchResultsTopPosition,
-      left: 16,
-      right: 16,
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.4,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, size: 18, color: Colors.grey.shade600),
-                    const SizedBox(width: 8),
-                    Text(
-                      "${controller.searchResults.length} Ergebnisse",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Results
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: controller.searchResults.length,
-                  itemBuilder: (context, index) {
-                    final feature = controller.searchResults[index];
-                    return _buildSearchResultTile(feature, index);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchResultTile(SearchableFeature feature, int index) {
-    final color = _getColorForPOIType(feature.type);
-    // Unused variable 'isAccommodation' was removed in previous fix.
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => searchHandler.selectFeatureAndSetPoint(feature),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              // Icon with category indicator
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  // Per diagnostic: Use .withValues()
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  // Per diagnostic: Use .withValues()
-                  border: Border.all(color: color.withValues(alpha: 0.3)),
-                ),
-                child: Icon(
-                  getIconForFeatureType(feature.type),
-                  color: color,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      feature.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _getReadableFeatureType(feature.type),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Distance indicator (if available)
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Colors.grey.shade400,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getReadableFeatureType(String type) {
-    switch (type.toLowerCase()) {
-      case 'accommodation':
-      case 'building':
-        return 'Unterkunft';
-      case 'shop':
-        return 'Geschäft';
-      case 'restaurant':
-        return 'Restaurant';
-      case 'cafe':
-        return 'Café';
-      case 'bar':
-        return 'Bar';
-      case 'toilets':
-      case 'sanitary':
-        return 'Sanitär';
-      case 'parking':
-        return 'Parkplatz';
-      case 'playground':
-        return 'Spielplatz';
-      case 'reception':
-        return 'Rezeption';
-      case 'information':
-        return 'Information';
-      default:
-        return type;
-    }
-  }
+  // REMOVED _calculateCurrentSearchCardHeight
+  // REMOVED _buildSearchResults
+  // REMOVED _buildSearchResultTile
+  // REMOVED _getReadableFeatureType (as it was only used by _buildSearchResultTile)
 
   Widget _buildLoadingOverlays(
       bool isUiReady, bool isLoading, LocationInfo? selectedLocation) {
@@ -1221,7 +511,7 @@ class MapScreenState extends State<MapScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _updateSearchCardHeight();
+        // _updateSearchCardHeight(); // REMOVED
       }
     });
   }
@@ -1284,20 +574,20 @@ class MapScreenState extends State<MapScreen>
   }
 
   // Public methods für Handler
-  void setStartToCurrentLocation() {
-    searchHandler.setStartToCurrentLocation();
-  }
+  // void setStartToCurrentLocation() { // REMOVED
+  //   // searchHandler.setStartToCurrentLocation();
+  // }
 
-  void calculateAndDisplayRoute() {
-    routeHandler.calculateRouteIfPossible();
-  }
+  // void calculateAndDisplayRoute() {
+  //   // routeHandler.calculateRouteIfPossible(); // REMOVED
+  // }
 
   void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
     routeHandler.clearRoute(
         showConfirmation: showConfirmation, clearMarkers: clearMarkers);
   }
 
-  void swapStartAndEnd() {
-    searchHandler.swapStartAndEnd();
-  }
+  // void swapStartAndEnd() { // REMOVED
+  //   // searchHandler.swapStartAndEnd();
+  // }
 }

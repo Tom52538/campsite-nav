@@ -1,281 +1,77 @@
-// lib/screens/map_screen/map_screen_search_handler.dart - ALL WARNINGS FIXED
-import 'dart:async';
+// lib/screens/map_screen/map_screen_search_handler.dart - GUTTED
+// import 'dart:async'; // REMOVED - Timer not used
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:camping_osm_navi/models/searchable_feature.dart';
-import 'package:camping_osm_navi/models/camping_search_categories.dart';
-import 'package:camping_osm_navi/providers/location_provider.dart';
+// import 'package:provider/provider.dart'; // REMOVED - Provider not used
+// import 'package:camping_osm_navi/models/searchable_feature.dart'; // REMOVED - SearchableFeature not used
+// import 'package:camping_osm_navi/models/camping_search_categories.dart'; // REMOVED - CampingSearchCategories not used
+// import 'package:camping_osm_navi/providers/location_provider.dart'; // REMOVED - LocationProvider not used
 import 'map_screen_controller.dart';
 
 class MapScreenSearchHandler {
   final MapScreenController controller;
   final BuildContext context;
 
-  Timer? _hideResultsTimer;
+  // Timer? _hideResultsTimer; // REMOVED
 
   MapScreenSearchHandler(this.controller, this.context) {
-    _initializeSearchListeners();
+    // _initializeSearchListeners(); // REMOVED
   }
 
-  void _initializeSearchListeners() {
-    // Add text change listeners
-    controller.startSearchController.addListener(() {
-      final query = controller.startSearchController.text;
-      if (controller.activeSearchField == ActiveSearchField.start) {
-        _performCampingIntelligentSearch(query);
-      }
-    });
+  // void _initializeSearchListeners() { // REMOVED
+  // }
 
-    controller.endSearchController.addListener(() {
-      final query = controller.endSearchController.text;
-      if (controller.activeSearchField == ActiveSearchField.end) {
-        _performCampingIntelligentSearch(query);
-      }
-    });
-  }
+  // void _performCampingIntelligentSearch(String query) { // REMOVED
+  // }
 
-  void _performCampingIntelligentSearch(String query) {
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final allFeatures = locationProvider.currentSearchableFeatures;
+  // void _hideSearchResultsAfterDelay() { // REMOVED
+  // }
 
-    if (query.isEmpty) {
-      controller.setSearchResults([]);
-      controller.setShowSearchResults(false);
-      controller.clearVisibleSearchResults();
-      return;
-    }
+  // List<SearchableFeature> _performAdvancedCategoryFiltering( // REMOVED
+  //     List<SearchableFeature> allFeatures, String query) {
+  // }
 
-    // Emoji-Shortcuts prüfen
-    final shortcutQuery = CampingSearchCategories.quickSearchShortcuts[query];
-    if (shortcutQuery != null) {
-      _performCampingIntelligentSearch(shortcutQuery);
-      return;
-    }
+  // List<SearchableFeature> _searchAccommodationByNumber( // REMOVED
+  //     List<SearchableFeature> features, String query) {
+  // }
 
-    final filteredResults =
-        _performAdvancedCategoryFiltering(allFeatures, query);
+  // List<SearchableFeature> _searchByCategory( // REMOVED
+  //     List<SearchableFeature> features, CampingSearchCategory category) {
+  // }
 
-    controller.setSearchResults(filteredResults);
-    controller.setShowSearchResults(true);
-    controller.setVisibleSearchResults(filteredResults);
+  // List<SearchableFeature> _searchByOsmType( // REMOVED
+  //     List<SearchableFeature> features, String query) {
+  // }
 
-    // Auto-hide results after delay
-    _hideSearchResultsAfterDelay();
-  }
+  // List<SearchableFeature> _prioritizeCategoryResults( // REMOVED
+  //     List<SearchableFeature> results, CampingSearchCategory category) {
+  // }
 
-  void _hideSearchResultsAfterDelay() {
-    _hideResultsTimer?.cancel();
-    _hideResultsTimer = Timer(const Duration(seconds: 30), () {
-      if (!controller.startFocusNode.hasFocus &&
-          !controller.endFocusNode.hasFocus) {
-        controller.setShowSearchResults(false);
-      }
-    });
-  }
+  // List<SearchableFeature> _searchByName( // REMOVED
+  //     List<SearchableFeature> features, String query) {
+  // }
 
-  List<SearchableFeature> _performAdvancedCategoryFiltering(
-      List<SearchableFeature> allFeatures, String query) {
-    final String cleanQuery = query.trim().toLowerCase();
+  // bool _isAccommodationType(String type) { // REMOVED
+  // }
 
-    // 1. UNTERKUNFT-NUMMER (höchste Priorität)
-    if (CampingSearchCategories.isAccommodationNumberSearch(cleanQuery)) {
-      final accommodationResults =
-          _searchAccommodationByNumber(allFeatures, cleanQuery);
-      if (accommodationResults.isNotEmpty) {
-        return accommodationResults;
-      }
-    }
+  // void swapStartAndEnd() { // REMOVED
+  // }
 
-    // 2. KATEGORIE-MATCHING
-    final matchedCategory = CampingSearchCategories.matchCategory(cleanQuery);
-    if (matchedCategory != null) {
-      final categoryResults = _searchByCategory(allFeatures, matchedCategory);
-      if (categoryResults.isNotEmpty) {
-        return _prioritizeCategoryResults(categoryResults, matchedCategory);
-      }
-    }
+  // void setStartToCurrentLocation() { // REMOVED
+  // }
 
-    // 3. OSM-TYPE MATCHING
-    final osmResults = _searchByOsmType(allFeatures, cleanQuery);
-    if (osmResults.isNotEmpty) {
-      return osmResults;
-    }
-
-    // 4. FALLBACK: Name-Suche
-    final nameResults = _searchByName(allFeatures, cleanQuery);
-    return nameResults;
-  }
-
-  List<SearchableFeature> _searchAccommodationByNumber(
-      List<SearchableFeature> features, String query) {
-    final numberMatches = RegExp(r'\d+').allMatches(query);
-    if (numberMatches.isEmpty) return [];
-
-    final searchNumbers = numberMatches.map((m) => m.group(0)!).toList();
-    final results = <SearchableFeature>[];
-
-    for (final searchNum in searchNumbers) {
-      final numberResults = features.where((feature) {
-        if (!_isAccommodationType(feature.type)) return false;
-
-        final name = feature.name.toLowerCase();
-
-        return name == searchNum ||
-            name.contains(' $searchNum ') ||
-            name.startsWith('$searchNum ') ||
-            name.endsWith(' $searchNum') ||
-            name.contains('$searchNum-') ||
-            name.contains('-$searchNum') ||
-            name.startsWith('${searchNum}a') ||
-            name.startsWith('${searchNum}b') ||
-            name.startsWith('${searchNum}c');
-      }).toList();
-
-      results.addAll(numberResults);
-    }
-
-    final uniqueResults = results.toSet().toList();
-    uniqueResults.sort((a, b) {
-      final aExact =
-          searchNumbers.any((searchNum) => a.name.toLowerCase() == searchNum);
-      final bExact =
-          searchNumbers.any((searchNum) => b.name.toLowerCase() == searchNum);
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-      return a.name.compareTo(b.name);
-    });
-
-    return uniqueResults;
-  }
-
-  List<SearchableFeature> _searchByCategory(
-      List<SearchableFeature> features, CampingSearchCategory category) {
-    return features.where((feature) {
-      for (final osmType in category.osmTypes) {
-        if (feature.type.toLowerCase() == osmType.toLowerCase() ||
-            feature.type.toLowerCase().contains(osmType.toLowerCase()) ||
-            osmType.toLowerCase().contains(feature.type.toLowerCase())) {
-          return true;
-        }
-      }
-
-      final featureName = feature.name.toLowerCase();
-      for (final keyword in category.keywords) {
-        if (featureName.contains(keyword.toLowerCase())) {
-          return true;
-        }
-      }
-
-      return false;
-    }).toList();
-  }
-
-  List<SearchableFeature> _searchByOsmType(
-      List<SearchableFeature> features, String query) {
-    return features
-        .where((feature) =>
-            feature.type.toLowerCase().contains(query) ||
-            query.contains(feature.type.toLowerCase()))
-        .toList();
-  }
-
-  List<SearchableFeature> _prioritizeCategoryResults(
-      List<SearchableFeature> results, CampingSearchCategory category) {
-    results.sort((a, b) {
-      final aExactType = category.osmTypes.contains(a.type.toLowerCase());
-      final bExactType = category.osmTypes.contains(b.type.toLowerCase());
-
-      if (aExactType && !bExactType) return -1;
-      if (!aExactType && bExactType) return 1;
-
-      return a.name.compareTo(b.name);
-    });
-
-    return results;
-  }
-
-  List<SearchableFeature> _searchByName(
-      List<SearchableFeature> features, String query) {
-    final results = features
-        .where((feature) => feature.name.toLowerCase().contains(query))
-        .toList();
-
-    results.sort((a, b) {
-      final aStarts = a.name.toLowerCase().startsWith(query);
-      final bStarts = b.name.toLowerCase().startsWith(query);
-
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-
-      return a.name.length.compareTo(b.name.length);
-    });
-
-    return results;
-  }
-
-  bool _isAccommodationType(String type) {
-    final category = CampingSearchCategories.getCategoryByOsmType(type);
-    return category?.category == CampingPOICategory.accommodation;
-  }
-
-  // ✅ REQUIRED METHODS
-  void swapStartAndEnd() {
-    controller.swapStartAndEnd();
-  }
-
-  void setStartToCurrentLocation() {
-    if (controller.currentGpsPosition != null) {
-      controller.startSearchController.text = "Aktueller Standort";
-      controller.setStartLatLng(controller.currentGpsPosition!);
-      controller.updateStartMarker();
-
-      // Trigger route calculation if end is set
-      if (controller.endLatLng != null && _onRouteCalculationNeeded != null) {
-        _onRouteCalculationNeeded!();
-      }
-    }
-  }
-
-  void selectFeatureAndSetPoint(SearchableFeature feature) {
-    if (controller.activeSearchField == ActiveSearchField.start) {
-      controller.startSearchController.text = feature.name;
-      controller.setStartLatLng(feature.center);
-      controller.updateStartMarker();
-    } else if (controller.activeSearchField == ActiveSearchField.end) {
-      controller.endSearchController.text = feature.name;
-      controller.setEndLatLng(feature.center);
-      controller.updateEndMarker();
-    }
-
-    // Hide search results after selection
-    controller.setShowSearchResults(false);
-    controller.clearVisibleSearchResults();
-
-    // Move map to selected feature
-    controller.mapController.move(feature.center, 18.0);
-
-    // Trigger route calculation if both points are set
-    if (controller.startLatLng != null &&
-        controller.endLatLng != null &&
-        _onRouteCalculationNeeded != null) {
-      _onRouteCalculationNeeded!();
-    }
-  }
+  // void selectFeatureAndSetPoint(SearchableFeature feature) { // REMOVED
+  // }
 
   // Callback management
-  void Function()? _onRouteCalculationNeeded;
+  // void Function()? _onRouteCalculationNeeded; // REMOVED
 
-  void setRouteCalculationCallback(void Function() callback) {
-    _onRouteCalculationNeeded = callback;
-  }
+  // void setRouteCalculationCallback(void Function() callback) { // REMOVED
+  // }
 
-  void setRouteClearCallback(void Function() callback) {
-    // This callback is set but may be used later for route clearing functionality
-    // Keeping it for future extensibility
-  }
+  // void setRouteClearCallback(void Function() callback) { // REMOVED
+  // }
 
   void dispose() {
-    _hideResultsTimer?.cancel();
+    // _hideResultsTimer?.cancel(); // REMOVED
   }
 }
