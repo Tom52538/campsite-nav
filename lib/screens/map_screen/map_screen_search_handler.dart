@@ -259,12 +259,14 @@ class MapScreenSearchHandler {
       controller.startSearchController.text = feature.name;
       controller.setStartLatLng(point);
       controller.updateStartMarker();
+      controller.startFocusNode.requestFocus();
       // ✅ FIX 9: Kein automatischer unfocus bei Feature-Auswahl
       // controller.startFocusNode.unfocus(); // ENTFERNT
     } else if (controller.activeSearchField == ActiveSearchField.end) {
       controller.endSearchController.text = feature.name;
       controller.setEndLatLng(point);
       controller.updateEndMarker();
+      controller.endFocusNode.requestFocus();
       // ✅ FIX 10: Kein automatischer unfocus bei Feature-Auswahl
       // controller.endFocusNode.unfocus(); // ENTFERNT
     }
