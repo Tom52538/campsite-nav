@@ -6,10 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
-import 'package:camping_osm_navi/models/searchable_feature.dart';
+// import 'package:camping_osm_navi/models/searchable_feature.dart'; // REMOVED
 import 'package:camping_osm_navi/services/tts_service.dart';
 
-enum ActiveSearchField { none, start, end }
+// enum ActiveSearchField { none, start, end } // REMOVED
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
@@ -18,11 +18,11 @@ class MapScreenController with ChangeNotifier {
   // State Variables
   Polyline? routePolyline;
   Marker? currentLocationMarker;
-  Marker? startMarker;
-  Marker? endMarker;
+  // Marker? startMarker; // REMOVED
+  // Marker? endMarker; // REMOVED
   LatLng? currentGpsPosition;
-  LatLng? endLatLng;
-  LatLng? startLatLng;
+  // LatLng? endLatLng; // REMOVED
+  // LatLng? startLatLng; // REMOVED
 
   bool isCalculatingRoute = false;
   bool showSearchResults = false;
@@ -45,23 +45,23 @@ class MapScreenController with ChangeNotifier {
   DateTime? _lastRerouteTime;
   bool _isRerouting = false;
 
-  List<SearchableFeature> searchResults = [];
-  List<SearchableFeature> visibleSearchResults = [];
+  // List<SearchableFeature> searchResults = []; // REMOVED
+  // List<SearchableFeature> visibleSearchResults = []; // REMOVED
 
-  ActiveSearchField activeSearchField = ActiveSearchField.none;
+  // ActiveSearchField activeSearchField = ActiveSearchField.none; // REMOVED
 
-  final TextEditingController startSearchController = TextEditingController();
-  final TextEditingController endSearchController = TextEditingController();
-  final FocusNode startFocusNode = FocusNode();
-  final FocusNode endFocusNode = FocusNode();
+  // final TextEditingController startSearchController = TextEditingController(); // REMOVED
+  // final TextEditingController endSearchController = TextEditingController(); // REMOVED
+  // final FocusNode startFocusNode = FocusNode(); // REMOVED
+  // final FocusNode endFocusNode = FocusNode(); // REMOVED
 
-  double fullSearchCardHeight = 0;
+  // double fullSearchCardHeight = 0; // REMOVED
   String _maptilerUrlTemplate = '';
 
   bool _isKeyboardVisible = false;
   double _keyboardHeight = 0;
   bool _compactSearchMode = false;
-  bool _showHorizontalPOIStrip = false;
+  // bool _showHorizontalPOIStrip = false; // REMOVED
 
   // Constants
   static const double followGpsZoomLevel = 17.5;
@@ -79,7 +79,7 @@ class MapScreenController with ChangeNotifier {
   bool get isKeyboardVisible => _isKeyboardVisible;
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
-  bool get showHorizontalPOIStrip => _showHorizontalPOIStrip;
+  // bool get showHorizontalPOIStrip => _showHorizontalPOIStrip; // REMOVED
 
   MapScreenController() {
     ttsService = TtsService();
@@ -88,8 +88,8 @@ class MapScreenController with ChangeNotifier {
 
   void _initializeListeners() {
     // ✅ FIXED: Wrap focus listeners in addPostFrameCallback to prevent setState during build
-    startFocusNode.addListener(_onStartFocusChanged);
-    endFocusNode.addListener(_onEndFocusChanged);
+    // startFocusNode.addListener(_onStartFocusChanged); // REMOVED
+    // endFocusNode.addListener(_onEndFocusChanged); // REMOVED
   }
 
   void initializeMaptilerUrl(String? apiKey) {
@@ -101,34 +101,8 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // ✅ FIXED: Focus change handlers now use addPostFrameCallback
-  void _onStartFocusChanged() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (startFocusNode.hasFocus) {
-        activeSearchField = ActiveSearchField.start;
-        isRouteActiveForCardSwitch = false;
-      } else {
-        if (activeSearchField == ActiveSearchField.start) {
-          activeSearchField = ActiveSearchField.none;
-        }
-      }
-      notifyListeners();
-    });
-  }
-
-  void _onEndFocusChanged() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (endFocusNode.hasFocus) {
-        activeSearchField = ActiveSearchField.end;
-        isRouteActiveForCardSwitch = false;
-      } else {
-        if (activeSearchField == ActiveSearchField.end) {
-          activeSearchField = ActiveSearchField.none;
-        }
-      }
-      notifyListeners();
-    });
-  }
+  // REMOVED _onStartFocusChanged
+  // REMOVED _onEndFocusChanged
 
   // ✅ FIXED: Keyboard visibility updates now use addPostFrameCallback
   void updateKeyboardVisibility(bool visible, double height) {
@@ -138,14 +112,15 @@ class MapScreenController with ChangeNotifier {
         _isKeyboardVisible = visible;
         _keyboardHeight = height;
 
-        if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
+        // if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) { // MODIFIED
+        if (visible) { // MODIFIED - Condition related to focus nodes removed
           setCompactSearchMode(true);
-          if (visibleSearchResults.isNotEmpty) {
-            setShowHorizontalPOIStrip(true);
-          }
+          // if (visibleSearchResults.isNotEmpty) { // REMOVED
+          //   setShowHorizontalPOIStrip(true); // REMOVED
+          // }
         } else if (!visible) {
           setCompactSearchMode(false);
-          setShowHorizontalPOIStrip(false);
+          // setShowHorizontalPOIStrip(false); // REMOVED
         }
 
         notifyListeners();
@@ -160,62 +135,33 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  void setShowHorizontalPOIStrip(bool show) {
-    if (_showHorizontalPOIStrip != show) {
-      _showHorizontalPOIStrip = show;
-      notifyListeners();
-    }
-  }
+  // void setShowHorizontalPOIStrip(bool show) { // REMOVED
+  //   if (_showHorizontalPOIStrip != show) {
+  //     _showHorizontalPOIStrip = show;
+  //     notifyListeners();
+  //   }
+  // }
 
-  void setVisibleSearchResults(List<SearchableFeature> results) {
-    visibleSearchResults = results;
+  // void setVisibleSearchResults(List<SearchableFeature> results) { // REMOVED
+  //   visibleSearchResults = results;
+  //
+  //   if (isKeyboardVisible && results.isNotEmpty) {
+  //     setShowHorizontalPOIStrip(true);
+  //   } else if (results.isEmpty) {
+  //     setShowHorizontalPOIStrip(false);
+  //   }
+  //
+  //   notifyListeners();
+  // }
 
-    if (isKeyboardVisible && results.isNotEmpty) {
-      setShowHorizontalPOIStrip(true);
-    } else if (results.isEmpty) {
-      setShowHorizontalPOIStrip(false);
-    }
+  // void clearVisibleSearchResults() { // REMOVED
+  //   visibleSearchResults.clear();
+  //   setShowHorizontalPOIStrip(false);
+  //   notifyListeners();
+  // }
 
-    notifyListeners();
-  }
-
-  void clearVisibleSearchResults() {
-    visibleSearchResults.clear();
-    setShowHorizontalPOIStrip(false);
-    notifyListeners();
-  }
-
-  void autoZoomToPOIsWithKeyboard(BuildContext context) {
-    if (!isKeyboardVisible || visibleSearchResults.isEmpty) return;
-
-    final results = visibleSearchResults;
-
-    if (results.length == 1) {
-      mapController.move(results.first.center, 18.0);
-    } else {
-      try {
-        final points = results.map((f) => f.center).toList();
-        final bounds = _calculateBoundsForPoints(points);
-
-        mapController.fitCamera(
-          CameraFit.bounds(
-            bounds: bounds,
-            padding: EdgeInsets.only(
-              top: 120,
-              bottom: keyboardHeight + 120,
-              left: 30,
-              right: 30,
-            ),
-          ),
-        );
-      } catch (e) {
-        // Fallback: Zoom to first result
-        if (results.isNotEmpty) {
-          mapController.move(results.first.center, 17.0);
-        }
-      }
-    }
-  }
+  // void autoZoomToPOIsWithKeyboard(BuildContext context) { // REMOVED
+  // }
 
   LatLngBounds _calculateBoundsForPoints(List<LatLng> points) {
     if (points.isEmpty) {
@@ -245,10 +191,7 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  void setFullSearchCardHeight(double height) {
-    fullSearchCardHeight = height;
-    notifyListeners();
-  }
+  // REMOVED setFullSearchCardHeight
 
   void setRouteOverviewMode(bool isOverview) {
     _isInRouteOverviewMode = isOverview;
@@ -265,10 +208,10 @@ class MapScreenController with ChangeNotifier {
 
   void togglePOILabels() {
     showPOILabels = !showPOILabels;
-    if (!showPOILabels) {
-      visibleSearchResults.clear();
-      setShowHorizontalPOIStrip(false);
-    }
+    // if (!showPOILabels) { // REMOVED
+    //   visibleSearchResults.clear(); // REMOVED
+    //   setShowHorizontalPOIStrip(false); // REMOVED
+    // }
     notifyListeners();
   }
 
@@ -304,20 +247,17 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  void setShowSearchResults(bool show) {
-    showSearchResults = show;
-    notifyListeners();
-  }
+  // void setShowSearchResults(bool show) { // REMOVED
+  //   showSearchResults = show;
+  //   notifyListeners();
+  // }
 
-  void setSearchResults(List<SearchableFeature> results) {
-    searchResults = results;
-    notifyListeners();
-  }
+  // void setSearchResults(List<SearchableFeature> results) { // REMOVED
+  //   searchResults = results;
+  //   notifyListeners();
+  // }
 
-  void setActiveSearchField(ActiveSearchField field) {
-    activeSearchField = field;
-    notifyListeners();
-  }
+  // REMOVED setActiveSearchField
 
   void updateCurrentLocationMarker() {
     if (currentGpsPosition != null) {
@@ -343,70 +283,8 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  void updateStartMarker() {
-    if (startLatLng != null &&
-        startSearchController.text != "Aktueller Standort") {
-      startMarker = Marker(
-        point: startLatLng!,
-        width: 80,
-        height: 80,
-        alignment: Alignment.center,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.9),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.green.withValues(alpha: 0.3),
-                blurRadius: 8.0,
-                spreadRadius: 2.0,
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.play_arrow,
-            color: Colors.white,
-            size: 32.0,
-          ),
-        ),
-      );
-    } else {
-      startMarker = null;
-    }
-    notifyListeners();
-  }
-
-  void updateEndMarker() {
-    if (endLatLng != null) {
-      endMarker = Marker(
-        point: endLatLng!,
-        width: 80,
-        height: 80,
-        alignment: Alignment.center,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.red.withValues(alpha: 0.9),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.red.withValues(alpha: 0.3),
-                blurRadius: 8.0,
-                spreadRadius: 2.0,
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.flag,
-            color: Colors.white,
-            size: 32.0,
-          ),
-        ),
-      );
-    } else {
-      endMarker = null;
-    }
-    notifyListeners();
-  }
+  // REMOVED updateStartMarker
+  // REMOVED updateEndMarker
 
   void updateRouteMetrics(List<LatLng> path) {
     if (path.isEmpty) return;
@@ -452,16 +330,16 @@ class MapScreenController with ChangeNotifier {
   }
 
   void resetSearchFields() {
-    startSearchController.clear();
-    endSearchController.clear();
-    searchResults.clear();
-    showSearchResults = false;
-    startLatLng = null;
-    endLatLng = null;
-    startMarker = null;
-    endMarker = null;
-    visibleSearchResults.clear();
-    setShowHorizontalPOIStrip(false);
+    // startSearchController.clear(); // REMOVED
+    // endSearchController.clear(); // REMOVED
+    // searchResults.clear(); // REMOVED
+    // showSearchResults = false; // REMOVED
+    // startLatLng = null; // REMOVED
+    // endLatLng = null; // REMOVED
+    // startMarker = null; // REMOVED
+    // endMarker = null; // REMOVED
+    // visibleSearchResults.clear(); // REMOVED
+    // setShowHorizontalPOIStrip(false); // REMOVED
     notifyListeners();
   }
 
@@ -474,15 +352,8 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  void setStartLatLng(LatLng? latLng) {
-    startLatLng = latLng;
-    notifyListeners();
-  }
-
-  void setEndLatLng(LatLng? latLng) {
-    endLatLng = latLng;
-    notifyListeners();
-  }
+  // REMOVED setStartLatLng
+  // REMOVED setEndLatLng
 
   void toggleMockLocation() {
     useMockLocation = !useMockLocation;
@@ -491,43 +362,19 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  void swapStartAndEnd() {
-    final tempName = startSearchController.text;
-    final tempLatLng = startLatLng;
-
-    startSearchController.text = endSearchController.text;
-    startLatLng = endLatLng;
-    endSearchController.text = tempName;
-    endLatLng = tempLatLng;
-
-    updateStartMarker();
-    updateEndMarker();
-    notifyListeners();
-  }
-
-  void unfocusSearchFieldsAndCollapse() {
-    if (startFocusNode.hasFocus) {
-      startFocusNode.unfocus();
-    }
-    if (endFocusNode.hasFocus) {
-      endFocusNode.unfocus();
-    }
-    if (routePolyline != null) {
-      isRouteActiveForCardSwitch = true;
-      notifyListeners();
-    }
-  }
+  // REMOVED swapStartAndEnd
+  // REMOVED unfocusSearchFieldsAndCollapse
 
   @override
   void dispose() {
     mapController.dispose();
     ttsService.stop();
-    startSearchController.dispose();
-    endSearchController.dispose();
-    startFocusNode.removeListener(_onStartFocusChanged);
-    startFocusNode.dispose();
-    endFocusNode.removeListener(_onEndFocusChanged);
-    endFocusNode.dispose();
+    // startSearchController.dispose(); // REMOVED
+    // endSearchController.dispose(); // REMOVED
+    // startFocusNode.removeListener(_onStartFocusChanged); // REMOVED
+    // startFocusNode.dispose(); // REMOVED
+    // endFocusNode.removeListener(_onEndFocusChanged); // REMOVED
+    // endFocusNode.dispose(); // REMOVED
     super.dispose();
   }
 }

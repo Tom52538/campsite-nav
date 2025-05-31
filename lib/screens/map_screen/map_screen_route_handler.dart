@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:camping_osm_navi/models/routing_graph.dart';
-import 'package:camping_osm_navi/models/graph_node.dart';
+// import 'package:camping_osm_navi/models/routing_graph.dart'; // REMOVED
+// import 'package:camping_osm_navi/models/graph_node.dart'; // REMOVED
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
@@ -23,89 +23,8 @@ class MapScreenRouteHandler {
 
   MapScreenRouteHandler(this.controller, this.context);
 
-  Future<void> calculateRouteIfPossible() async {
-    if (controller.startLatLng == null || controller.endLatLng == null) {
-      return;
-    }
-
-    controller.setCalculatingRoute(true);
-
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final graph = locationProvider.currentRoutingGraph;
-
-    if (graph == null) {
-      if (kDebugMode) {
-        print("Routing-Graph ist nicht geladen.");
-      }
-      controller.setCalculatingRoute(false);
-      return;
-    }
-
-    final startNode = _findNearestNode(controller.startLatLng!, graph);
-    final endNode = _findNearestNode(controller.endLatLng!, graph);
-
-    if (startNode == null || endNode == null) {
-      if (kDebugMode) {
-        print("Start- oder Endpunkt liegt außerhalb des Wegnetzes.");
-      }
-      controller.setCalculatingRoute(false);
-      return;
-    }
-
-    final List<LatLng>? pathPoints =
-        await RoutingService.findPath(graph, startNode, endNode);
-
-    if (pathPoints != null && pathPoints.isNotEmpty) {
-      final maneuvers = RoutingService.analyzeRouteForTurns(pathPoints);
-      final polyline = Polyline(
-        points: pathPoints,
-        color: Colors.blue.shade600, // ✅ Schönere Farbe
-        strokeWidth: 6.0, // ✅ Dicker für bessere Sichtbarkeit
-        borderColor: Colors.white, // ✅ Weißer Rand
-        borderStrokeWidth: 2.0, // ✅ Rand für Kontrast
-      );
-
-      controller.setCurrentManeuvers(maneuvers);
-      controller.setRoutePolyline(polyline);
-      controller.updateRouteMetrics(pathPoints);
-
-      // ✅ NEU: TTS für neue Route zurücksetzen
-      controller.ttsService.resetForNewRoute();
-
-      updateCurrentManeuverOnGpsUpdate(
-          controller.currentGpsPosition ?? pathPoints.first);
-
-      if (kDebugMode) {
-        print(
-            "Route berechnet. Distanz: ${controller.routeDistance?.toStringAsFixed(2)}m");
-      }
-
-      controller.setRouteActiveForCardSwitch(true);
-      _toggleRouteOverview(zoomOut: true, delaySeconds: 0.5);
-    } else {
-      if (kDebugMode) {
-        print("Keine Route zwischen den Punkten gefunden.");
-      }
-      controller.resetRouteAndNavigation();
-    }
-
-    controller.setCalculatingRoute(false);
-  }
-
-  GraphNode? _findNearestNode(LatLng point, RoutingGraph graph) {
-    GraphNode? nearestNode;
-    double minDistance = double.infinity;
-
-    for (var node in graph.nodes.values) {
-      final d = _distanceCalculator.distance(point, node.position);
-      if (d < minDistance) {
-        minDistance = d;
-        nearestNode = node;
-      }
-    }
-    return nearestNode;
-  }
+  // REMOVED calculateRouteIfPossible
+  // REMOVED _findNearestNode
 
   void updateNavigationOnGpsChange(LatLng newGpsPosition) {
     if (controller.routePolyline == null ||
@@ -124,65 +43,17 @@ class MapScreenRouteHandler {
           remainingInfo.remainingDistance, remainingInfo.remainingTimeMinutes);
     }
 
-    // 2. Prüfe auf Off-Route und führe ggf. Rerouting durch
-    if (!controller.isRerouting && controller.endLatLng != null) {
-      final isOffRoute = RoutingService.isOffRoute(newGpsPosition, routePoints);
-
-      if (isOffRoute && controller.shouldTriggerReroute()) {
-        _performRerouting(newGpsPosition);
-      }
-    }
+    // 2. Prüfe auf Off-Route und führe ggf. Rerouting durch // REMOVED Rerouting Block
+    // if (!controller.isRerouting && controller.endLatLng != null) {
+    //   final isOffRoute = RoutingService.isOffRoute(newGpsPosition, routePoints);
+    //
+    //   if (isOffRoute && controller.shouldTriggerReroute()) {
+    //     _performRerouting(newGpsPosition);
+    //   }
+    // }
   }
 
-  Future<void> _performRerouting(LatLng currentPosition) async {
-    if (controller.isRerouting || controller.endLatLng == null) return;
-
-    controller.setRerouting(true);
-
-    try {
-      final locationProvider =
-          Provider.of<LocationProvider>(context, listen: false);
-      final graph = locationProvider.currentRoutingGraph;
-
-      if (graph != null) {
-        final newRoutePoints = await RoutingService.recalculateRoute(
-            graph, currentPosition, controller.endLatLng!);
-
-        if (newRoutePoints != null && newRoutePoints.isNotEmpty) {
-          final newPolyline = Polyline(
-            points: newRoutePoints,
-            color: Colors.orange.shade600, // ✅ Orange für Rerouting
-            strokeWidth: 6.0,
-            borderColor: Colors.white,
-            borderStrokeWidth: 2.0,
-          );
-
-          controller.setRoutePolyline(newPolyline);
-          controller.setCurrentManeuvers(
-              RoutingService.analyzeRouteForTurns(newRoutePoints));
-          controller.updateRouteMetrics(newRoutePoints);
-          updateCurrentManeuverOnGpsUpdate(currentPosition);
-
-          // ✅ NEU: Rerouting Ansage
-          controller.ttsService.speakImmediate("Route wird neu berechnet");
-
-          if (kDebugMode) {
-            print("Route neu berechnet");
-          }
-        } else {
-          if (kDebugMode) {
-            print("Neue Route konnte nicht berechnet werden");
-          }
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print("Fehler beim Rerouting: $e");
-      }
-    } finally {
-      controller.setRerouting(false);
-    }
-  }
+  // REMOVED _performRerouting
 
   void updateCurrentManeuverOnGpsUpdate(LatLng currentPos) {
     if (controller.currentManeuvers.isEmpty) return;
@@ -277,23 +148,26 @@ class MapScreenRouteHandler {
     _toggleRouteOverview();
   }
 
-  void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
+  void clearRoute({bool showConfirmation = false /*, bool clearMarkers = false // REMOVED clearMarkers */}) {
     if (showConfirmation) {
       _showConfirmationDialog(
           "Route löschen",
           "Möchten Sie die aktuelle Route wirklich löschen?",
-          () => _performClearRoute(clearMarkers));
+          // () => _performClearRoute(clearMarkers)); // MODIFIED
+          () => _performClearRoute());
     } else {
-      _performClearRoute(clearMarkers);
+      // _performClearRoute(clearMarkers); // MODIFIED
+      _performClearRoute();
     }
   }
 
-  void _performClearRoute(bool clearMarkers) {
+  // void _performClearRoute(bool clearMarkers) { // MODIFIED
+  void _performClearRoute() {
     controller.resetRouteAndNavigation();
-    if (clearMarkers) {
-      controller.startMarker = null;
-      controller.endMarker = null;
-    }
+    // if (clearMarkers) { // REMOVED - startMarker and endMarker are gone from controller
+    //   controller.startMarker = null;
+    //   controller.endMarker = null;
+    // }
   }
 
   void _showConfirmationDialog(
@@ -322,57 +196,5 @@ class MapScreenRouteHandler {
     );
   }
 
-  void handleMapTap(TapPosition tapPos, LatLng latlng) {
-    if (controller.isCalculatingRoute) return;
-
-    final locationProvider =
-        Provider.of<LocationProvider>(context, listen: false);
-    final graph = locationProvider.currentRoutingGraph;
-    if (graph == null) return;
-
-    final nearestNode = _findNearestNode(latlng, graph);
-    if (nearestNode == null) {
-      if (kDebugMode) {
-        print("Kein Weg in der Nähe gefunden.");
-      }
-      return;
-    }
-
-    final pointOnGraph = nearestNode.position;
-    const pointName = "Punkt auf Karte";
-
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Wrap(
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.play_arrow),
-                title: const Text('Als Startpunkt'),
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.startSearchController.text = pointName;
-                  controller.setStartLatLng(pointOnGraph);
-                  controller.updateStartMarker();
-                  calculateRouteIfPossible();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.flag),
-                title: const Text('Als Ziel'),
-                onTap: () {
-                  Navigator.pop(context);
-                  controller.endSearchController.text = pointName;
-                  controller.setEndLatLng(pointOnGraph);
-                  controller.updateEndMarker();
-                  calculateRouteIfPossible();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // REMOVED handleMapTap
 }
