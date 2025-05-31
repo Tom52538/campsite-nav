@@ -18,52 +18,6 @@ class MapScreenSearchHandler {
   }
 
   void _initializeSearchListeners() {
-    controller.startSearchController.addListener(_onStartSearchChanged);
-    controller.endSearchController.addListener(_onEndSearchChanged);
-    controller.startFocusNode.addListener(_onStartFocusChanged);
-    controller.endFocusNode.addListener(_onEndFocusChanged);
-  }
-
-  void _onStartSearchChanged() {
-    if (controller.startFocusNode.hasFocus &&
-        controller.startSearchController.text != "Aktueller Standort") {
-      _performCampingIntelligentSearch(controller.startSearchController.text);
-    }
-  }
-
-  void _onEndSearchChanged() {
-    if (controller.endFocusNode.hasFocus) {
-      _performCampingIntelligentSearch(controller.endSearchController.text);
-    }
-  }
-
-  void _onStartFocusChanged() {
-    if (controller.startFocusNode.hasFocus) {
-      controller.setActiveSearchField(ActiveSearchField.start);
-      controller.setRouteActiveForCardSwitch(false);
-      if (controller.startSearchController.text != "Aktueller Standort") {
-        _performCampingIntelligentSearch(controller.startSearchController.text);
-      }
-    } else {
-      if (controller.activeSearchField == ActiveSearchField.start) {
-        controller.setActiveSearchField(ActiveSearchField.none);
-      }
-      _hideSearchResultsAfterDelay();
-    }
-  }
-
-  void _onEndFocusChanged() {
-    if (controller.endFocusNode.hasFocus) {
-      controller.setActiveSearchField(ActiveSearchField.end);
-      controller.setRouteActiveForCardSwitch(false);
-      _performCampingIntelligentSearch(controller.endSearchController.text);
-    } else {
-      if (controller.activeSearchField == ActiveSearchField.end) {
-        controller.setActiveSearchField(ActiveSearchField.none);
-      }
-      // ✅ FIX 6: Längere Verzögerung für Hide Timer
-      _hideSearchResultsAfterDelay();
-    }
   }
 
   void _hideSearchResultsAfterDelay() {
@@ -252,74 +206,6 @@ class MapScreenSearchHandler {
     return category?.category == CampingPOICategory.accommodation;
   }
 
-  void selectFeatureAndSetPoint(SearchableFeature feature) {
-    final point = feature.center;
-
-    if (controller.activeSearchField == ActiveSearchField.start) {
-      controller.startSearchController.text = feature.name;
-      controller.setStartLatLng(point);
-      controller.updateStartMarker();
-      // ✅ FIX 9: Kein automatischer unfocus bei Feature-Auswahl
-      // controller.startFocusNode.unfocus(); // ENTFERNT
-    } else if (controller.activeSearchField == ActiveSearchField.end) {
-      controller.endSearchController.text = feature.name;
-      controller.setEndLatLng(point);
-      controller.updateEndMarker();
-      // ✅ FIX 10: Kein automatischer unfocus bei Feature-Auswahl
-      // controller.endFocusNode.unfocus(); // ENTFERNT
-    }
-
-    controller.setShowSearchResults(false);
-    controller.setVisibleSearchResults([feature]);
-
-    if (_onRouteCalculationNeeded != null) {
-      _onRouteCalculationNeeded!();
-    }
-  }
-
-  void setStartToCurrentLocation() {
-    if (controller.currentGpsPosition == null) {
-      return;
-    }
-
-    controller.startSearchController.text = "Aktueller Standort";
-    controller.setStartLatLng(controller.currentGpsPosition);
-    controller.startMarker = null;
-    controller.startFocusNode.unfocus();
-
-    controller.clearVisibleSearchResults();
-
-    if (_onRouteCalculationNeeded != null) {
-      _onRouteCalculationNeeded!();
-    }
-  }
-
-  void swapStartAndEnd() {
-    controller.swapStartAndEnd();
-
-    if (_onRouteCalculationNeeded != null) {
-      _onRouteCalculationNeeded!();
-    }
-  }
-
-  void clearSearchField(bool isStartField) {
-    if (isStartField) {
-      controller.startSearchController.clear();
-      controller.setStartLatLng(null);
-      controller.startMarker = null;
-    } else {
-      controller.endSearchController.clear();
-      controller.setEndLatLng(null);
-      controller.endMarker = null;
-    }
-
-    controller.clearVisibleSearchResults();
-
-    if (_onRouteClearNeeded != null) {
-      _onRouteClearNeeded!();
-    }
-  }
-
   void Function()? _onRouteCalculationNeeded;
   void Function()? _onRouteClearNeeded;
 
@@ -334,9 +220,5 @@ class MapScreenSearchHandler {
   void dispose() {
     _hideResultsTimer?.cancel();
 
-    controller.startSearchController.removeListener(_onStartSearchChanged);
-    controller.endSearchController.removeListener(_onEndSearchChanged);
-    controller.startFocusNode.removeListener(_onStartFocusChanged);
-    controller.endFocusNode.removeListener(_onEndFocusChanged);
   }
 }

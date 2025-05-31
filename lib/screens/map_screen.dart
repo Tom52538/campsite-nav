@@ -844,6 +844,7 @@ class MapScreenState extends State<MapScreen>
                   controller.startSearchController.text = feature.name;
                   controller.setStartLatLng(feature.center);
                   controller.updateStartMarker();
+                  controller.startFocusNode.requestFocus();
                   routeHandler.calculateRouteIfPossible();
                 },
               ),
@@ -855,6 +856,7 @@ class MapScreenState extends State<MapScreen>
                   controller.endSearchController.text = feature.name;
                   controller.setEndLatLng(feature.center);
                   controller.updateEndMarker();
+                  controller.endFocusNode.requestFocus();
                   routeHandler.calculateRouteIfPossible();
                 },
               ),
