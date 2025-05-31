@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_search_handler.dart - KEYBOARD FIX VERSION
+// lib/screens/map_screen/map_screen_search_handler.dart - MISSING METHODS ADDED
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +18,20 @@ class MapScreenSearchHandler {
   }
 
   void _initializeSearchListeners() {
+    // Add text change listeners
+    controller.startSearchController.addListener(() {
+      final query = controller.startSearchController.text;
+      if (controller.activeSearchField == ActiveSearchField.start) {
+        _performCampingIntelligentSearch(query);
+      }
+    });
+
+    controller.endSearchController.addListener(() {
+      final query = controller.endSearchController.text;
+      if (controller.activeSearchField == ActiveSearchField.end) {
+        _performCampingIntelligentSearch(query);
+      }
+    });
   }
 
   void _hideSearchResultsAfterDelay() {
@@ -206,6 +220,53 @@ class MapScreenSearchHandler {
     return category?.category == CampingPOICategory.accommodation;
   }
 
+  // ✅ MISSING METHOD 1: swapStartAndEnd
+  void swapStartAndEnd() {
+    controller.swapStartAndEnd();
+  }
+
+  // ✅ MISSING METHOD 2: setStartToCurrentLocation
+  void setStartToCurrentLocation() {
+    if (controller.currentGpsPosition != null) {
+      controller.startSearchController.text = "Aktueller Standort";
+      controller.setStartLatLng(controller.currentGpsPosition!);
+      controller.updateStartMarker();
+
+      // Trigger route calculation if end is set
+      if (controller.endLatLng != null && _onRouteCalculationNeeded != null) {
+        _onRouteCalculationNeeded!();
+      }
+    }
+  }
+
+  // ✅ MISSING METHOD 3: selectFeatureAndSetPoint
+  void selectFeatureAndSetPoint(SearchableFeature feature) {
+    if (controller.activeSearchField == ActiveSearchField.start) {
+      controller.startSearchController.text = feature.name;
+      controller.setStartLatLng(feature.center);
+      controller.updateStartMarker();
+    } else if (controller.activeSearchField == ActiveSearchField.end) {
+      controller.endSearchController.text = feature.name;
+      controller.setEndLatLng(feature.center);
+      controller.updateEndMarker();
+    }
+
+    // Hide search results after selection
+    controller.setShowSearchResults(false);
+    controller.clearVisibleSearchResults();
+
+    // Move map to selected feature
+    controller.mapController.move(feature.center, 18.0);
+
+    // Trigger route calculation if both points are set
+    if (controller.startLatLng != null &&
+        controller.endLatLng != null &&
+        _onRouteCalculationNeeded != null) {
+      _onRouteCalculationNeeded!();
+    }
+  }
+
+  // Callback management (used by the methods above)
   void Function()? _onRouteCalculationNeeded;
   void Function()? _onRouteClearNeeded;
 
@@ -219,6 +280,5 @@ class MapScreenSearchHandler {
 
   void dispose() {
     _hideResultsTimer?.cancel();
-
   }
 }
