@@ -1,14 +1,9 @@
-// lib/screens/map_screen/map_screen_route_handler.dart
-import 'package:flutter/foundation.dart';
+// lib/screens/map_screen/map_screen_route_handler.dart - IMPORTS BEREINIGT
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
-// import 'package:camping_osm_navi/models/routing_graph.dart'; // REMOVED
-// import 'package:camping_osm_navi/models/graph_node.dart'; // REMOVED
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
-import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'map_screen_controller.dart';
 
 class MapScreenRouteHandler {
@@ -22,9 +17,6 @@ class MapScreenRouteHandler {
   double? _currentDistanceToManeuver;
 
   MapScreenRouteHandler(this.controller, this.context);
-
-  // REMOVED calculateRouteIfPossible
-  // REMOVED _findNearestNode
 
   void updateNavigationOnGpsChange(LatLng newGpsPosition) {
     if (controller.routePolyline == null ||
@@ -43,17 +35,8 @@ class MapScreenRouteHandler {
           remainingInfo.remainingDistance, remainingInfo.remainingTimeMinutes);
     }
 
-    // 2. Prüfe auf Off-Route und führe ggf. Rerouting durch // REMOVED Rerouting Block
-    // if (!controller.isRerouting && controller.endLatLng != null) {
-    //   final isOffRoute = RoutingService.isOffRoute(newGpsPosition, routePoints);
-    //
-    //   if (isOffRoute && controller.shouldTriggerReroute()) {
-    //     _performRerouting(newGpsPosition);
-    //   }
-    // }
+    // 2. Prüfe auf Off-Route und führe ggf. Rerouting durch - REMOVED
   }
-
-  // REMOVED _performRerouting
 
   void updateCurrentManeuverOnGpsUpdate(LatLng currentPos) {
     if (controller.currentManeuvers.isEmpty) return;
@@ -148,26 +131,19 @@ class MapScreenRouteHandler {
     _toggleRouteOverview();
   }
 
-  void clearRoute({bool showConfirmation = false /*, bool clearMarkers = false // REMOVED clearMarkers */}) {
+  void clearRoute({bool showConfirmation = false}) {
     if (showConfirmation) {
       _showConfirmationDialog(
           "Route löschen",
           "Möchten Sie die aktuelle Route wirklich löschen?",
-          // () => _performClearRoute(clearMarkers)); // MODIFIED
           () => _performClearRoute());
     } else {
-      // _performClearRoute(clearMarkers); // MODIFIED
       _performClearRoute();
     }
   }
 
-  // void _performClearRoute(bool clearMarkers) { // MODIFIED
   void _performClearRoute() {
     controller.resetRouteAndNavigation();
-    // if (clearMarkers) { // REMOVED - startMarker and endMarker are gone from controller
-    //   controller.startMarker = null;
-    //   controller.endMarker = null;
-    // }
   }
 
   void _showConfirmationDialog(
@@ -195,6 +171,4 @@ class MapScreenRouteHandler {
       },
     );
   }
-
-  // REMOVED handleMapTap
 }

@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart - MODERNE GOOGLE MAPS STYLE VERSION
+// lib/screens/map_screen.dart - FEHLER BEHOBEN
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; // Ensure this import is present for LatLng
@@ -10,15 +10,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
-// import 'package:camping_osm_navi/models/searchable_feature.dart'; // REMOVED
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
-// import 'map_screen_parts/horizontal_poi_strip.dart'; // REMOVED
 import 'map_screen/map_screen_controller.dart';
 import 'map_screen/map_screen_gps_handler.dart';
 import 'map_screen/map_screen_route_handler.dart';
-// import 'map_screen/map_screen_search_handler.dart'; // REMOVED
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -32,7 +29,6 @@ class MapScreenState extends State<MapScreen>
   late MapScreenController controller;
   late MapScreenGpsHandler gpsHandler;
   late MapScreenRouteHandler routeHandler;
-  // late MapScreenSearchHandler searchHandler; // REMOVED
 
   @override
   void initState() {
@@ -43,13 +39,9 @@ class MapScreenState extends State<MapScreen>
     controller = MapScreenController();
     gpsHandler = MapScreenGpsHandler(controller);
     routeHandler = MapScreenRouteHandler(controller, context);
-    // searchHandler = MapScreenSearchHandler(controller, context); // REMOVED
 
     // Setup callbacks between handlers
     gpsHandler.setOnGpsChangeCallback(routeHandler.updateNavigationOnGpsChange);
-    // searchHandler
-    //     .setRouteCalculationCallback(routeHandler.calculateRouteIfPossible); // REMOVED
-    // searchHandler.setRouteClearCallback(() => routeHandler.clearRoute()); // REMOVED
 
     _initializeApp();
   }
@@ -57,10 +49,6 @@ class MapScreenState extends State<MapScreen>
   void _initializeApp() {
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
     controller.initializeMaptilerUrl(apiKey);
-
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   _updateSearchCardHeight();
-    // });
   }
 
   @override
@@ -73,18 +61,6 @@ class MapScreenState extends State<MapScreen>
         final isKeyboardVisible = keyboardHeight > 50;
 
         controller.updateKeyboardVisibility(isKeyboardVisible, keyboardHeight);
-
-        // Smart auto-zoom only for active search // REMOVED Block
-        // if (isKeyboardVisible &&
-        //     controller.visibleSearchResults.isNotEmpty &&
-        //     (controller.startFocusNode.hasFocus ||
-        //         controller.endFocusNode.hasFocus)) {
-        //   Future.delayed(const Duration(milliseconds: 300), () {
-        //     if (mounted && controller.visibleSearchResults.isNotEmpty) {
-        //       controller.autoZoomToPOIsWithKeyboard(context);
-        //     }
-        //   });
-        // }
       }
     });
   }
@@ -116,7 +92,6 @@ class MapScreenState extends State<MapScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     gpsHandler.dispose();
-    // searchHandler.dispose(); // REMOVED
     controller.dispose();
     super.dispose();
   }
@@ -237,26 +212,14 @@ class MapScreenState extends State<MapScreen>
         // Map without any focus interference
         _buildMap(isUiReady, mapTheme, selectedLocation),
 
-        // Modern Google Maps style search interface
-        // if (!controller.compactSearchMode) _buildModernSearchCard(isUiReady), // REMOVED
-        // if (controller.compactSearchMode) _buildCompactSearchBar(isUiReady), // REMOVED
-
         // Navigation instructions
         _buildInstructionCard(isUiReady),
-
-        // Smart search results
-        // if (!controller.isKeyboardVisible) _buildSearchResults(isUiReady), // REMOVED
-        // if (controller.showHorizontalPOIStrip) _buildHorizontalPOIStrip(), // REMOVED
 
         // Loading states
         _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
       ],
     );
   }
-
-  // REMOVED _buildModernSearchCard, _buildModernTextField, _buildRouteInfo
-  // REMOVED _buildCompactSearchBar
-  // REMOVED _buildHorizontalPOIStrip
 
   Widget _buildMap(
       bool isUiReady, dynamic mapTheme, LocationInfo? selectedLocation) {
@@ -289,7 +252,6 @@ class MapScreenState extends State<MapScreen>
   void _handleSmartMapTap(TapPosition tapPosition, LatLng point) {
     // LatLng type for point
     // Only handle route creation, never unfocus
-    // routeHandler.handleMapTap(tapPosition, point); // REMOVED as handleMapTap was removed
   }
 
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
@@ -323,29 +285,10 @@ class MapScreenState extends State<MapScreen>
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
-    if (controller.startMarker != null) { // This state is already removed from controller, but kept for safety, will be caught by analyzer if truly unused
-      activeMarkers.add(controller.startMarker!);
-    }
-    if (controller.endMarker != null) { // This state is already removed from controller, but kept for safety, will be caught by analyzer if truly unused
-      activeMarkers.add(controller.endMarker!);
-    }
-
-    // if (controller.visibleSearchResults.isNotEmpty && // REMOVED - visibleSearchResults and showHorizontalPOIStrip are removed from controller
-    //     !controller.showHorizontalPOIStrip) {
-    //   final currentZoom = controller.mapController.camera.zoom;
-    //
-    //   for (final feature in controller.visibleSearchResults) {
-    //     activeMarkers.add(_createSearchResultMarker(feature, currentZoom));
-    //   }
-    // }
+    // ✅ FEHLER BEHOBEN: startMarker und endMarker Referenzen entfernt
 
     return MarkerLayer(markers: activeMarkers);
   }
-
-  // REMOVED _createSearchResultMarker and its helper methods:
-  // _getMarkerWidthForFeature, _getMarkerHeightForFeature, _getIconSizeForZoom,
-  // _shouldShowTextForZoom, _getFontSizeForZoom, _isAccommodationType,
-  // _getBackgroundColorForPOIType, _getColorForPOIType, _showPOIActions
 
   Widget _buildInstructionCard(bool isUiReady) {
     final bool instructionCardVisible = controller.currentDisplayedManeuver !=
@@ -361,10 +304,7 @@ class MapScreenState extends State<MapScreen>
     }
 
     final double instructionCardTop = 8 +
-        (controller.compactSearchMode
-            ? 60
-            // : _calculateCurrentSearchCardHeight()) + // REMOVED
-            : 200.0) + // Default height
+        (controller.compactSearchMode ? 60 : 200.0) + // Default height
         16;
 
     return Positioned(
@@ -378,11 +318,6 @@ class MapScreenState extends State<MapScreen>
       ),
     );
   }
-
-  // REMOVED _calculateCurrentSearchCardHeight
-  // REMOVED _buildSearchResults
-  // REMOVED _buildSearchResultTile
-  // REMOVED _getReadableFeatureType (as it was only used by _buildSearchResultTile)
 
   Widget _buildLoadingOverlays(
       bool isUiReady, bool isLoading, LocationInfo? selectedLocation) {
@@ -399,7 +334,6 @@ class MapScreenState extends State<MapScreen>
   Widget _buildCalculatingOverlay() {
     return Positioned.fill(
       child: Container(
-        // Per diagnostic: Use .withValues()
         color: Colors.black.withValues(alpha: 0.3),
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
@@ -411,7 +345,6 @@ class MapScreenState extends State<MapScreen>
   Widget _buildReroutingOverlay() {
     return Positioned.fill(
       child: Container(
-        // Per diagnostic: Use .withValues()
         color: Colors.black.withValues(alpha: 0.2),
         child: const Center(
           child: Column(
@@ -431,7 +364,6 @@ class MapScreenState extends State<MapScreen>
   Widget _buildLoadingOverlay(LocationInfo? selectedLocation) {
     return Positioned.fill(
       child: Container(
-        // Per diagnostic: Use .withValues()
         color: Colors.black.withValues(alpha: 0.7),
         child: Center(
           child: Column(
@@ -511,7 +443,7 @@ class MapScreenState extends State<MapScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // _updateSearchCardHeight(); // REMOVED
+        // Future search card height updates
       }
     });
   }
@@ -573,21 +505,8 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  // Public methods für Handler
-  // void setStartToCurrentLocation() { // REMOVED
-  //   // searchHandler.setStartToCurrentLocation();
-  // }
-
-  // void calculateAndDisplayRoute() {
-  //   // routeHandler.calculateRouteIfPossible(); // REMOVED
-  // }
-
-  void clearRoute({bool showConfirmation = false, bool clearMarkers = false}) {
-    routeHandler.clearRoute(
-        showConfirmation: showConfirmation, clearMarkers: clearMarkers);
+  // ✅ FEHLER BEHOBEN: clearMarkers Parameter entfernt
+  void clearRoute({bool showConfirmation = false}) {
+    routeHandler.clearRoute(showConfirmation: showConfirmation);
   }
-
-  // void swapStartAndEnd() { // REMOVED
-  //   // searchHandler.swapStartAndEnd();
-  // }
 }
