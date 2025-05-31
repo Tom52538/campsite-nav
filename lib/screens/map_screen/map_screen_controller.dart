@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_controller.dart
+// lib/screens/map_screen/map_screen_controller.dart - KEYBOARD CRASH FIXED
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -87,6 +87,7 @@ class MapScreenController with ChangeNotifier {
   }
 
   void _initializeListeners() {
+    // ✅ FIXED: Wrap focus listeners in addPostFrameCallback to prevent setState during build
     startFocusNode.addListener(_onStartFocusChanged);
     endFocusNode.addListener(_onEndFocusChanged);
   }
@@ -100,23 +101,55 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
+  // ✅ FIXED: Focus change handlers now use addPostFrameCallback
+  void _onStartFocusChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (startFocusNode.hasFocus) {
+        activeSearchField = ActiveSearchField.start;
+        isRouteActiveForCardSwitch = false;
+      } else {
+        if (activeSearchField == ActiveSearchField.start) {
+          activeSearchField = ActiveSearchField.none;
+        }
+      }
+      notifyListeners();
+    });
+  }
+
+  void _onEndFocusChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (endFocusNode.hasFocus) {
+        activeSearchField = ActiveSearchField.end;
+        isRouteActiveForCardSwitch = false;
+      } else {
+        if (activeSearchField == ActiveSearchField.end) {
+          activeSearchField = ActiveSearchField.none;
+        }
+      }
+      notifyListeners();
+    });
+  }
+
+  // ✅ FIXED: Keyboard visibility updates now use addPostFrameCallback
   void updateKeyboardVisibility(bool visible, double height) {
     if (visible != _isKeyboardVisible ||
         (height - _keyboardHeight).abs() > 10) {
-      _isKeyboardVisible = visible;
-      _keyboardHeight = height;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _isKeyboardVisible = visible;
+        _keyboardHeight = height;
 
-      if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
-        setCompactSearchMode(true);
-        if (visibleSearchResults.isNotEmpty) {
-          setShowHorizontalPOIStrip(true);
+        if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) {
+          setCompactSearchMode(true);
+          if (visibleSearchResults.isNotEmpty) {
+            setShowHorizontalPOIStrip(true);
+          }
+        } else if (!visible) {
+          setCompactSearchMode(false);
+          setShowHorizontalPOIStrip(false);
         }
-      } else if (!visible) {
-        setCompactSearchMode(false);
-        setShowHorizontalPOIStrip(false);
-      }
 
-      notifyListeners();
+        notifyListeners();
+      });
     }
   }
 
@@ -205,30 +238,6 @@ class MapScreenController with ChangeNotifier {
       LatLng(minLat, minLng),
       LatLng(maxLat, maxLng),
     );
-  }
-
-  void _onStartFocusChanged() {
-    if (startFocusNode.hasFocus) {
-      activeSearchField = ActiveSearchField.start;
-      isRouteActiveForCardSwitch = false;
-    } else {
-      if (activeSearchField == ActiveSearchField.start) {
-        activeSearchField = ActiveSearchField.none;
-      }
-    }
-    notifyListeners();
-  }
-
-  void _onEndFocusChanged() {
-    if (endFocusNode.hasFocus) {
-      activeSearchField = ActiveSearchField.end;
-      isRouteActiveForCardSwitch = false;
-    } else {
-      if (activeSearchField == ActiveSearchField.end) {
-        activeSearchField = ActiveSearchField.none;
-      }
-    }
-    notifyListeners();
   }
 
   void setMapReady() {
