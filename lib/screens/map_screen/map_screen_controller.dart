@@ -1,6 +1,5 @@
 // lib/screens/map_screen/map_screen_controller.dart - KEYBOARD CRASH FIXED
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -205,7 +204,19 @@ class MapScreenController with ChangeNotifier {
 
   void _tryCalculateRoute() {
     if (_selectedStart != null && _selectedDestination != null) {
-      // Route calculation logic would go here
+      // This is where you'd call your actual route calculation service
+      // For now, it just sets calculating to true and then false as a placeholder
+      // And potentially updates route polyline, distance, time etc.
+      // Example:
+      // setCalculatingRoute(true);
+      // final routeData = await routeService.calculate(_selectedStart!, _selectedDestination!);
+      // if (routeData != null) {
+      //   setRoutePolyline(routeData.polyline);
+      //   updateRouteMetrics(routeData.path); // Assuming routeData has a path
+      //   setCurrentManeuvers(routeData.maneuvers);
+      // }
+      // setCalculatingRoute(false);
+      print("Route calculation triggered for Start: ${_selectedStart!.name} to Dest: ${_selectedDestination!.name}");
     }
   }
 
@@ -263,7 +274,7 @@ class MapScreenController with ChangeNotifier {
         alignment: Alignment.center,
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.2),
+            color: Colors.blue.withAlpha((0.2 * 255).round()),
             shape: BoxShape.circle,
             border: Border.all(color: Colors.blue, width: 3.0),
           ),
