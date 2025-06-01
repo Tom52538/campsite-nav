@@ -7,9 +7,7 @@ import 'package:flutter/widgets.dart';
 
 // Importiere das Original, um @visibleForTesting nutzen zu können
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
-import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
-import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/graph_node.dart'; // Corrected import for GraphNode
 import 'package:camping_osm_navi/models/graph_edge.dart'; // Added import for GraphEdge
@@ -178,6 +176,55 @@ void main() {
       expect(mapScreenController.routePolyline, isNull);
     });
   });
+
+  group('Route Metrics Calculation', () {
+    // LatLng uses degrees. One degree of latitude is approximately 111,111 meters.
+    // So, 0.004498 degrees is approx 0.004498 * 111111 = 499.77 meters (close enough to 500m for test)
+    final path500m = [const LatLng(0, 0), const LatLng(0.004498, 0)];
+    // 0.013944 * 111111 = 1549.31 meters (close enough to 1550m for test)
+    final path1550m = [const LatLng(0,0), const LatLng(0.013944, 0)];
+    final pathZero = [const LatLng(0,0)]; // Single point path
+    final pathEmpty = <LatLng>[];
+
+
+    test('calculates distance and time for a short path', () {
+      mapScreenController.updateRouteMetrics(path500m);
+      // Actual distance calculated by latlong2 for the given points
+      expect(mapScreenController.routeDistance, closeTo(497.0, 0.01));
+      expect(mapScreenController.routeTimeMinutes, 5); // (497.0 / 100).ceil() = 5
+    });
+
+    test('calculates distance and time for a longer path', () {
+      mapScreenController.updateRouteMetrics(path1550m);
+      // Actual distance calculated by latlong2 for the given points
+      expect(mapScreenController.routeDistance, closeTo(1542.0, 0.01));
+      expect(mapScreenController.routeTimeMinutes, 16); // (1542.0 / 100).ceil() = 16
+    });
+
+    test('handles zero distance for a single point path', () {
+      mapScreenController.updateRouteMetrics(pathZero);
+      expect(mapScreenController.routeDistance, 0.0);
+      expect(mapScreenController.routeTimeMinutes, 0);
+    });
+
+    test('handles zero distance for an empty path', () {
+      mapScreenController.updateRouteMetrics(pathEmpty);
+      // The method should return early if path.isEmpty
+      expect(mapScreenController.routeDistance, isNull); // Assuming it doesn't change from initial null
+      expect(mapScreenController.routeTimeMinutes, isNull); // Assuming it doesn't change from initial null
+    });
+
+    test('resetRouteAndNavigation clears route metrics', () {
+      // Set some initial values
+      mapScreenController.updateRouteMetrics(path500m);
+      expect(mapScreenController.routeDistance, isNotNull);
+      expect(mapScreenController.routeTimeMinutes, isNotNull);
+
+      mapScreenController.resetRouteAndNavigation();
+      expect(mapScreenController.routeDistance, isNull);
+      expect(mapScreenController.routeTimeMinutes, isNull);
+    });
+  });
   // Weitere Tests hier einfügen, falls vorhanden...
 }
 
@@ -207,6 +254,6 @@ extension TestHelpers on MapScreenController {
   Future<void> sendUpdatedRouteCalculationOrClearRoute() async {
     // Ruft die @visibleForTesting Methode im MapScreenController auf.
     // Dies ist der vorgesehene Weg, um die private Logik testbar zu machen.
-    await this.attemptRouteCalculationOrClearRoute();
+await attemptRouteCalculationOrClearRoute();
   }
 }

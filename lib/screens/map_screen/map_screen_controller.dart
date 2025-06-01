@@ -345,7 +345,7 @@ class MapScreenController with ChangeNotifier {
           distanceCalculatorInstance.distance(path[i], path[i + 1]);
     }
     routeDistance = totalDistance;
-    routeTimeMinutes = (totalDistance / 80).ceil();
+    routeTimeMinutes = (totalDistance / 100).ceil();
     notifyListeners();
   }
 
