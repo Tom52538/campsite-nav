@@ -217,8 +217,7 @@ class MapScreenController with ChangeNotifier {
       //   setCurrentManeuvers(routeData.maneuvers);
       // }
       // setCalculatingRoute(false);
-      print(
-          "Route calculation triggered for Start: ${_selectedStart!.name} to Dest: ${_selectedDestination!.name}"); //Severity 2 [INFO]
+      // print("Route calculation triggered for Start: ${_selectedStart!.name} to Dest: ${_selectedDestination!.name}"); //FIXED: Commented out to avoid lint warning
     }
   }
 
@@ -364,16 +363,14 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  @override //Severity 4 [WARN]
+  @override
   void dispose() {
     mapController.dispose();
     ttsService.stop();
     startSearchController.dispose();
     endSearchController.dispose();
     startFocusNode.dispose();
-    //FIXED: Added missing endFocusNode.dispose()
     endFocusNode.dispose();
-    //FIXED: Added super.dispose() call
-    super.dispose(); //Severity 8 [ERROR]
+    super.dispose();
   }
-} //FIXED: Added missing closing brace for the class
+}
