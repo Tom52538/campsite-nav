@@ -10,53 +10,42 @@ import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
-import 'package:camping_osm_navi/models/routing_graph.dart'; // GraphNode wird hieraus erwartet
+import 'package:camping_osm_navi/models/graph_node.dart'; // Corrected import for GraphNode
+import 'package:camping_osm_navi/models/graph_edge.dart'; // Added import for GraphEdge
 // import 'package:camping_osm_navi/services/routing_service.dart'; // Wird im Test nicht direkt verwendet
 
 // Generiere Mocks. Stellen Sie sicher, dass 'flutter pub run build_runner build' ausgeführt wurde.
 @GenerateMocks([LocationProvider, RoutingGraph])
 import 'map_screen_controller_test.mocks.dart';
 
-// Mock für GraphNode, falls nicht direkt von Mockito generiert oder spezifisch benötigt.
-// GraphNode ist eine abstract class und kann implementiert werden.
-// Der Fehler "implements_non_class" sollte nach erfolgreicher Mock-Generierung und
-// korrekter Auflösung aller Typen verschwinden.
 class MockGraphNode extends Mock implements GraphNode {
   final String id;
   final LatLng position;
-  // Map<GraphNode, GraphEdge> get edges => throw UnimplementedError(); // Muss ggf. implementiert werden, wenn Tests es erfordern
-  // double hValue = double.infinity;
-  // double gValue = double.infinity;
-  // GraphNode? predecessor;
-  // void addEdge(GraphNode neighbor, double weight) => throw UnimplementedError();
-  // void removeEdge(GraphNode neighbor) => throw UnimplementedError();
-  // double get fValue => gValue + hValue;
 
   MockGraphNode({required this.id, required this.position});
 
-  // Implementiere die abstrakten Getter/Methoden von GraphNode, wenn sie von Tests benötigt werden
-  // oder wenn der Mock sonst nicht vollständig ist.
-  // Für die vorliegenden Tests scheinen id und position ausreichend zu sein.
   @override
-  Map<GraphNode, dynamic> get edges => {}; // Minimalimplementierung
+  List<GraphEdge> get edges => []; // Changed type
 
   @override
-  double get fValue => gValue + hValue;
+  double get fCost => gCost + hCost; // Changed name and calculation based on renamed fields
 
   @override
-  double gValue = 0;
+  double gCost = 0; // Renamed
 
   @override
-  double hValue = 0;
+  double hCost = 0; // Renamed
 
   @override
-  GraphNode? predecessor;
+  GraphNode? parent; // Renamed
 
   @override
-  void addEdge(GraphNode neighbor, double weight) {}
+  void addEdge(GraphEdge edge) {} // Changed signature
+
+  // removeEdge is removed
 
   @override
-  void removeEdge(GraphNode neighbor) {}
+  void resetCosts() {} // Added
 }
 
 void main() {

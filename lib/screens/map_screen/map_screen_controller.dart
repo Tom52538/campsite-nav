@@ -10,8 +10,8 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
-import 'package:camping_osm_navi/models/routing_graph.dart';
-import 'package:meta/meta.dart'; // Hinzugefügt für @visibleForTesting
+// import 'package:camping_osm_navi/models/routing_graph.dart'; // Removed unused import
+// import 'package:meta/meta.dart'; // Removed unnecessary import, Flutter re-exports meta
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
@@ -163,6 +163,7 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ignore: invalid_visibility_annotation
   @visibleForTesting // Hinzugefügt
   Future<void> _attemptRouteCalculationOrClearRoute() async {
     if (isStartLocked &&
