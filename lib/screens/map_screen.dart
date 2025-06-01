@@ -11,6 +11,7 @@ import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
+import 'package:camping_osm_navi/widgets/simple_search_container.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen/map_screen_controller.dart';
@@ -207,16 +208,29 @@ class MapScreenState extends State<MapScreen>
 
   Widget _buildBody(bool isUiReady, dynamic mapTheme,
       LocationInfo? selectedLocation, bool isLoading) {
-    return Stack(
+    final locationProvider = Provider.of<LocationProvider>(context);
+    return Stack( // New root Stack
       children: [
-        // Map without any focus interference
-        _buildMap(isUiReady, mapTheme, selectedLocation),
-
-        // Navigation instructions
-        _buildInstructionCard(isUiReady),
-
-        // Loading states
-        _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
+        // Original map and overlays
+        Stack(
+          children: [
+            _buildMap(isUiReady, mapTheme, selectedLocation),
+            _buildInstructionCard(isUiReady), // This might need y-offset adjustment later
+            _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
+          ],
+        ),
+        // Add SimpleSearchContainer here
+        if (isUiReady)
+          Positioned(
+            top: 10, // Basic top padding, adjust as needed
+            left: 10,
+            right: 10,
+            child: SimpleSearchContainer(
+              controller: controller,
+              allFeatures: locationProvider.currentSearchableFeatures,
+              // routeInfo: _buildSomeRouteInfoWidget(), // Optional, can be added later
+            ),
+          ),
       ],
     );
   }
@@ -250,8 +264,12 @@ class MapScreenState extends State<MapScreen>
   }
 
   void _handleSmartMapTap(TapPosition tapPosition, LatLng point) {
-    // LatLng type for point
-    // Only handle route creation, never unfocus
+    if (controller.isMapSelectionActive) {
+      controller.handleMapTapForSelection(point);
+      return;
+    }
+    // Existing map tap logic (if any) would go here
+    // For now, it does nothing else if not in map selection mode.
   }
 
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
