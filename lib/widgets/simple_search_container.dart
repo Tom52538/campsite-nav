@@ -10,6 +10,7 @@ class SimpleSearchContainer extends StatefulWidget {
   final Widget? routeInfo; // Optional: To display route information
   final bool isStartLocked;
   final bool isDestinationLocked;
+  final bool showRouteInfoAndFadeFields; // New field
 
   const SimpleSearchContainer({
     super.key,
@@ -18,6 +19,7 @@ class SimpleSearchContainer extends StatefulWidget {
     this.routeInfo,
     required this.isStartLocked,
     required this.isDestinationLocked,
+    required this.showRouteInfoAndFadeFields, // Include in constructor
   });
 
   @override
@@ -89,84 +91,97 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Start Input Row
-          Row(
-            children: [
-              Expanded(
-                child: CampsiteSearchInput(
-                  fieldType: SearchFieldType.start,
-                  controller: widget.controller.startSearchController,
-                  focusNode: widget.controller.startFocusNode,
-                  allFeatures: widget.allFeatures,
-                  onFeatureSelected: _setStartLocation,
-                  onCurrentLocationTap: _setCurrentAsStart,
-                  onMapSelectionTap: () =>
-                      _activateMapSelection(SearchFieldType.start),
+          AnimatedOpacity(
+            opacity: widget.showRouteInfoAndFadeFields ? 0.0 : 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CampsiteSearchInput(
+                    fieldType: SearchFieldType.start,
+                    controller: widget.controller.startSearchController,
+                    focusNode: widget.controller.startFocusNode,
+                    allFeatures: widget.allFeatures,
+                    onFeatureSelected: _setStartLocation,
+                    onCurrentLocationTap: _setCurrentAsStart,
+                    onMapSelectionTap: () =>
+                        _activateMapSelection(SearchFieldType.start),
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(widget.isStartLocked
-                    ? Icons.lock
-                    : Icons.lock_open_outlined), // Korrigiert
-                tooltip: widget.isStartLocked
-                    ? "Startpunkt entsperren"
-                    : "Startpunkt sperren",
-                onPressed: () => widget.controller.toggleStartLock(),
-              ),
-            ],
+                IconButton(
+                  icon: Icon(widget.isStartLocked
+                      ? Icons.lock
+                      : Icons.lock_open_outlined), // Korrigiert
+                  tooltip: widget.isStartLocked
+                      ? "Startpunkt entsperren"
+                      : "Startpunkt sperren",
+                  onPressed: () => widget.controller.toggleStartLock(),
+                ),
+              ],
+            ),
           ),
 
           const SizedBox(height: 8),
 
           // Swap Button and Dividers
-          Row(
-            children: [
-              const Expanded(child: Divider(height: 1, thickness: 1)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: IconButton(
-                  icon: const Icon(Icons.swap_vert, color: Colors.grey),
-                  tooltip: 'Start und Ziel tauschen',
-                  onPressed: _swapStartAndDestination,
+          AnimatedOpacity(
+            opacity: widget.showRouteInfoAndFadeFields ? 0.0 : 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: Row(
+              children: [
+                const Expanded(child: Divider(height: 1, thickness: 1)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.swap_vert, color: Colors.grey),
+                    tooltip: 'Start und Ziel tauschen',
+                    onPressed: _swapStartAndDestination,
+                  ),
                 ),
-              ),
-              const Expanded(child: Divider(height: 1, thickness: 1)),
-            ],
+                const Expanded(child: Divider(height: 1, thickness: 1)),
+              ],
+            ),
           ),
 
           const SizedBox(height: 8),
 
           // Destination Input Row
-          Row(
-            children: [
-              Expanded(
-                child: CampsiteSearchInput(
-                  fieldType: SearchFieldType.destination,
-                  controller: widget.controller.endSearchController,
-                  focusNode: widget.controller.endFocusNode,
-                  allFeatures: widget.allFeatures,
-                  onFeatureSelected: _setDestination,
-                  onMapSelectionTap: () =>
-                      _activateMapSelection(SearchFieldType.destination),
+          AnimatedOpacity(
+            opacity: widget.showRouteInfoAndFadeFields ? 0.0 : 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CampsiteSearchInput(
+                    fieldType: SearchFieldType.destination,
+                    controller: widget.controller.endSearchController,
+                    focusNode: widget.controller.endFocusNode,
+                    allFeatures: widget.allFeatures,
+                    onFeatureSelected: _setDestination,
+                    onMapSelectionTap: () =>
+                        _activateMapSelection(SearchFieldType.destination),
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(widget.isDestinationLocked
-                    ? Icons.lock
-                    : Icons.lock_open_outlined), // Korrigiert
-                tooltip: widget.isDestinationLocked
-                    ? "Zielpunkt entsperren"
-                    : "Zielpunkt sperren",
-                onPressed: () => widget.controller.toggleDestinationLock(),
-              ),
-            ],
+                IconButton(
+                  icon: Icon(widget.isDestinationLocked
+                      ? Icons.lock
+                      : Icons.lock_open_outlined), // Korrigiert
+                  tooltip: widget.isDestinationLocked
+                      ? "Zielpunkt entsperren"
+                      : "Zielpunkt sperren",
+                  onPressed: () => widget.controller.toggleDestinationLock(),
+                ),
+              ],
+            ),
           ),
 
           // Optional: Route Info (if provided or conditions met)
-          if (widget.routeInfo !=
-              null /*|| _hasRoute()*/) // _hasRoute() part is commented out as per note
+          // This part should appear as the others fade.
+          // It's visibility is controlled by widget.routeInfo != null
+          if (widget.routeInfo != null)
             Padding(
               padding: const EdgeInsets.only(top: 12.0),
-              child: widget.routeInfo!, // _buildRouteInfo() is commented out
+              child: widget.routeInfo!,
             ),
         ],
       ),
