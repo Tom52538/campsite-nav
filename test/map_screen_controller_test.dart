@@ -254,6 +254,6 @@ extension TestHelpers on MapScreenController {
   Future<void> sendUpdatedRouteCalculationOrClearRoute() async {
     // Ruft die @visibleForTesting Methode im MapScreenController auf.
     // Dies ist der vorgesehene Weg, um die private Logik testbar zu machen.
-    await attemptRouteCalculationOrClearRoute();
+await attemptRouteCalculationOrClearRoute();
   }
 }
