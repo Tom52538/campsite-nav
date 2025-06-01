@@ -9,10 +9,13 @@ import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
+import 'package:camping_osm_navi/services/routing_service.dart';
+// provider.dart and location_provider.dart are already imported in the original file.
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
   late TtsService ttsService;
+  final LocationProvider _locationProvider;
 
   // State Variables
   Polyline? routePolyline;
@@ -22,6 +25,8 @@ class MapScreenController with ChangeNotifier {
   // New search related state
   SearchableFeature? _selectedStart;
   SearchableFeature? _selectedDestination;
+  bool _isStartLocked = false;
+  bool _isDestinationLocked = false;
   bool _isMapSelectionMode = false;
   SearchFieldType? _mapSelectionFor;
 
@@ -61,6 +66,8 @@ class MapScreenController with ChangeNotifier {
   // Getters for new search state
   SearchableFeature? get selectedStart => _selectedStart;
   SearchableFeature? get selectedDestination => _selectedDestination;
+  bool get isStartLocked => _isStartLocked;
+  bool get isDestinationLocked => _isDestinationLocked;
   bool get isMapSelectionActive => _isMapSelectionMode;
   SearchFieldType? get mapSelectionFor => _mapSelectionFor;
 
@@ -81,7 +88,7 @@ class MapScreenController with ChangeNotifier {
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
 
-  MapScreenController() {
+  MapScreenController(this._locationProvider) { // Modified constructor
     ttsService = TtsService();
     _initializeListeners();
   }
@@ -136,6 +143,7 @@ class MapScreenController with ChangeNotifier {
 
   void setStartLocation(SearchableFeature feature) {
     _selectedStart = feature;
+    _isStartLocked = false;
     startSearchController.text = feature.name;
     _tryCalculateRoute();
     notifyListeners();
@@ -143,8 +151,80 @@ class MapScreenController with ChangeNotifier {
 
   void setDestination(SearchableFeature feature) {
     _selectedDestination = feature;
+    _isDestinationLocked = false;
     endSearchController.text = feature.name;
     _tryCalculateRoute();
+    notifyListeners();
+  }
+
+  void toggleStartLock() {
+    _isStartLocked = !_isStartLocked;
+    _attemptRouteCalculationOrClearRoute(); // Added call
+    notifyListeners();
+  }
+
+  void toggleDestinationLock() {
+    _isDestinationLocked = !_isDestinationLocked;
+    _attemptRouteCalculationOrClearRoute(); // Added call
+    notifyListeners();
+  }
+
+  Future<void> _attemptRouteCalculationOrClearRoute() async {
+    if (isStartLocked && isDestinationLocked && _selectedStart != null && _selectedDestination != null) {
+      setCalculatingRoute(true);
+      notifyListeners(); // Ensure UI updates for loading state
+
+      // Retrieve the RoutingGraph from LocationProvider
+      // This requires access to BuildContext to get the provider.
+      // For now, we'll assume a way to access it or pass it.
+      // This part might need adjustment depending on how LocationProvider is accessed from the controller.
+      // Let's assume a placeholder for graph access for now, and refine if needed.
+      // final locationProvider = Provider.of<LocationProvider>(<BuildContext_NEEDS_TO_BE_PASSED_OR_ACCESSED_DIFFERENTLY>, listen: false);
+      // final graph = locationProvider.currentRoutingGraph;
+
+      // Placeholder: Directly use a method that can access the graph if available
+      // This is a common challenge when a controller needs data from a provider without direct context.
+      // A robust solution might involve passing the graph or a graph accessor function.
+      // For this subtask, we'll add a comment and proceed with the logic,
+      // acknowledging that graph retrieval needs to be handled correctly in the app's architecture.
+
+      final graph = _locationProvider.currentRoutingGraph;
+
+      if (graph == null) {
+        setCalculatingRoute(false);
+        notifyListeners();
+        return;
+      }
+
+      final startNode = graph.findNearestNode(_selectedStart!.center);
+      final endNode = graph.findNearestNode(_selectedDestination!.center);
+
+      if (startNode != null && endNode != null) {
+        graph.resetAllNodeCosts(); // Reset costs before finding a new path
+        final List<LatLng>? path = await RoutingService.findPath(graph, startNode, endNode);
+
+        if (path != null && path.isNotEmpty) {
+          final maneuvers = RoutingService.analyzeRouteForTurns(path);
+          setRoutePolyline(Polyline(points: path, strokeWidth: 4.0, color: Colors.blue));
+          setCurrentManeuvers(maneuvers);
+          updateRouteMetrics(path); // Calculate and set distance/time
+          if (maneuvers.isNotEmpty) {
+            updateCurrentDisplayedManeuver(maneuvers.first);
+          }
+        } else {
+          // No path found, clear existing route info
+          resetRouteAndNavigation();
+          // Optionally, show a message to the user that no route could be found
+        }
+      } else {
+        // Start or end node not found on graph
+        resetRouteAndNavigation();
+        // Optionally, show a message
+      }
+      setCalculatingRoute(false);
+    } else {
+      resetRouteAndNavigation(); // Clear route if not locked or points missing
+    }
     notifyListeners();
   }
 
@@ -204,21 +284,7 @@ class MapScreenController with ChangeNotifier {
   }
 
   void _tryCalculateRoute() {
-    if (_selectedStart != null && _selectedDestination != null) {
-      // This is where you'd call your actual route calculation service
-      // For now, it just sets calculating to true and then false as a placeholder
-      // And potentially updates route polyline, distance, time etc.
-      // Example:
-      // setCalculatingRoute(true);
-      // final routeData = await routeService.calculate(_selectedStart!, _selectedDestination!);
-      // if (routeData != null) {
-      //   setRoutePolyline(routeData.polyline);
-      //   updateRouteMetrics(routeData.path); // Assuming routeData has a path
-      //   setCurrentManeuvers(routeData.maneuvers);
-      // }
-      // setCalculatingRoute(false);
-      // print("Route calculation triggered for Start: ${_selectedStart!.name} to Dest: ${_selectedDestination!.name}"); //FIXED: Commented out to avoid lint warning
-    }
+    _attemptRouteCalculationOrClearRoute();
   }
 
   void setRerouting(bool rerouting) {
@@ -341,8 +407,17 @@ class MapScreenController with ChangeNotifier {
     _isMapSelectionMode = false;
     _mapSelectionFor = null;
 
+    _isStartLocked = false; // Added
+    _isDestinationLocked = false; // Added
+
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
+
+    // It's important to also clear the route if search fields are reset
+    // and points were potentially locked.
+    // Calling _attemptRouteCalculationOrClearRoute() will handle this
+    // because the points will be null and locks will be false.
+    _attemptRouteCalculationOrClearRoute();
 
     notifyListeners();
   }

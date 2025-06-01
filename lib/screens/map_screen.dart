@@ -37,7 +37,12 @@ class MapScreenState extends State<MapScreen>
 
     WidgetsBinding.instance.addObserver(this);
 
-    controller = MapScreenController();
+    // Get LocationProvider
+    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+
+    // Pass it to MapScreenController
+    controller = MapScreenController(locationProvider);
+
     gpsHandler = MapScreenGpsHandler(controller);
     routeHandler = MapScreenRouteHandler(controller, context);
 
@@ -228,6 +233,8 @@ class MapScreenState extends State<MapScreen>
             child: SimpleSearchContainer(
               controller: controller,
               allFeatures: locationProvider.currentSearchableFeatures,
+              isStartLocked: controller.isStartLocked, // Pass the state
+              isDestinationLocked: controller.isDestinationLocked, // Pass the state
               // routeInfo: _buildSomeRouteInfoWidget(), // Optional, can be added later
             ),
           ),
