@@ -61,6 +61,7 @@ class MapScreenController with ChangeNotifier {
   bool _isKeyboardVisible = false;
   double _keyboardHeight = 0;
   bool _compactSearchMode = false;
+  bool showRouteInfoAndFadeFields = false;
 
   SearchableFeature? get selectedStart => _selectedStart;
   SearchableFeature? get selectedDestination => _selectedDestination;
@@ -139,6 +140,7 @@ class MapScreenController with ChangeNotifier {
     _selectedStart = feature;
     _isStartLocked = false;
     startSearchController.text = feature.name;
+    showRouteInfoAndFadeFields = false;
     _tryCalculateRoute();
     notifyListeners();
   }
@@ -147,6 +149,7 @@ class MapScreenController with ChangeNotifier {
     _selectedDestination = feature;
     _isDestinationLocked = false;
     endSearchController.text = feature.name;
+    showRouteInfoAndFadeFields = false;
     _tryCalculateRoute();
     notifyListeners();
   }
@@ -196,15 +199,19 @@ class MapScreenController with ChangeNotifier {
           if (maneuvers.isNotEmpty) {
             updateCurrentDisplayedManeuver(maneuvers.first);
           }
+          showRouteInfoAndFadeFields = true;
         } else {
           resetRouteAndNavigation();
+          showRouteInfoAndFadeFields = false;
         }
       } else {
         resetRouteAndNavigation();
+        showRouteInfoAndFadeFields = false;
       }
       setCalculatingRoute(false);
     } else {
       resetRouteAndNavigation();
+      showRouteInfoAndFadeFields = false;
     }
     notifyListeners();
   }
@@ -232,6 +239,7 @@ class MapScreenController with ChangeNotifier {
     _selectedDestination = tempFeature;
     endSearchController.text = tempText;
 
+    showRouteInfoAndFadeFields = false;
     _tryCalculateRoute();
     notifyListeners();
   }
@@ -377,6 +385,7 @@ class MapScreenController with ChangeNotifier {
     isRouteActiveForCardSwitch = false;
     _isRerouting = false;
     _lastRerouteTime = null;
+    showRouteInfoAndFadeFields = false;
     notifyListeners();
   }
 
@@ -391,6 +400,7 @@ class MapScreenController with ChangeNotifier {
     _isDestinationLocked = false;
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
+    showRouteInfoAndFadeFields = false;
     attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }

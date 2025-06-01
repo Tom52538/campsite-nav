@@ -269,6 +269,7 @@ class MapScreenState extends State<MapScreen>
               isDestinationLocked:
                   controller.isDestinationLocked, // Pass the state
               routeInfo: _buildRouteInfoDisplayWidget(), // MODIFIED LINE
+               showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields, // New parameter
             ),
           ),
       ],
