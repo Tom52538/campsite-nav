@@ -8,12 +8,16 @@ class SimpleSearchContainer extends StatefulWidget {
   final MapScreenController controller; // Controller from MapScreen
   final List<SearchableFeature> allFeatures; // All POIs for autocomplete
   final Widget? routeInfo; // Optional: To display route information
+  final bool isStartLocked;
+  final bool isDestinationLocked;
 
   const SimpleSearchContainer({
     super.key,
     required this.controller,
     required this.allFeatures,
     this.routeInfo,
+    required this.isStartLocked,
+    required this.isDestinationLocked,
   });
 
   @override
@@ -83,15 +87,26 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Start Input
-          CampsiteSearchInput(
-            fieldType: SearchFieldType.start,
-            controller: widget.controller.startSearchController, // Assuming controller has these
-            focusNode: widget.controller.startFocusNode,       // Assuming controller has these
-            allFeatures: widget.allFeatures,
-            onFeatureSelected: _setStartLocation,
-            onCurrentLocationTap: _setCurrentAsStart,
-            onMapSelectionTap: () => _activateMapSelection(SearchFieldType.start),
+          // Start Input Row
+          Row(
+            children: [
+              Expanded(
+                child: CampsiteSearchInput(
+                  fieldType: SearchFieldType.start,
+                  controller: widget.controller.startSearchController,
+                  focusNode: widget.controller.startFocusNode,
+                  allFeatures: widget.allFeatures,
+                  onFeatureSelected: _setStartLocation,
+                  onCurrentLocationTap: _setCurrentAsStart,
+                  onMapSelectionTap: () => _activateMapSelection(SearchFieldType.start),
+                ),
+              ),
+              IconButton(
+                icon: Icon(widget.isStartLocked ? Icons.lock : Icons.lock_open_outline),
+                tooltip: widget.isStartLocked ? "Startpunkt entsperren" : "Startpunkt sperren",
+                onPressed: () => widget.controller.toggleStartLock(),
+              ),
+            ],
           ),
 
           const SizedBox(height: 8),
@@ -114,15 +129,25 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
 
           const SizedBox(height: 8),
 
-          // Destination Input
-          CampsiteSearchInput(
-            fieldType: SearchFieldType.destination,
-            controller: widget.controller.endSearchController, // Assuming controller has these
-            focusNode: widget.controller.endFocusNode,         // Assuming controller has these
-            allFeatures: widget.allFeatures,
-            onFeatureSelected: _setDestination,
-            // No current location for destination
-            onMapSelectionTap: () => _activateMapSelection(SearchFieldType.destination),
+          // Destination Input Row
+          Row(
+            children: [
+              Expanded(
+                child: CampsiteSearchInput(
+                  fieldType: SearchFieldType.destination,
+                  controller: widget.controller.endSearchController,
+                  focusNode: widget.controller.endFocusNode,
+                  allFeatures: widget.allFeatures,
+                  onFeatureSelected: _setDestination,
+                  onMapSelectionTap: () => _activateMapSelection(SearchFieldType.destination),
+                ),
+              ),
+              IconButton(
+                icon: Icon(widget.isDestinationLocked ? Icons.lock : Icons.lock_open_outline),
+                tooltip: widget.isDestinationLocked ? "Zielpunkt entsperren" : "Zielpunkt sperren",
+                onPressed: () => widget.controller.toggleDestinationLock(),
+              ),
+            ],
           ),
 
           // Optional: Route Info (if provided or conditions met)
