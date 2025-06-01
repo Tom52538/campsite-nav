@@ -3,6 +3,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter/widgets.dart';
 
 // Importiere das Original, um @visibleForTesting nutzen zu können
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
@@ -12,6 +13,7 @@ import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/graph_node.dart'; // Corrected import for GraphNode
 import 'package:camping_osm_navi/models/graph_edge.dart'; // Added import for GraphEdge
+import 'package:camping_osm_navi/models/routing_graph.dart';
 // import 'package:camping_osm_navi/services/routing_service.dart'; // Wird im Test nicht direkt verwendet
 
 // Generiere Mocks. Stellen Sie sicher, dass 'flutter pub run build_runner build' ausgeführt wurde.
@@ -19,7 +21,9 @@ import 'package:camping_osm_navi/models/graph_edge.dart'; // Added import for Gr
 import 'map_screen_controller_test.mocks.dart';
 
 class MockGraphNode extends Mock implements GraphNode {
+  @override
   final String id;
+  @override
   final LatLng position;
 
   MockGraphNode({required this.id, required this.position});
@@ -49,6 +53,7 @@ class MockGraphNode extends Mock implements GraphNode {
 }
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   late MapScreenController mapScreenController;
   late MockLocationProvider mockLocationProvider;
   late MockRoutingGraph mockRoutingGraph;
@@ -135,7 +140,7 @@ void main() {
     setUp(() {
       mapScreenController.setStartLocation(startFeature);
       mapScreenController.setDestination(destinationFeature);
-      clearInteractions(mapScreenController);
+      // clearInteractions(mapScreenController); // Removed incorrect usage
     });
 
     test('clears route if start is not locked', () async {
@@ -202,6 +207,6 @@ extension TestHelpers on MapScreenController {
   Future<void> sendUpdatedRouteCalculationOrClearRoute() async {
     // Ruft die @visibleForTesting Methode im MapScreenController auf.
     // Dies ist der vorgesehene Weg, um die private Logik testbar zu machen.
-    await _attemptRouteCalculationOrClearRoute();
+    await this.attemptRouteCalculationOrClearRoute();
   }
 }
