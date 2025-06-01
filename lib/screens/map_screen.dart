@@ -12,6 +12,7 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 import 'package:camping_osm_navi/widgets/simple_search_container.dart';
+import 'package:camping_osm_navi/widgets/route_info_display.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen/map_screen_controller.dart';
@@ -110,6 +111,33 @@ class MapScreenState extends State<MapScreen>
       listenable: controller,
       builder: (context, child) {
         return _buildMapScreen();
+      },
+    );
+  }
+
+  Widget _buildRouteInfoDisplayWidget() {
+    // Listen to the controller to ensure the widget rebuilds when route info changes.
+    // Using a ListenableBuilder or similar is good practice if MapScreenController is a Listenable.
+    // Assuming 'controller' is accessible here and is a Listenable (e.g., ChangeNotifier).
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, child) {
+        // Only build RouteInfoDisplay if there's actually some route information
+        // This prevents an empty card from showing up.
+        bool hasTotalRouteInfo = controller.routeDistance != null && controller.routeTimeMinutes != null;
+        bool hasRemainingRouteInfo = controller.remainingRouteDistance != null && controller.remainingRouteTimeMinutes != null;
+
+        if (!hasTotalRouteInfo && !hasRemainingRouteInfo) {
+          return const SizedBox.shrink(); // Don't display if no info at all
+        }
+
+        return RouteInfoDisplay(
+          routeDistance: controller.routeDistance,
+          routeTimeMinutes: controller.routeTimeMinutes,
+          remainingRouteDistance: controller.remainingRouteDistance,
+          remainingRouteTimeMinutes: controller.remainingRouteTimeMinutes,
+          // isCompact: controller.compactSearchMode, // Or some other logic for compact mode
+        );
       },
     );
   }
@@ -240,7 +268,7 @@ class MapScreenState extends State<MapScreen>
               isStartLocked: controller.isStartLocked, // Pass the state
               isDestinationLocked:
                   controller.isDestinationLocked, // Pass the state
-              // routeInfo: _buildSomeRouteInfoWidget(), // Optional, can be added later
+              routeInfo: _buildRouteInfoDisplayWidget(), // MODIFIED LINE
             ),
           ),
       ],
