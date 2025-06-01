@@ -136,7 +136,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
             border: Border.all(color: Colors.grey.shade300),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: Colors.grey.withAlpha((0.1 * 255).round()),
                 spreadRadius: 1,
                 blurRadius: 3,
                 offset: const Offset(0, 2), // changes position of shadow
@@ -204,7 +204,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withAlpha((0.1 * 255).round()),
             spreadRadius: 1,
             blurRadius: 3,
             offset: const Offset(0, 2),
