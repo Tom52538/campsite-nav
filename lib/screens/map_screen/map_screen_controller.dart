@@ -1,9 +1,6 @@
 // lib/screens/map_screen/map_screen_controller.dart - KEYBOARD CRASH FIXED
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +8,7 @@ import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
-import 'package:camping_osm_navi/widgets/campsite_search_input.dart'; // For SearchFieldType
+import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
 
 class MapScreenController with ChangeNotifier {
@@ -56,23 +53,11 @@ class MapScreenController with ChangeNotifier {
   DateTime? _lastRerouteTime;
   bool _isRerouting = false;
 
-  // List<SearchableFeature> searchResults = []; // REMOVED
-  // List<SearchableFeature> visibleSearchResults = []; // REMOVED
-
-  // ActiveSearchField activeSearchField = ActiveSearchField.none; // REMOVED
-
-  // final TextEditingController startSearchController = TextEditingController(); // REMOVED
-  // final TextEditingController endSearchController = TextEditingController(); // REMOVED
-  // final FocusNode startFocusNode = FocusNode(); // REMOVED
-  // final FocusNode endFocusNode = FocusNode(); // REMOVED
-
-  // double fullSearchCardHeight = 0; // REMOVED
   String _maptilerUrlTemplate = '';
 
   bool _isKeyboardVisible = false;
   double _keyboardHeight = 0;
   bool _compactSearchMode = false;
-  // bool _showHorizontalPOIStrip = false; // REMOVED
 
   // Getters for new search state
   SearchableFeature? get selectedStart => _selectedStart;
@@ -96,7 +81,6 @@ class MapScreenController with ChangeNotifier {
   bool get isKeyboardVisible => _isKeyboardVisible;
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
-  // bool get showHorizontalPOIStrip => _showHorizontalPOIStrip; // REMOVED
 
   MapScreenController() {
     ttsService = TtsService();
@@ -105,8 +89,6 @@ class MapScreenController with ChangeNotifier {
 
   void _initializeListeners() {
     // Listeners for new focus nodes (optional, if specific logic needed on focus change)
-    // startFocusNode.addListener(_onNewStartFocusChanged);
-    // endFocusNode.addListener(_onNewEndFocusChanged);
   }
 
   void initializeMaptilerUrl(String? apiKey) {
@@ -118,10 +100,6 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // REMOVED _onStartFocusChanged
-  // REMOVED _onEndFocusChanged
-
-  // ✅ FIXED: Keyboard visibility updates now use addPostFrameCallback
   void updateKeyboardVisibility(bool visible, double height) {
     if (visible != _isKeyboardVisible ||
         (height - _keyboardHeight).abs() > 10) {
@@ -129,16 +107,10 @@ class MapScreenController with ChangeNotifier {
         _isKeyboardVisible = visible;
         _keyboardHeight = height;
 
-        // if (visible && (startFocusNode.hasFocus || endFocusNode.hasFocus)) { // MODIFIED
         if (visible) {
-          // MODIFIED - Condition related to focus nodes removed
           setCompactSearchMode(true);
-          // if (visibleSearchResults.isNotEmpty) { // REMOVED
-          //   setShowHorizontalPOIStrip(true); // REMOVED
-          // }
         } else if (!visible) {
           setCompactSearchMode(false);
-          // setShowHorizontalPOIStrip(false); // REMOVED
         }
 
         notifyListeners();
@@ -153,53 +125,19 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // void setShowHorizontalPOIStrip(bool show) { // REMOVED
-  //   if (_showHorizontalPOIStrip != show) {
-  //     _showHorizontalPOIStrip = show;
-  //     notifyListeners();
-  //   }
-  // }
-
-  // void setVisibleSearchResults(List<SearchableFeature> results) { // REMOVED
-  //   visibleSearchResults = results;
-  //
-  //   if (isKeyboardVisible && results.isNotEmpty) {
-  //     setShowHorizontalPOIStrip(true);
-  //   } else if (results.isEmpty) {
-  //     setShowHorizontalPOIStrip(false);
-  //   }
-  //
-  //   notifyListeners();
-  // }
-
-  // void clearVisibleSearchResults() { // REMOVED
-  //   visibleSearchResults.clear();
-  //   setShowHorizontalPOIStrip(false);
-  //   notifyListeners();
-  // }
-
-  // void autoZoomToPOIsWithKeyboard(BuildContext context) { // REMOVED
-  // }
-
-  // REMOVED: _calculateBoundsForPoints - unused method
-
   void setMapReady() {
     isMapReady = true;
     notifyListeners();
   }
-
-  // REMOVED setFullSearchCardHeight
 
   void setRouteOverviewMode(bool isOverview) {
     _isInRouteOverviewMode = isOverview;
     notifyListeners();
   }
 
-  // New search methods
   void setStartLocation(SearchableFeature feature) {
     _selectedStart = feature;
     startSearchController.text = feature.name;
-    // Potentially update map marker if needed
     _tryCalculateRoute();
     notifyListeners();
   }
@@ -207,21 +145,17 @@ class MapScreenController with ChangeNotifier {
   void setDestination(SearchableFeature feature) {
     _selectedDestination = feature;
     endSearchController.text = feature.name;
-    // Potentially update map marker if needed
     _tryCalculateRoute();
     notifyListeners();
   }
 
   void setCurrentLocationAsStart() {
     if (currentGpsPosition != null) {
-      // Create a SearchableFeature from current GPS or use a predefined "Current Location" feature
-      // This might require fetching reverse geocoded name or using a generic name
       final currentLocationFeature = SearchableFeature(
         id: "current_location",
         name: "Aktueller Standort",
         type: "Current Location",
-        lat: currentGpsPosition!.latitude,
-        lon: currentGpsPosition!.longitude,
+        center: currentGpsPosition!,
       );
       setStartLocation(currentLocationFeature);
     }
@@ -245,22 +179,17 @@ class MapScreenController with ChangeNotifier {
   void activateMapSelection(SearchFieldType fieldType) {
     _isMapSelectionMode = true;
     _mapSelectionFor = fieldType;
-    // Optionally, provide user feedback (e.g., SnackBar) that map selection is active
-    // This is handled in SimpleSearchContainer, but could also be here.
     notifyListeners();
   }
 
   void handleMapTapForSelection(LatLng tappedPoint) {
     if (!_isMapSelectionMode || _mapSelectionFor == null) return;
 
-    // Create a SearchableFeature from tapped point.
-    // This might require reverse geocoding for name/type or using generic "Map Selection"
     final mapSelectedFeature = SearchableFeature(
       id: "map_selection_${_mapSelectionFor.toString()}",
       name: "Kartenpunkt (${_mapSelectionFor == SearchFieldType.start ? 'Start' : 'Ziel'})",
       type: "Map Selection",
-      lat: tappedPoint.latitude,
-      lon: tappedPoint.longitude,
+      center: tappedPoint,
     );
 
     if (_mapSelectionFor == SearchFieldType.start) {
@@ -276,19 +205,7 @@ class MapScreenController with ChangeNotifier {
 
   void _tryCalculateRoute() {
     if (_selectedStart != null && _selectedDestination != null) {
-      // This is where you'd call your actual route calculation service
-      // For now, it just sets calculating to true and then false as a placeholder
-      // And potentially updates route polyline, distance, time etc.
-      // Example:
-      // setCalculatingRoute(true);
-      // final routeData = await routeService.calculate(_selectedStart!, _selectedDestination!);
-      // if (routeData != null) {
-      //   setRoutePolyline(routeData.polyline);
-      //   updateRouteMetrics(routeData.path); // Assuming routeData has a path
-      //   setCurrentManeuvers(routeData.maneuvers);
-      // }
-      // setCalculatingRoute(false);
-      print("Route calculation triggered for Start: ${_selectedStart!.name} to Dest: ${_selectedDestination!.name}");
+      // Route calculation logic would go here
     }
   }
 
@@ -302,10 +219,6 @@ class MapScreenController with ChangeNotifier {
 
   void togglePOILabels() {
     showPOILabels = !showPOILabels;
-    // if (!showPOILabels) { // REMOVED
-    //   visibleSearchResults.clear(); // REMOVED
-    //   setShowHorizontalPOIStrip(false); // REMOVED
-    // }
     notifyListeners();
   }
 
@@ -341,18 +254,6 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // void setShowSearchResults(bool show) { // REMOVED
-  //   showSearchResults = show;
-  //   notifyListeners();
-  // }
-
-  // void setSearchResults(List<SearchableFeature> results) { // REMOVED
-  //   searchResults = results;
-  //   notifyListeners();
-  // }
-
-  // REMOVED setActiveSearchField
-
   void updateCurrentLocationMarker() {
     if (currentGpsPosition != null) {
       currentLocationMarker = Marker(
@@ -376,9 +277,6 @@ class MapScreenController with ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // REMOVED updateStartMarker
-  // REMOVED updateEndMarker
 
   void updateRouteMetrics(List<LatLng> path) {
     if (path.isEmpty) return;
@@ -428,21 +326,12 @@ class MapScreenController with ChangeNotifier {
     endSearchController.clear();
     _selectedStart = null;
     _selectedDestination = null;
-    // Reset markers if they are tied to _selectedStart/_selectedDestination
-    // startMarker = null;
-    // endMarker = null;
     _isMapSelectionMode = false;
     _mapSelectionFor = null;
 
-    // Clear focus
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
 
-    // Reset other search related states that were removed if any new ones replace them
-    // searchResults.clear(); // If you re-introduce a general search result list
-    // showSearchResults = false; // If you re-introduce a general search result visibility flag
-    // visibleSearchResults.clear();
-    // setShowHorizontalPOIStrip(false);
     notifyListeners();
   }
 
@@ -455,18 +344,12 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // REMOVED setStartLatLng
-  // REMOVED setEndLatLng
-
   void toggleMockLocation() {
     useMockLocation = !useMockLocation;
     followGps = false;
     resetRouteAndNavigation();
     notifyListeners();
   }
-
-  // REMOVED swapStartAndEnd
-  // REMOVED unfocusSearchFieldsAndCollapse
 
   @override
   void dispose() {
@@ -475,10 +358,3 @@ class MapScreenController with ChangeNotifier {
     startSearchController.dispose();
     endSearchController.dispose();
     startFocusNode.dispose();
-    endFocusNode.dispose();
-    // Remove new focus node listeners if they were added
-    // startFocusNode.removeListener(_onNewStartFocusChanged);
-    // endFocusNode.removeListener(_onNewEndFocusChanged);
-    super.dispose();
-  }
-}

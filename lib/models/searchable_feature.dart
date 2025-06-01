@@ -1,13 +1,17 @@
 // lib/models/searchable_feature.dart
 
-import 'package:latlong2/latlong.dart'; // Stellt sicher, dass das latlong2 Paket importiert ist
+import 'package:latlong2/latlong.dart';
 
 /// Repräsentiert ein Feature auf der Karte, das durchsucht werden kann.
 class SearchableFeature {
-  final dynamic id; // Eindeutige ID (z.B. OSM-ID)
-  final String name; // Anzeigename des Features (z.B. aus 'name' Tag)
-  final String type; // Typ des Features (z.B. 'building', 'amenity', 'highway')
-  final LatLng center; // Koordinaten zum Zentrieren der Karte
+  final dynamic id;
+  final String name;
+  final String type;
+  final LatLng center;
+
+  // Convenience getters für Kompatibilität
+  double get lat => center.latitude;
+  double get lon => center.longitude;
 
   SearchableFeature({
     required this.id,
@@ -16,12 +20,20 @@ class SearchableFeature {
     required this.center,
   });
 
+  // Alternative Konstruktor für lat/lon
+  SearchableFeature.fromLatLon({
+    required this.id,
+    required this.name,
+    required this.type,
+    required double lat,
+    required double lon,
+  }) : center = LatLng(lat, lon);
+
   @override
   String toString() {
     return 'SearchableFeature{id: $id, name: $name, type: $type, center: $center}';
   }
 
-  // Optional: Gleichheit und HashCode überschreiben, wenn nötig
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
