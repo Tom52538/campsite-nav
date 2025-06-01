@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_controller.dart - KEYBOARD CRASH FIXED
+// lib/screens/map_screen/map_screen_controller.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,7 +10,8 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
-import 'package:camping_osm_navi/models/routing_graph.dart'; // This import is used
+import 'package:camping_osm_navi/models/routing_graph.dart';
+import 'package:meta/meta.dart'; // Hinzugefügt für @visibleForTesting
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
@@ -22,7 +23,6 @@ class MapScreenController with ChangeNotifier {
   Marker? currentLocationMarker;
   LatLng? currentGpsPosition;
 
-  // New search related state
   SearchableFeature? _selectedStart;
   SearchableFeature? _selectedDestination;
   bool _isStartLocked = false;
@@ -30,7 +30,6 @@ class MapScreenController with ChangeNotifier {
   bool _isMapSelectionMode = false;
   SearchFieldType? _mapSelectionFor;
 
-  // Text editing controllers and focus nodes for new search inputs
   final TextEditingController startSearchController = TextEditingController();
   final TextEditingController endSearchController = TextEditingController();
   final FocusNode startFocusNode = FocusNode();
@@ -63,7 +62,6 @@ class MapScreenController with ChangeNotifier {
   double _keyboardHeight = 0;
   bool _compactSearchMode = false;
 
-  // Getters for new search state
   SearchableFeature? get selectedStart => _selectedStart;
   SearchableFeature? get selectedDestination => _selectedDestination;
   bool get isStartLocked => _isStartLocked;
@@ -71,7 +69,6 @@ class MapScreenController with ChangeNotifier {
   bool get isMapSelectionActive => _isMapSelectionMode;
   SearchFieldType? get mapSelectionFor => _mapSelectionFor;
 
-  // Constants
   static const double followGpsZoomLevel = 17.5;
   static const LatLng fallbackInitialCenter =
       LatLng(51.02518780487824, 5.858832278816441);
@@ -80,7 +77,6 @@ class MapScreenController with ChangeNotifier {
   static const double significantGpsChangeThreshold = 2.0;
   static const Distance distanceCalculatorInstance = Distance();
 
-  // Getters
   bool get isInRouteOverviewMode => _isInRouteOverviewMode;
   bool get isRerouting => _isRerouting;
   String get maptilerUrlTemplate => _maptilerUrlTemplate;
@@ -94,7 +90,7 @@ class MapScreenController with ChangeNotifier {
   }
 
   void _initializeListeners() {
-    // Listeners for new focus nodes (optional, if specific logic needed on focus change)
+    // Listeners
   }
 
   void initializeMaptilerUrl(String? apiKey) {
@@ -112,13 +108,11 @@ class MapScreenController with ChangeNotifier {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _isKeyboardVisible = visible;
         _keyboardHeight = height;
-
         if (visible) {
           setCompactSearchMode(true);
         } else if (!visible) {
           setCompactSearchMode(false);
         }
-
         notifyListeners();
       });
     }
@@ -169,6 +163,7 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  @visibleForTesting // Hinzugefügt
   Future<void> _attemptRouteCalculationOrClearRoute() async {
     if (isStartLocked &&
         isDestinationLocked &&
@@ -180,8 +175,6 @@ class MapScreenController with ChangeNotifier {
       final graph = _locationProvider.currentRoutingGraph;
 
       if (graph == null) {
-        // Removed print statement, consider using a logging framework
-        // debugPrint("Error: Routing graph is not available in MapScreenController via LocationProvider.");
         setCalculatingRoute(false);
         notifyListeners();
         return;
@@ -395,15 +388,11 @@ class MapScreenController with ChangeNotifier {
     _selectedDestination = null;
     _isMapSelectionMode = false;
     _mapSelectionFor = null;
-
     _isStartLocked = false;
     _isDestinationLocked = false;
-
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
-
     _attemptRouteCalculationOrClearRoute();
-
     notifyListeners();
   }
 
