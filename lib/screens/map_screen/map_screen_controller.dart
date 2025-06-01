@@ -186,7 +186,8 @@ class MapScreenController with ChangeNotifier {
 
     final mapSelectedFeature = SearchableFeature(
       id: "map_selection_${_mapSelectionFor.toString()}",
-      name: "Kartenpunkt (${_mapSelectionFor == SearchFieldType.start ? 'Start' : 'Ziel'})",
+      name:
+          "Kartenpunkt (${_mapSelectionFor == SearchFieldType.start ? 'Start' : 'Ziel'})",
       type: "Map Selection",
       center: tappedPoint,
     );
@@ -216,7 +217,8 @@ class MapScreenController with ChangeNotifier {
       //   setCurrentManeuvers(routeData.maneuvers);
       // }
       // setCalculatingRoute(false);
-      print("Route calculation triggered for Start: ${_selectedStart!.name} to Dest: ${_selectedDestination!.name}");
+      print(
+          "Route calculation triggered for Start: ${_selectedStart!.name} to Dest: ${_selectedDestination!.name}"); //Severity 2 [INFO]
     }
   }
 
@@ -362,10 +364,16 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  @override
+  @override //Severity 4 [WARN]
   void dispose() {
     mapController.dispose();
     ttsService.stop();
     startSearchController.dispose();
     endSearchController.dispose();
     startFocusNode.dispose();
+    //FIXED: Added missing endFocusNode.dispose()
+    endFocusNode.dispose();
+    //FIXED: Added super.dispose() call
+    super.dispose(); //Severity 8 [ERROR]
+  }
+} //FIXED: Added missing closing brace for the class
