@@ -25,7 +25,6 @@ class SimpleSearchContainer extends StatefulWidget {
 }
 
 class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
-
   void _setStartLocation(SearchableFeature feature) {
     widget.controller.setStartLocation(feature);
     // Optionally, unfocus or clear the other field if needed
@@ -47,13 +46,15 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
     // Consider providing feedback to the user that map selection is active
     // e.g., using a SnackBar or a message in the UI
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Tippen Sie auf die Karte, um ${fieldType == SearchFieldType.start ? 'Start' : 'Ziel'} auszuwählen.')),
+      SnackBar(
+          content: Text(
+              'Tippen Sie auf die Karte, um ${fieldType == SearchFieldType.start ? 'Start' : 'Ziel'} auszuwählen.')),
     );
   }
 
   void _swapStartAndDestination() {
     widget.controller.swapStartAndDestination();
-     // Unfocus after swapping to prevent keyboard issues or if needed
+    // Unfocus after swapping to prevent keyboard issues or if needed
     FocusScope.of(context).unfocus();
   }
 
@@ -98,12 +99,17 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
                   allFeatures: widget.allFeatures,
                   onFeatureSelected: _setStartLocation,
                   onCurrentLocationTap: _setCurrentAsStart,
-                  onMapSelectionTap: () => _activateMapSelection(SearchFieldType.start),
+                  onMapSelectionTap: () =>
+                      _activateMapSelection(SearchFieldType.start),
                 ),
               ),
               IconButton(
-                icon: Icon(widget.isStartLocked ? Icons.lock : Icons.lock_open_outline),
-                tooltip: widget.isStartLocked ? "Startpunkt entsperren" : "Startpunkt sperren",
+                icon: Icon(widget.isStartLocked
+                    ? Icons.lock
+                    : Icons.lock_open_outlined), // Korrigiert
+                tooltip: widget.isStartLocked
+                    ? "Startpunkt entsperren"
+                    : "Startpunkt sperren",
                 onPressed: () => widget.controller.toggleStartLock(),
               ),
             ],
@@ -139,19 +145,25 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
                   focusNode: widget.controller.endFocusNode,
                   allFeatures: widget.allFeatures,
                   onFeatureSelected: _setDestination,
-                  onMapSelectionTap: () => _activateMapSelection(SearchFieldType.destination),
+                  onMapSelectionTap: () =>
+                      _activateMapSelection(SearchFieldType.destination),
                 ),
               ),
               IconButton(
-                icon: Icon(widget.isDestinationLocked ? Icons.lock : Icons.lock_open_outline),
-                tooltip: widget.isDestinationLocked ? "Zielpunkt entsperren" : "Zielpunkt sperren",
+                icon: Icon(widget.isDestinationLocked
+                    ? Icons.lock
+                    : Icons.lock_open_outlined), // Korrigiert
+                tooltip: widget.isDestinationLocked
+                    ? "Zielpunkt entsperren"
+                    : "Zielpunkt sperren",
                 onPressed: () => widget.controller.toggleDestinationLock(),
               ),
             ],
           ),
 
           // Optional: Route Info (if provided or conditions met)
-          if (widget.routeInfo != null /*|| _hasRoute()*/) // _hasRoute() part is commented out as per note
+          if (widget.routeInfo !=
+              null /*|| _hasRoute()*/) // _hasRoute() part is commented out as per note
             Padding(
               padding: const EdgeInsets.only(top: 12.0),
               child: widget.routeInfo!, // _buildRouteInfo() is commented out

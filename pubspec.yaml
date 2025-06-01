@@ -30,12 +30,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  mockito: ^5.4.4 # Hinzugefügt
+  build_runner: ^2.4.9 # Hinzugefügt
 
 flutter:
   uses-material-design: true
 
   assets:
-    - .env 
+    - .env
     # Alle 3 GeoJSON-Dateien mit den korrekten Namen:
     - assets/data/export.geojson                # Sittard
     - assets/data/export_kamperland.geojson     # Kamperland

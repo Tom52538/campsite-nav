@@ -10,8 +10,7 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
-import 'package:camping_osm_navi/models/routing_graph.dart';
-// provider.dart and location_provider.dart are already imported in the original file.
+import 'package:camping_osm_navi/models/routing_graph.dart'; // This import is used
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
@@ -89,7 +88,7 @@ class MapScreenController with ChangeNotifier {
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
 
-  MapScreenController(this._locationProvider) { // Modified constructor
+  MapScreenController(this._locationProvider) {
     ttsService = TtsService();
     _initializeListeners();
   }
@@ -160,39 +159,29 @@ class MapScreenController with ChangeNotifier {
 
   void toggleStartLock() {
     _isStartLocked = !_isStartLocked;
-    _attemptRouteCalculationOrClearRoute(); // Added call
+    _attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
 
   void toggleDestinationLock() {
     _isDestinationLocked = !_isDestinationLocked;
-    _attemptRouteCalculationOrClearRoute(); // Added call
+    _attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
 
   Future<void> _attemptRouteCalculationOrClearRoute() async {
-    if (isStartLocked && isDestinationLocked && _selectedStart != null && _selectedDestination != null) {
+    if (isStartLocked &&
+        isDestinationLocked &&
+        _selectedStart != null &&
+        _selectedDestination != null) {
       setCalculatingRoute(true);
-      notifyListeners(); // Ensure UI updates for loading state
-
-      // Retrieve the RoutingGraph from LocationProvider
-      // This requires access to BuildContext to get the provider.
-      // For now, we'll assume a way to access it or pass it.
-      // This part might need adjustment depending on how LocationProvider is accessed from the controller.
-      // Let's assume a placeholder for graph access for now, and refine if needed.
-      // final locationProvider = Provider.of<LocationProvider>(<BuildContext_NEEDS_TO_BE_PASSED_OR_ACCESSED_DIFFERENTLY>, listen: false);
-      // final graph = locationProvider.currentRoutingGraph;
-
-      // Placeholder: Directly use a method that can access the graph if available
-      // This is a common challenge when a controller needs data from a provider without direct context.
-      // A robust solution might involve passing the graph or a graph accessor function.
-      // For this subtask, we'll add a comment and proceed with the logic,
-      // acknowledging that graph retrieval needs to be handled correctly in the app's architecture.
+      notifyListeners();
 
       final graph = _locationProvider.currentRoutingGraph;
 
       if (graph == null) {
-        print("Error: Routing graph is not available in MapScreenController via LocationProvider.");
+        // Removed print statement, consider using a logging framework
+        // debugPrint("Error: Routing graph is not available in MapScreenController via LocationProvider.");
         setCalculatingRoute(false);
         notifyListeners();
         return;
@@ -202,30 +191,28 @@ class MapScreenController with ChangeNotifier {
       final endNode = graph.findNearestNode(_selectedDestination!.center);
 
       if (startNode != null && endNode != null) {
-        graph.resetAllNodeCosts(); // Reset costs before finding a new path
-        final List<LatLng>? path = await RoutingService.findPath(graph, startNode, endNode);
+        graph.resetAllNodeCosts();
+        final List<LatLng>? path =
+            await RoutingService.findPath(graph, startNode, endNode);
 
         if (path != null && path.isNotEmpty) {
           final maneuvers = RoutingService.analyzeRouteForTurns(path);
-          setRoutePolyline(Polyline(points: path, strokeWidth: 4.0, color: Colors.blue));
+          setRoutePolyline(
+              Polyline(points: path, strokeWidth: 4.0, color: Colors.blue));
           setCurrentManeuvers(maneuvers);
-          updateRouteMetrics(path); // Calculate and set distance/time
+          updateRouteMetrics(path);
           if (maneuvers.isNotEmpty) {
             updateCurrentDisplayedManeuver(maneuvers.first);
           }
         } else {
-          // No path found, clear existing route info
           resetRouteAndNavigation();
-          // Optionally, show a message to the user that no route could be found
         }
       } else {
-        // Start or end node not found on graph
         resetRouteAndNavigation();
-        // Optionally, show a message
       }
       setCalculatingRoute(false);
     } else {
-      resetRouteAndNavigation(); // Clear route if not locked or points missing
+      resetRouteAndNavigation();
     }
     notifyListeners();
   }
@@ -409,16 +396,12 @@ class MapScreenController with ChangeNotifier {
     _isMapSelectionMode = false;
     _mapSelectionFor = null;
 
-    _isStartLocked = false; // Added
-    _isDestinationLocked = false; // Added
+    _isStartLocked = false;
+    _isDestinationLocked = false;
 
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
 
-    // It's important to also clear the route if search fields are reset
-    // and points were potentially locked.
-    // Calling _attemptRouteCalculationOrClearRoute() will handle this
-    // because the points will be null and locks will be false.
     _attemptRouteCalculationOrClearRoute();
 
     notifyListeners();
