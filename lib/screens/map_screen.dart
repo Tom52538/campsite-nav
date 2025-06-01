@@ -12,6 +12,7 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 import 'package:camping_osm_navi/widgets/simple_search_container.dart';
+import 'package:camping_osm_navi/widgets/route_info_display.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen/map_screen_controller.dart';
@@ -237,6 +238,16 @@ class MapScreenState extends State<MapScreen>
               isDestinationLocked: controller.isDestinationLocked, // Pass the state
               // routeInfo: _buildSomeRouteInfoWidget(), // Optional, can be added later
             ),
+          ),
+        // Add RouteInfoDisplay here, listening to MapScreenController
+        if (isUiReady)
+          Consumer<MapScreenController>(
+            builder: (context, controller, child) {
+              return RouteInfoDisplay(
+                distanceInMeters: controller.routeDistance,
+                timeInMinutes: controller.routeTimeMinutes,
+              );
+            },
           ),
       ],
     );

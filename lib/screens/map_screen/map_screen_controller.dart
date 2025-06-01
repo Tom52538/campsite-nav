@@ -153,19 +153,17 @@ class MapScreenController with ChangeNotifier {
 
   void toggleStartLock() {
     _isStartLocked = !_isStartLocked;
-    _attemptRouteCalculationOrClearRoute();
+    attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
 
   void toggleDestinationLock() {
     _isDestinationLocked = !_isDestinationLocked;
-    _attemptRouteCalculationOrClearRoute();
+    attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
 
-  // ignore: invalid_visibility_annotation
-  @visibleForTesting // Hinzugefügt
-  Future<void> _attemptRouteCalculationOrClearRoute() async {
+  Future<void> attemptRouteCalculationOrClearRoute() async {
     if (isStartLocked &&
         isDestinationLocked &&
         _selectedStart != null &&
@@ -267,7 +265,7 @@ class MapScreenController with ChangeNotifier {
   }
 
   void _tryCalculateRoute() {
-    _attemptRouteCalculationOrClearRoute();
+    attemptRouteCalculationOrClearRoute();
   }
 
   void setRerouting(bool rerouting) {
@@ -347,7 +345,7 @@ class MapScreenController with ChangeNotifier {
           distanceCalculatorInstance.distance(path[i], path[i + 1]);
     }
     routeDistance = totalDistance;
-    routeTimeMinutes = (totalDistance / 80).ceil();
+    routeTimeMinutes = (totalDistance / 100).ceil();
     notifyListeners();
   }
 
@@ -393,7 +391,7 @@ class MapScreenController with ChangeNotifier {
     _isDestinationLocked = false;
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
-    _attemptRouteCalculationOrClearRoute();
+    attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
 
