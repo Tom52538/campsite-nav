@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart - VOLLSTÄNDIG MIT GPS AUTO-CENTER
+// lib/screens/map_screen.dart - VOLLSTÄNDIG MIT PROVIDER-FIX
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart'; // Ensure this import is present for LatLng
@@ -12,7 +12,6 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 import 'package:camping_osm_navi/widgets/simple_search_container.dart';
-import 'package:camping_osm_navi/widgets/route_info_display.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen/map_screen_controller.dart';
@@ -39,7 +38,8 @@ class MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
 
     // Get LocationProvider
-    final locationProvider = Provider.of<LocationProvider>(context, listen: false);
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
 
     // Pass it to MapScreenController
     controller = MapScreenController(locationProvider);
@@ -105,6 +105,7 @@ class MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    // ✅ FIX: ListenableBuilder statt Consumer<MapScreenController>
     return ListenableBuilder(
       listenable: controller,
       builder: (context, child) {
@@ -215,13 +216,15 @@ class MapScreenState extends State<MapScreen>
   Widget _buildBody(bool isUiReady, dynamic mapTheme,
       LocationInfo? selectedLocation, bool isLoading) {
     final locationProvider = Provider.of<LocationProvider>(context);
-    return Stack( // New root Stack
+    return Stack(
+      // New root Stack
       children: [
         // Original map and overlays
         Stack(
           children: [
             _buildMap(isUiReady, mapTheme, selectedLocation),
-            _buildInstructionCard(isUiReady), // This might need y-offset adjustment later
+            _buildInstructionCard(
+                isUiReady), // This might need y-offset adjustment later
             _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
           ],
         ),
@@ -235,19 +238,10 @@ class MapScreenState extends State<MapScreen>
               controller: controller,
               allFeatures: locationProvider.currentSearchableFeatures,
               isStartLocked: controller.isStartLocked, // Pass the state
-              isDestinationLocked: controller.isDestinationLocked, // Pass the state
+              isDestinationLocked:
+                  controller.isDestinationLocked, // Pass the state
               // routeInfo: _buildSomeRouteInfoWidget(), // Optional, can be added later
             ),
-          ),
-        // Add RouteInfoDisplay here, listening to MapScreenController
-        if (isUiReady)
-          Consumer<MapScreenController>(
-            builder: (context, controller, child) {
-              return RouteInfoDisplay(
-                distanceInMeters: controller.routeDistance,
-                timeInMinutes: controller.routeTimeMinutes,
-              );
-            },
           ),
       ],
     );
