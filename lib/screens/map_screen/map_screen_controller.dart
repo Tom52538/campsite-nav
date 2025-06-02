@@ -61,6 +61,10 @@ class MapScreenController with ChangeNotifier {
   bool _compactSearchMode = false;
   bool showRouteInfoAndFadeFields = false;
 
+  // TTS state for route updates
+  double? lastSpokenDistance;
+  int? lastSpokenTime;
+
   // Getters
   SearchableFeature? get selectedStart => _selectedStart;
   SearchableFeature? get selectedDestination => _selectedDestination;
@@ -325,12 +329,11 @@ class MapScreenController with ChangeNotifier {
     // Automatic TTS for significant changes
     if (distance != null && timeMinutes != null) {
       // TTS only for large changes (> 1 minute or > 100m)
-      static double? lastSpokenDistance;
-      static int? lastSpokenTime;
+      // lastSpokenDistance and lastSpokenTime are now instance variables
 
-      if (lastSpokenDistance == null || lastSpokenTime == null ||
-          (distance - lastSpokenDistance!).abs() > 100 ||
-          (timeMinutes - lastSpokenTime!).abs() >= 1) {
+      if (this.lastSpokenDistance == null || this.lastSpokenTime == null ||
+          (distance - this.lastSpokenDistance!).abs() > 100 ||
+          (timeMinutes - this.lastSpokenTime!).abs() >= 1) {
 
         if (timeMinutes <= 1) {
           ttsService.speakImmediate("Destination almost reached.");
@@ -338,8 +341,8 @@ class MapScreenController with ChangeNotifier {
           ttsService.speakImmediate("About $timeMinutes minutes to destination.");
         }
 
-        lastSpokenDistance = distance;
-        lastSpokenTime = timeMinutes;
+        this.lastSpokenDistance = distance;
+        this.lastSpokenTime = timeMinutes;
       }
     }
 
@@ -470,6 +473,14 @@ class MapScreenController with ChangeNotifier {
   void toggleSearchInterfaceMode() {
     showRouteInfoAndFadeFields = !showRouteInfoAndFadeFields;
     notifyListeners();
+  }
+
+  // Method to control showRouteInfoAndFadeFields and notify listeners
+  void setRouteInfoAndFadeFields(bool value) {
+    if (showRouteInfoAndFadeFields != value) {
+      showRouteInfoAndFadeFields = value;
+      notifyListeners();
+    }
   }
 
   // NEW: Helper method for distance formatting

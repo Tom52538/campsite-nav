@@ -118,8 +118,7 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
 
   void _expandSearchFields() {
     // Activate edit mode
-    widget.controller.showRouteInfoAndFadeFields = false;
-    widget.controller.notifyListeners();
+    widget.controller.setRouteInfoAndFadeFields(false);
   }
 
   @override

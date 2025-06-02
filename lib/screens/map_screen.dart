@@ -276,8 +276,7 @@ class MapScreenState extends State<MapScreen>
       totalTime: controller.routeTimeMinutes,
       isNavigating: controller.followGps && controller.currentGpsPosition != null,
       onEditPressed: () {
-        controller.showRouteInfoAndFadeFields = false; // Switch back to full search
-        controller.notifyListeners();
+        controller.setRouteInfoAndFadeFields(false); // Switch back to full search
       },
       onClosePressed: () {
         routeHandler.clearRoute(showConfirmation: true); // End navigation
@@ -396,7 +395,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildCalculatingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withOpacity(0.3), // Standardized opacity
+        color: Colors.black.withAlpha((0.3 * 255).round()), // Standardized opacity
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
         ),
@@ -407,7 +406,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildReroutingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withOpacity(0.2), // Standardized opacity
+        color: Colors.black.withAlpha((0.2 * 255).round()), // Standardized opacity
         child: const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -426,7 +425,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildLoadingOverlay(LocationInfo? selectedLocation) {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withOpacity(0.7), // Standardized opacity
+        color: Colors.black.withAlpha((0.7 * 255).round()), // Standardized opacity
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -597,10 +596,8 @@ class MapScreenState extends State<MapScreen>
 
     String shareText = "Route to: $destination";
     if (distance != null && time != null) {
-      shareText += "
-Distance: ${controller.formatDistance(distance)}"; // Uses new helper
-      shareText += "
-Walking time: about $time minutes";
+      shareText += "\nDistance: ${controller.formatDistance(distance)}"; // Uses new helper
+      shareText += "\nWalking time: about $time minutes";
     }
 
     // Placeholder for actual sharing logic (e.g., using share_plus)
