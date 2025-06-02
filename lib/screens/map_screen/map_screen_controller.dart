@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_controller.dart
+// lib/screens/map_screen/map_screen_controller.dart - COMPLETE FILE
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,8 +10,6 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
-// import 'package:camping_osm_navi/models/routing_graph.dart'; // Removed unused import
-// import 'package:meta/meta.dart'; // Removed unnecessary import, Flutter re-exports meta
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
@@ -63,6 +61,7 @@ class MapScreenController with ChangeNotifier {
   bool _compactSearchMode = false;
   bool showRouteInfoAndFadeFields = false;
 
+  // Getters
   SearchableFeature? get selectedStart => _selectedStart;
   SearchableFeature? get selectedDestination => _selectedDestination;
   bool get isStartLocked => _isStartLocked;
@@ -84,6 +83,15 @@ class MapScreenController with ChangeNotifier {
   bool get isKeyboardVisible => _isKeyboardVisible;
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
+
+  // NEW: Enhanced getters for UI control
+  bool get hasActiveRoute => routePolyline != null &&
+                            _selectedStart != null &&
+                            _selectedDestination != null;
+
+  bool get shouldShowCompactMode => hasActiveRoute &&
+                                    isStartLocked &&
+                                    isDestinationLocked;
 
   MapScreenController(this._locationProvider) {
     ttsService = TtsService();
@@ -166,16 +174,17 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ENHANCED: Route calculation with automatic UI switching
   Future<void> attemptRouteCalculationOrClearRoute() async {
     if (isStartLocked &&
         isDestinationLocked &&
         _selectedStart != null &&
         _selectedDestination != null) {
+
       setCalculatingRoute(true);
       notifyListeners();
 
       final graph = _locationProvider.currentRoutingGraph;
-
       if (graph == null) {
         setCalculatingRoute(false);
         notifyListeners();
@@ -196,10 +205,17 @@ class MapScreenController with ChangeNotifier {
               Polyline(points: path, strokeWidth: 4.0, color: Colors.blue));
           setCurrentManeuvers(maneuvers);
           updateRouteMetrics(path);
+
           if (maneuvers.isNotEmpty) {
             updateCurrentDisplayedManeuver(maneuvers.first);
           }
+
+          // NEW: Automatically switch to compact view
           showRouteInfoAndFadeFields = true;
+
+          // NEW: TTS for route start
+          ttsService.speakImmediate("Route calculated. ${formatDistance(routeDistance)} in about $routeTimeMinutes minutes.");
+
         } else {
           resetRouteAndNavigation();
           showRouteInfoAndFadeFields = false;
@@ -208,6 +224,7 @@ class MapScreenController with ChangeNotifier {
         resetRouteAndNavigation();
         showRouteInfoAndFadeFields = false;
       }
+
       setCalculatingRoute(false);
     } else {
       resetRouteAndNavigation();
@@ -220,7 +237,7 @@ class MapScreenController with ChangeNotifier {
     if (currentGpsPosition != null) {
       final currentLocationFeature = SearchableFeature(
         id: "current_location",
-        name: "Aktueller Standort",
+        name: "Current Location",
         type: "Current Location",
         center: currentGpsPosition!,
       );
@@ -256,7 +273,7 @@ class MapScreenController with ChangeNotifier {
     final mapSelectedFeature = SearchableFeature(
       id: "map_selection_${_mapSelectionFor.toString()}",
       name:
-          "Kartenpunkt (${_mapSelectionFor == SearchFieldType.start ? 'Start' : 'Ziel'})",
+          "Map Point (${_mapSelectionFor == SearchFieldType.start ? 'Start' : 'Destination'})",
       type: "Map Selection",
       center: tappedPoint,
     );
@@ -300,9 +317,32 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ENHANCED: Smart route update for better UX
   void updateRemainingRouteInfo(double? distance, int? timeMinutes) {
     remainingRouteDistance = distance;
     remainingRouteTimeMinutes = timeMinutes;
+
+    // Automatic TTS for significant changes
+    if (distance != null && timeMinutes != null) {
+      // TTS only for large changes (> 1 minute or > 100m)
+      static double? lastSpokenDistance;
+      static int? lastSpokenTime;
+
+      if (lastSpokenDistance == null || lastSpokenTime == null ||
+          (distance - lastSpokenDistance!).abs() > 100 ||
+          (timeMinutes - lastSpokenTime!).abs() >= 1) {
+
+        if (timeMinutes <= 1) {
+          ttsService.speakImmediate("Destination almost reached.");
+        } else if (timeMinutes <= 5) {
+          ttsService.speakImmediate("About $timeMinutes minutes to destination.");
+        }
+
+        lastSpokenDistance = distance;
+        lastSpokenTime = timeMinutes;
+      }
+    }
+
     notifyListeners();
   }
 
@@ -372,6 +412,7 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ENHANCED: Reset method
   void resetRouteAndNavigation() {
     routePolyline = null;
     isCalculatingRoute = false;
@@ -385,10 +426,11 @@ class MapScreenController with ChangeNotifier {
     isRouteActiveForCardSwitch = false;
     _isRerouting = false;
     _lastRerouteTime = null;
-    showRouteInfoAndFadeFields = false;
+    showRouteInfoAndFadeFields = false; // Back to normal view
     notifyListeners();
   }
 
+  // ENHANCED: Search reset method
   void resetSearchFields() {
     startSearchController.clear();
     endSearchController.clear();
@@ -398,9 +440,12 @@ class MapScreenController with ChangeNotifier {
     _mapSelectionFor = null;
     _isStartLocked = false;
     _isDestinationLocked = false;
+
+    // Unfocus only if actually focused
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
-    showRouteInfoAndFadeFields = false;
+
+    showRouteInfoAndFadeFields = false; // Back to normal view
     attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
@@ -419,6 +464,23 @@ class MapScreenController with ChangeNotifier {
     followGps = false;
     resetRouteAndNavigation();
     notifyListeners();
+  }
+
+  // NEW: Explicit method for UI mode switching
+  void toggleSearchInterfaceMode() {
+    showRouteInfoAndFadeFields = !showRouteInfoAndFadeFields;
+    notifyListeners();
+  }
+
+  // NEW: Helper method for distance formatting
+  String formatDistance(double? distanceMeters) {
+    if (distanceMeters == null) return "unknown";
+
+    if (distanceMeters < 1000) {
+      return "${distanceMeters.round()} meters";
+    } else {
+      return "${(distanceMeters / 1000).toStringAsFixed(1)} kilometers";
+    }
   }
 
   @override
