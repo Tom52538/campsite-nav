@@ -1,9 +1,7 @@
-// lib/widgets/campsite_search_input.dart
+// lib/widgets/campsite_search_input.dart - COMPLETE FILE
 import 'package:flutter/material.dart';
-import 'package:camping_osm_navi/models/searchable_feature.dart'; // Assuming this path is correct
+import 'package:camping_osm_navi/models/searchable_feature.dart';
 
-// Assuming SearchFieldType is defined elsewhere, e.g., lib/models/search_field_type.dart
-// or move the enum from stable_search_input.dart here / to a model file.
 enum SearchFieldType { start, destination }
 
 class CampsiteSearchInput extends StatefulWidget {
@@ -13,7 +11,7 @@ class CampsiteSearchInput extends StatefulWidget {
   final Function(SearchableFeature) onFeatureSelected;
   final VoidCallback? onCurrentLocationTap;
   final VoidCallback? onMapSelectionTap;
-  final List<SearchableFeature> allFeatures; // From LocationProvider
+  final List<SearchableFeature> allFeatures;
 
   const CampsiteSearchInput({
     super.key,
@@ -82,15 +80,15 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
   List<SearchableFeature> _filterFeatures(String query) {
     if (query.length < 2) return [];
 
-    // Smart Result Limiting from the issue description
+    // Smart Result Limiting
     final results = widget.allFeatures.where((feature) {
       final name = feature.name.toLowerCase();
-      final type = feature.type.toLowerCase(); // Assuming SearchableFeature has a 'type' property
+      final type = feature.type.toLowerCase();
       final q = query.toLowerCase();
       return name.contains(q) || type.contains(q);
     }).toList();
 
-    // Prioritization: Exakte Treffer zuerst
+    // Prioritization: Exact matches first
     results.sort((a, b) {
       final aExact = a.name.toLowerCase().startsWith(query.toLowerCase());
       final bExact = b.name.toLowerCase().startsWith(query.toLowerCase());
@@ -100,11 +98,10 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
       return a.name.compareTo(b.name);
     });
 
-    return results.take(8).toList(); // Max 8 für Mobile
+    return results.take(8).toList(); // Max 8 for mobile
   }
 
   IconData _getIconForType(String type) {
-    // Example icons, adapt as needed from existing StableSearchInput or project assets
     switch (type.toLowerCase()) {
       case 'parking':
         return Icons.local_parking;
@@ -117,9 +114,57 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
         return Icons.place;
       case 'tourism':
         return Icons.attractions;
-      // Add more cases as per your project's feature types
+      case 'reception':
+      case 'information':
+        return Icons.info;
+      case 'sanitary':
+      case 'toilets':
+        return Icons.wc;
+      case 'restaurant':
+      case 'cafe':
+      case 'bar':
+        return Icons.restaurant;
+      case 'playground':
+        return Icons.child_friendly;
+      case 'pitch':
+      case 'camp_pitch':
+        return Icons.holiday_village;
+      case 'water_point':
+        return Icons.water_drop;
+      case 'waste_disposal':
+        return Icons.recycling;
       default:
         return Icons.location_pin;
+    }
+  }
+
+  Color _getColorForType(String type) {
+    switch (type.toLowerCase()) {
+      case 'building':
+      case 'accommodation':
+        return Colors.brown.shade600;
+      case 'shop':
+        return Colors.purple.shade600;
+      case 'amenity':
+        return Colors.green.shade600;
+      case 'tourism':
+        return Colors.orange.shade600;
+      case 'restaurant':
+      case 'cafe':
+      case 'bar':
+        return Colors.red.shade600;
+      case 'reception':
+      case 'information':
+        return Colors.teal.shade600;
+      case 'toilets':
+      case 'sanitary':
+        return Colors.cyan.shade600;
+      case 'playground':
+        return Colors.pink.shade600;
+      case 'parking':
+        return Colors.indigo.shade600;
+      default:
+        return Colors.grey.shade600;
     }
   }
 
@@ -132,24 +177,34 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12.0),
+            border: Border.all(
+              color: widget.focusNode.hasFocus
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey.shade300,
+              width: widget.focusNode.hasFocus ? 2.0 : 1.0,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withAlpha((0.1 * 255).round()),
                 spreadRadius: 1,
-                blurRadius: 3,
-                offset: const Offset(0, 2), // changes position of shadow
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Row(
             children: [
               Padding(
-                padding: const EdgeInsets.all(10.0),
+                padding: const EdgeInsets.all(12.0),
                 child: Icon(
-                  widget.fieldType == SearchFieldType.start ? Icons.trip_origin : Icons.flag,
-                  color: Colors.grey.shade700,
+                  widget.fieldType == SearchFieldType.start
+                      ? Icons.trip_origin
+                      : Icons.flag_outlined,
+                  color: widget.focusNode.hasFocus
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.grey.shade600,
+                  size: 20,
                 ),
               ),
               Expanded(
@@ -157,76 +212,152 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
                   controller: widget.controller,
                   focusNode: widget.focusNode,
                   decoration: InputDecoration(
-                    hintText: widget.fieldType == SearchFieldType.start ? 'Startpunkt' : 'Zielpunkt',
+                    hintText: widget.fieldType == SearchFieldType.start
+                        ? 'Enter starting point'
+                        : 'Enter destination',
                     border: InputBorder.none,
                     isDense: true,
+                    hintStyle: TextStyle(color: Colors.grey.shade500),
                   ),
+                  style: const TextStyle(fontSize: 16),
+                  // Keyboard-friendly configuration
+                  textInputAction: TextInputAction.search,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  keyboardType: TextInputType.text,
                   onChanged: (text) { /* Handled by listener */ },
                 ),
               ),
-              if (widget.onCurrentLocationTap != null && widget.fieldType == SearchFieldType.start)
-                IconButton(
-                  icon: Icon(Icons.my_location, color: Theme.of(context).colorScheme.primary),
-                  tooltip: 'Aktueller Standort',
-                  onPressed: widget.onCurrentLocationTap,
-                ),
-              if (widget.onMapSelectionTap != null)
-                IconButton(
-                  icon: Icon(Icons.map_outlined, color: Theme.of(context).colorScheme.secondary),
-                  tooltip: 'Auf Karte auswählen',
-                  onPressed: widget.onMapSelectionTap,
-                ),
-               // Clear button
-              if (widget.controller.text.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.clear, size: 20),
-                  color: Colors.grey.shade600,
-                  onPressed: () {
-                    widget.controller.clear();
-                    // _onTextChanged will be called by listener, which will update state
-                  },
-                ),
+              // Action buttons row
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Current location button (only for start field)
+                  if (widget.onCurrentLocationTap != null && widget.fieldType == SearchFieldType.start)
+                    IconButton(
+                      icon: Icon(
+                        Icons.my_location,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      tooltip: 'Use current location',
+                      onPressed: widget.onCurrentLocationTap,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                    ),
+
+                  // Map selection button
+                  if (widget.onMapSelectionTap != null)
+                    IconButton(
+                      icon: Icon(
+                        Icons.map_outlined,
+                        color: Theme.of(context).colorScheme.secondary,
+                        size: 20,
+                      ),
+                      tooltip: 'Select on map',
+                      onPressed: widget.onMapSelectionTap,
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                    ),
+
+                  // Clear button
+                  if (widget.controller.text.isNotEmpty)
+                    IconButton(
+                      icon: Icon(
+                        Icons.clear,
+                        size: 18,
+                        color: Colors.grey.shade600,
+                      ),
+                      onPressed: () {
+                        widget.controller.clear();
+                        // _onTextChanged will be called by listener
+                      },
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
         if (_showResults && _filteredFeatures.isNotEmpty)
-          _buildSimpleResultsList(),
+          _buildResultsList(),
       ],
     );
   }
 
-  Widget _buildSimpleResultsList() {
+  Widget _buildResultsList() {
     return Container(
       margin: const EdgeInsets.only(top: 4.0),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(12.0),
         border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withAlpha((0.1 * 255).round()),
+            color: Colors.grey.withAlpha((0.15 * 255).round()),
             spreadRadius: 1,
-            blurRadius: 3,
-            offset: const Offset(0, 2),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      constraints: const BoxConstraints(maxHeight: 200), // Max height for the list
-      child: ListView.builder(
+      constraints: const BoxConstraints(maxHeight: 240), // Max height for the list
+      child: ListView.separated(
         shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 4),
         itemCount: _filteredFeatures.length,
+        separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: Colors.grey.shade200,
+          indent: 52,
+        ),
         itemBuilder: (context, index) {
           final feature = _filteredFeatures[index];
           return ListTile(
-            leading: Icon(_getIconForType(feature.type)),
-            title: Text(feature.name),
-            subtitle: Text(feature.type), // Assuming SearchableFeature has a 'type' property
+            leading: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: _getColorForType(feature.type).withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                _getIconForType(feature.type),
+                color: _getColorForType(feature.type),
+                size: 20,
+              ),
+            ),
+            title: Text(
+              feature.name,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              feature.type,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+              ),
+            ),
             dense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
             onTap: () {
               widget.onFeatureSelected(feature);
               // Hide results after selection
-              // No need to call controller.clear() or focusNode.unfocus() here,
-              // as the parent (SimpleSearchContainer) will handle this.
               if (mounted) {
                 setState(() {
                   _showResults = false;

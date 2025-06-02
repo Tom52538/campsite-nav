@@ -1,7 +1,7 @@
-// lib/screens/map_screen.dart - VOLLSTÄNDIG MIT PROVIDER-FIX
+// lib/screens/map_screen.dart - COMPLETE FILE
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart'; // Ensure this import is present for LatLng
+import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
@@ -12,7 +12,8 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 import 'package:camping_osm_navi/widgets/simple_search_container.dart';
-import 'package:camping_osm_navi/widgets/route_info_display.dart';
+// import 'package:camping_osm_navi/widgets/route_info_display.dart'; // Original, replaced by CompactRouteWidget logic
+import 'package:camping_osm_navi/widgets/compact_route_widget.dart'; // ADDED IMPORT
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen/map_screen_controller.dart';
@@ -38,17 +39,11 @@ class MapScreenState extends State<MapScreen>
 
     WidgetsBinding.instance.addObserver(this);
 
-    // Get LocationProvider
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
-
-    // Pass it to MapScreenController
     controller = MapScreenController(locationProvider);
-
     gpsHandler = MapScreenGpsHandler(controller);
     routeHandler = MapScreenRouteHandler(controller, context);
-
-    // Setup callbacks between handlers
     gpsHandler.setOnGpsChangeCallback(routeHandler.updateNavigationOnGpsChange);
 
     _initializeApp();
@@ -67,7 +62,6 @@ class MapScreenState extends State<MapScreen>
         final mediaQuery = MediaQuery.of(context);
         final keyboardHeight = mediaQuery.viewInsets.bottom;
         final isKeyboardVisible = keyboardHeight > 50;
-
         controller.updateKeyboardVisibility(isKeyboardVisible, keyboardHeight);
       }
     });
@@ -106,7 +100,6 @@ class MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: ListenableBuilder statt Consumer<MapScreenController>
     return ListenableBuilder(
       listenable: controller,
       builder: (context, child) {
@@ -115,38 +108,10 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  Widget _buildRouteInfoDisplayWidget() {
-    // Listen to the controller to ensure the widget rebuilds when route info changes.
-    // Using a ListenableBuilder or similar is good practice if MapScreenController is a Listenable.
-    // Assuming 'controller' is accessible here and is a Listenable (e.g., ChangeNotifier).
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, child) {
-        // Only build RouteInfoDisplay if there's actually some route information
-        // This prevents an empty card from showing up.
-        bool hasTotalRouteInfo = controller.routeDistance != null && controller.routeTimeMinutes != null;
-        bool hasRemainingRouteInfo = controller.remainingRouteDistance != null && controller.remainingRouteTimeMinutes != null;
-
-        if (!hasTotalRouteInfo && !hasRemainingRouteInfo) {
-          return const SizedBox.shrink(); // Don't display if no info at all
-        }
-
-        return RouteInfoDisplay(
-          routeDistance: controller.routeDistance,
-          routeTimeMinutes: controller.routeTimeMinutes,
-          remainingRouteDistance: controller.remainingRouteDistance,
-          remainingRouteTimeMinutes: controller.remainingRouteTimeMinutes,
-          // isCompact: controller.compactSearchMode, // Or some other logic for compact mode
-        );
-      },
-    );
-  }
-
   Widget _buildMapScreen() {
     final locationProvider = Provider.of<LocationProvider>(context);
     final selectedLocationFromUI = locationProvider.selectedLocation;
     final availableLocationsFromUI = locationProvider.availableLocations;
-
     final isLoading = locationProvider.isLoadingLocationData;
     final mapThemeFromProvider = locationProvider.mapTheme;
     final isGraphReady = locationProvider.currentRoutingGraph != null;
@@ -178,11 +143,11 @@ class MapScreenState extends State<MapScreen>
             color: controller.showPOILabels ? Colors.white : Colors.white70,
           ),
           tooltip: controller.showPOILabels
-              ? 'Search-Navigation aktiv'
-              : 'Search-Navigation inaktiv',
+              ? 'Search-Navigation active'
+              : 'Search-Navigation inactive',
           onPressed: isUiReady
               ? () {
-                  setState(() {
+                  setState(() { // Ensure UI updates when toggling POI labels
                     controller.togglePOILabels();
                   });
                 }
@@ -219,7 +184,7 @@ class MapScreenState extends State<MapScreen>
               )
               .toList(),
           onChanged: !isLoading ? _onLocationSelectedFromDropdown : null,
-          hint: const Text("Standort wählen",
+          hint: const Text("Select location",
               style: TextStyle(color: Colors.white70)),
         ),
       ),
@@ -229,8 +194,8 @@ class MapScreenState extends State<MapScreen>
   Widget _buildMockLocationToggle(bool isLoading) {
     return Tooltip(
       message: controller.useMockLocation
-          ? "Echtes GPS aktivieren"
-          : "Mock-Position aktivieren",
+          ? "Activate real GPS"
+          : "Activate mock position",
       child: IconButton(
         icon: Icon(controller.useMockLocation
             ? Icons.location_on
@@ -241,38 +206,82 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
+  // ENHANCED: Body layout with intelligent UI positioning
   Widget _buildBody(bool isUiReady, dynamic mapTheme,
       LocationInfo? selectedLocation, bool isLoading) {
     final locationProvider = Provider.of<LocationProvider>(context);
+
     return Stack(
-      // New root Stack
       children: [
-        // Original map and overlays
-        Stack(
-          children: [
-            _buildMap(isUiReady, mapTheme, selectedLocation),
-            _buildInstructionCard(
-                isUiReady), // This might need y-offset adjustment later
-            _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
-          ],
+        _buildMap(isUiReady, mapTheme, selectedLocation),
+        _buildInstructionCard(isUiReady), // Positioned based on controller state
+        _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
+
+        // Top UI elements (Search or Compact Route Info)
+        Positioned(
+          top: 10,
+          left: 10,
+          right: 10,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Compact route info (shown when route is active and fields should fade)
+              if (controller.showRouteInfoAndFadeFields)
+                _buildCompactRouteDisplayWidget(),
+
+              // Full search fields (shown when not in compact mode)
+              if (!controller.showRouteInfoAndFadeFields)
+                SimpleSearchContainer(
+                  controller: controller,
+                  allFeatures: locationProvider.currentSearchableFeatures,
+                  isStartLocked: controller.isStartLocked,
+                  isDestinationLocked: controller.isDestinationLocked,
+                  showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
+                ),
+            ],
+          ),
         ),
-        // Add SimpleSearchContainer here
-        if (isUiReady)
+
+        // Route Progress Indicator (conditionally shown)
+        if (controller.followGps &&
+            controller.routePolyline != null &&
+            controller.remainingRouteDistance != null &&
+            controller.routeDistance != null &&
+            controller.routeDistance! > 0) // Avoid division by zero
           Positioned(
-            top: 10, // Basic top padding, adjust as needed
-            left: 10,
-            right: 10,
-            child: SimpleSearchContainer(
-              controller: controller,
-              allFeatures: locationProvider.currentSearchableFeatures,
-              isStartLocked: controller.isStartLocked, // Pass the state
-              isDestinationLocked:
-                  controller.isDestinationLocked, // Pass the state
-              routeInfo: _buildRouteInfoDisplayWidget(), // MODIFIED LINE
-               showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields, // New parameter
+            // Adjust top based on whether compact view is active
+            top: controller.showRouteInfoAndFadeFields ? 80 : 10,
+            left: 20,
+            right: 20,
+            child: RouteProgressIndicator(
+              progress: (1.0 - (controller.remainingRouteDistance! / controller.routeDistance!))
+                  .clamp(0.0, 1.0), // Ensure progress is between 0 and 1
+              color: Colors.blue,
+              height: 6.0,
             ),
           ),
       ],
+    );
+  }
+
+  // NEW: CompactRouteWidget integration
+  Widget _buildCompactRouteDisplayWidget() {
+    // This widget is now directly part of _buildBody's logic
+    // It's shown/hidden based on controller.showRouteInfoAndFadeFields
+    return CompactRouteWidget(
+      destinationName: controller.endSearchController.text,
+      remainingDistance: controller.remainingRouteDistance,
+      totalDistance: controller.routeDistance,
+      remainingTime: controller.remainingRouteTimeMinutes,
+      totalTime: controller.routeTimeMinutes,
+      isNavigating: controller.followGps && controller.currentGpsPosition != null,
+      onEditPressed: () {
+        controller.showRouteInfoAndFadeFields = false; // Switch back to full search
+        controller.notifyListeners();
+      },
+      onClosePressed: () {
+        routeHandler.clearRoute(showConfirmation: true); // End navigation
+      },
     );
   }
 
@@ -287,10 +296,7 @@ class MapScreenState extends State<MapScreen>
         minZoom: 13.0,
         maxZoom: 20.0,
         onTap: isUiReady
-            ? (tapPosition, point) {
-                // 'point' is LatLng
-                _handleSmartMapTap(tapPosition, point);
-              }
+            ? (tapPosition, point) => _handleSmartMapTap(tapPosition, point)
             : null,
         onMapEvent: _handleMapEvent,
         onMapReady: _onMapReady,
@@ -307,16 +313,15 @@ class MapScreenState extends State<MapScreen>
   void _handleSmartMapTap(TapPosition tapPosition, LatLng point) {
     if (controller.isMapSelectionActive) {
       controller.handleMapTapForSelection(point);
-      return;
     }
-    // Existing map tap logic (if any) would go here
-    // For now, it does nothing else if not in map selection mode.
+    // Potentially other tap interactions if needed
   }
 
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
     final bool vectorConditionsMet = isUiReady &&
         controller.maptilerUrlTemplate.isNotEmpty &&
-        controller.maptilerUrlTemplate.contains('key=');
+        controller.maptilerUrlTemplate.contains('key=') &&
+        mapTheme != null; // Ensure mapTheme is loaded
 
     if (vectorConditionsMet) {
       return vector_map_tiles.VectorTileLayer(
@@ -325,12 +330,13 @@ class MapScreenState extends State<MapScreen>
         tileProviders: vector_map_tiles.TileProviders({
           'openmaptiles': vector_map_tiles.NetworkVectorTileProvider(
             urlTemplate: controller.maptilerUrlTemplate,
-            maximumZoom: 14,
+            maximumZoom: 14, // Max zoom for vector tiles
           ),
         }),
-        maximumZoom: 20,
+        maximumZoom: 20, // Max zoom for map display
       );
     } else {
+      // Fallback to raster tiles
       return TileLayer(
         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         userAgentPackageName: 'com.example.camping_osm_navi',
@@ -340,30 +346,28 @@ class MapScreenState extends State<MapScreen>
 
   Widget _buildMarkerLayer() {
     final List<Marker> activeMarkers = [];
-
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
-
+    // Add other markers if necessary (e.g., start/end points, POIs)
     return MarkerLayer(markers: activeMarkers);
   }
 
+  // ENHANCED: Instruction card positioning
   Widget _buildInstructionCard(bool isUiReady) {
-    final bool instructionCardVisible = controller.currentDisplayedManeuver !=
-            null &&
+    final bool instructionCardVisible = controller.currentDisplayedManeuver != null &&
         controller.currentDisplayedManeuver!.turnType != TurnType.depart &&
         !(controller.currentManeuvers.length <= 2 &&
             controller.currentDisplayedManeuver!.turnType == TurnType.arrive);
 
-    if (!instructionCardVisible ||
-        !isUiReady ||
-        controller.isInRouteOverviewMode) {
+    if (!instructionCardVisible || !isUiReady || controller.isInRouteOverviewMode) {
       return const SizedBox.shrink();
     }
 
-    final double instructionCardTop = 8 +
-        (controller.compactSearchMode ? 60 : 200.0) + // Default height
-        16;
+    // Position based on whether compact route info is shown
+    final double instructionCardTop = controller.showRouteInfoAndFadeFields
+        ? 90.0  // Below compact route info
+        : 220.0; // Below full search inputs
 
     return Positioned(
       top: instructionCardTop,
@@ -392,7 +396,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildCalculatingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.3),
+        color: Colors.black.withOpacity(0.3), // Standardized opacity
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
         ),
@@ -403,14 +407,14 @@ class MapScreenState extends State<MapScreen>
   Widget _buildReroutingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.2),
+        color: Colors.black.withOpacity(0.2), // Standardized opacity
         child: const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(color: Colors.orange),
               SizedBox(height: 8),
-              Text("Route wird neu berechnet...",
+              Text("Recalculating route...",
                   style: TextStyle(color: Colors.white)),
             ],
           ),
@@ -422,7 +426,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildLoadingOverlay(LocationInfo? selectedLocation) {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withValues(alpha: 0.7),
+        color: Colors.black.withOpacity(0.7), // Standardized opacity
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -430,7 +434,7 @@ class MapScreenState extends State<MapScreen>
               const CircularProgressIndicator(color: Colors.white),
               const SizedBox(height: 16),
               Text(
-                "Lade Kartendaten für ${selectedLocation?.name ?? '...'}...",
+                "Loading map data for ${selectedLocation?.name ?? '...'}...",
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
@@ -441,33 +445,66 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
+  // ENHANCED: Floating action buttons
   Widget _buildFloatingActionButtons(bool isUiReady) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        // Route Overview Toggle
         if (isUiReady && controller.routePolyline != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: FloatingActionButton.small(
               heroTag: "toggleOverviewBtn",
               onPressed: routeHandler.toggleRouteOverview,
-              tooltip: "Ganze Route anzeigen",
+              tooltip: controller.isInRouteOverviewMode
+                  ? "Back to navigation"
+                  : "Show full route",
+              backgroundColor: controller.isInRouteOverviewMode
+                  ? Colors.blue
+                  : Colors.white,
+              foregroundColor: controller.isInRouteOverviewMode
+                  ? Colors.white
+                  : Colors.blue,
               child: Icon(
                 controller.isInRouteOverviewMode
-                    ? Icons.my_location
+                    ? Icons.my_location // Or Icons.navigation if preferred
                     : Icons.zoom_out_map,
               ),
             ),
           ),
+
+        // GPS Center Button
         if (isUiReady)
           FloatingActionButton(
             heroTag: "centerGpsBtn",
             onPressed: _centerOnGps,
-            tooltip: 'Auf GPS zentrieren',
+            tooltip: controller.followGps
+                ? 'GPS tracking active'
+                : 'Center on GPS',
+            backgroundColor: controller.followGps
+                ? Colors.blue
+                : Colors.white,
+            foregroundColor: controller.followGps
+                ? Colors.white
+                : Colors.grey.shade700,
             child: Icon(
               controller.followGps ? Icons.navigation : Icons.near_me,
-              color: controller.followGps ? Colors.blue : Colors.black,
+            ),
+          ),
+
+        // NEW: Route share button
+        if (isUiReady && controller.routePolyline != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0), // Spacing from GPS button
+            child: FloatingActionButton.small(
+              heroTag: "shareRouteBtn",
+              onPressed: _shareRoute,
+              tooltip: "Share route",
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.share),
             ),
           ),
       ],
@@ -481,7 +518,7 @@ class MapScreenState extends State<MapScreen>
             mapEvent.source == MapEventSource.flingAnimationController)) {
       if (controller.followGps) {
         controller.setFollowGps(false);
-        showSnackbar("Follow-GPS Modus deaktiviert.", durationSeconds: 2);
+        showSnackbar("Follow-GPS mode deactivated.", durationSeconds: 2);
       }
     }
   }
@@ -489,7 +526,6 @@ class MapScreenState extends State<MapScreen>
   void _onMapReady() {
     if (!mounted) return;
     controller.setMapReady();
-
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     if (locationProvider.selectedLocation != null &&
@@ -498,12 +534,6 @@ class MapScreenState extends State<MapScreen>
     } else {
       controller.performInitialMapMove(context: context);
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        // Future search card height updates
-      }
-    });
   }
 
   void _onLocationSelectedFromDropdown(LocationInfo? newLocation) {
@@ -513,30 +543,21 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  // ✅ ANGEPASSTE METHODE: GPS Button mit Auto-Center
   void _toggleMockLocation() {
     final locationProvider =
         Provider.of<LocationProvider>(context, listen: false);
     final selectedLocation = locationProvider.selectedLocation;
     if (selectedLocation == null) {
-      showSnackbar("Kein Standort ausgewählt, kann Modus nicht wechseln.");
+      showSnackbar("No location selected, cannot switch mode.");
       return;
     }
-
-    // ✅ NEU: Verwende activateGps für automatische Zentrierung
-    if (controller.useMockLocation) {
-      // Wechsel zu echtem GPS
-      controller.toggleMockLocation();
-      gpsHandler.activateGps(selectedLocation);
-      showSnackbar("Echtes GPS aktiviert und Karte zentriert.",
-          durationSeconds: 3);
-    } else {
-      // Wechsel zu Mock GPS
-      controller.toggleMockLocation();
-      gpsHandler.activateGps(selectedLocation);
-      showSnackbar("Mock-GPS aktiviert und Karte zentriert.",
-          durationSeconds: 3);
-    }
+    controller.toggleMockLocation(); // Toggles useMockLocation in controller
+    gpsHandler.activateGps(selectedLocation); // Re-activates GPS with new mode
+    showSnackbar(
+        controller.useMockLocation
+            ? "Mock-GPS activated and map centered."
+            : "Real GPS activated and map centered.",
+        durationSeconds: 3);
   }
 
   void _centerOnGps() {
@@ -544,29 +565,49 @@ class MapScreenState extends State<MapScreen>
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
 
     if (gpsHandler.canCenterOnGps(selectedLocation?.initialCenter)) {
-      gpsHandler.centerOnGps();
-      showSnackbar("Follow-GPS Modus aktiviert.", durationSeconds: 2);
+      gpsHandler.centerOnGps(); // This also sets controller.followGps = true
+      showSnackbar("Follow-GPS mode activated.", durationSeconds: 2);
     } else {
-      if (controller.currentGpsPosition == null) {
-        // ✅ NEU: Wenn GPS noch nicht aktiv ist, aktiviere es automatisch
-        if (selectedLocation != null) {
-          if (controller.useMockLocation) {
-            showSnackbar("GPS wird aktiviert und Karte zentriert...",
-                durationSeconds: 2);
-            gpsHandler.activateGps(selectedLocation);
-          } else {
-            showSnackbar("Echtes GPS wird aktiviert, bitte warten...",
-                durationSeconds: 3);
-            gpsHandler.activateGps(selectedLocation);
-          }
-        } else {
-          showSnackbar("Aktuelle GPS-Position ist unbekannt.");
-        }
-      } else {
+      if (controller.currentGpsPosition == null && selectedLocation != null) {
         showSnackbar(
-            "Du bist zu weit vom Campingplatz entfernt, um zu zentrieren.");
+            controller.useMockLocation
+                ? "Mock GPS will be activated and map centered..."
+                : "Real GPS will be activated, please wait...",
+            durationSeconds: 3);
+        gpsHandler.activateGps(selectedLocation); // Will attempt to center
+      } else {
+        showSnackbar(controller.currentGpsPosition == null
+            ? "Current GPS position is unknown."
+            : "You are too far from the campground to center.");
       }
     }
+  }
+
+  // NEW: Route sharing functionality
+  void _shareRoute() {
+    if (controller.routePolyline == null ||
+        controller.endSearchController.text.isEmpty) {
+      showSnackbar("No route available to share.");
+      return;
+    }
+
+    final destination = controller.endSearchController.text;
+    final distance = controller.routeDistance;
+    final time = controller.routeTimeMinutes;
+
+    String shareText = "Route to: $destination";
+    if (distance != null && time != null) {
+      shareText += "
+Distance: ${controller.formatDistance(distance)}"; // Uses new helper
+      shareText += "
+Walking time: about $time minutes";
+    }
+
+    // Placeholder for actual sharing logic (e.g., using share_plus)
+    if (kDebugMode) {
+      print("SHARE_ROUTE_TEXT: $shareText");
+    }
+    showSnackbar("Route info prepared for sharing (see console for debug).", durationSeconds: 5);
   }
 
   void showSnackbar(String message, {int durationSeconds = 3}) {
@@ -583,7 +624,7 @@ class MapScreenState extends State<MapScreen>
             );
           } catch (e) {
             if (kDebugMode) {
-              print("SNACKBAR: $message");
+              print("SNACKBAR_ERROR: $e, MESSAGE: $message");
             }
           }
         }
