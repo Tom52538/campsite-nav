@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart - MODERNISIERT FÜR SMARTPHONE-FIRST UX
+// lib/screens/map_screen.dart - FINALER ZERO-WARNINGS FIX
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -12,7 +12,7 @@ import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
-import 'package:camping_osm_navi/widgets/smartphone_search_system.dart'; // ✅ NEUE IMPORT
+import 'package:camping_osm_navi/widgets/smartphone_search_system.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
@@ -33,9 +33,8 @@ class MapScreenState extends State<MapScreen>
   late MapScreenGpsHandler gpsHandler;
   late MapScreenRouteHandler routeHandler;
   
-  // ✅ NEU: Smart Context Detection
+  // Smart Context Detection
   SearchContext _currentSearchContext = SearchContext.guest;
-  bool _isFirstAppLaunch = true;
 
   @override
   void initState() {
@@ -59,7 +58,7 @@ class MapScreenState extends State<MapScreen>
     controller.initializeMaptilerUrl(apiKey);
   }
 
-  // ✅ NEU: Intelligente Context-Erkennung
+  // Intelligente Context-Erkennung
   void _detectInitialContext() {
     final now = DateTime.now();
     
@@ -202,7 +201,7 @@ class MapScreenState extends State<MapScreen>
               : 'Search-Navigation inactive',
           onPressed: isUiReady
               ? () {
-                  setState(() { // Ensure UI updates when toggling POI labels
+                  setState(() {
                     controller.togglePOILabels();
                   });
                 }
@@ -216,7 +215,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ NEU: Context Icon Helper
+  // ✅ FIX: Context Icon Helper
   IconData _getContextIcon(SearchContext context) {
     switch (context) {
       case SearchContext.arrival:
@@ -226,7 +225,6 @@ class MapScreenState extends State<MapScreen>
       case SearchContext.emergency:
         return Icons.emergency;
       case SearchContext.guest:
-      default:
         return Icons.explore;
     }
   }
@@ -276,7 +274,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ MODERNISIERTER BODY mit intelligenter UI-Positionierung
+  // MODERNISIERTER BODY mit intelligenter UI-Positionierung
   Widget _buildBody(bool isUiReady, dynamic mapTheme,
       LocationInfo? selectedLocation, bool isLoading) {
     final locationProvider = Provider.of<LocationProvider>(context);
@@ -284,10 +282,10 @@ class MapScreenState extends State<MapScreen>
     return Stack(
       children: [
         _buildMap(isUiReady, mapTheme, selectedLocation),
-        _buildInstructionCard(isUiReady), // ✅ Intelligente Positionierung
+        _buildInstructionCard(isUiReady),
         _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
 
-        // ✅ MODERNISIERTES TOP UI - SmartphoneSearchSystem Integration
+        // MODERNISIERTES TOP UI - SmartphoneSearchSystem Integration
         Positioned(
           top: 10,
           left: 10,
@@ -295,7 +293,7 @@ class MapScreenState extends State<MapScreen>
           child: _buildModernSearchInterface(locationProvider),
         ),
 
-        // ✅ NEU: Route Progress Indicator
+        // Route Progress Indicator
         if (controller.followGps &&
             controller.routePolyline != null &&
             controller.remainingRouteDistance != null &&
@@ -306,7 +304,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ NEUE METHODE: Modernes Search Interface
+  // NEUE METHODE: Modernes Search Interface
   Widget _buildModernSearchInterface(LocationProvider locationProvider) {
     // Bestimme Interface State für intelligente Positionierung
     final interfaceState = controller.searchInterfaceState;
@@ -328,7 +326,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ NEUE METHODE: Context-basierte Auto-Hide Delays
+  // NEUE METHODE: Context-basierte Auto-Hide Delays
   Duration _getAutoHideDelayForContext(SearchContext context) {
     switch (context) {
       case SearchContext.emergency:
@@ -338,12 +336,11 @@ class MapScreenState extends State<MapScreen>
       case SearchContext.departure:
         return const Duration(milliseconds: 1200); // Standard
       case SearchContext.guest:
-      default:
         return const Duration(milliseconds: 1500); // Standard
     }
   }
 
-  // ✅ NEUE METHODE: Route Progress Indicator
+  // NEUE METHODE: Route Progress Indicator
   Widget _buildRouteProgressIndicator() {
     final progress = controller.routeDistance! > 0
         ? (1.0 - (controller.remainingRouteDistance! / controller.routeDistance!))
@@ -387,7 +384,6 @@ class MapScreenState extends State<MapScreen>
       case SearchContext.departure:
         return Colors.orange;
       case SearchContext.guest:
-      default:
         return Colors.blue;
     }
   }
@@ -421,7 +417,6 @@ class MapScreenState extends State<MapScreen>
     if (controller.isMapSelectionActive) {
       controller.handleMapTapForSelection(point);
     }
-    // Weitere Map-Interactions können hier hinzugefügt werden
   }
 
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
@@ -455,7 +450,6 @@ class MapScreenState extends State<MapScreen>
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
-    // Weitere Marker hinzufügen (Start/End/POIs)
     if (controller.startMarker != null) {
       activeMarkers.add(controller.startMarker!);
     }
@@ -465,7 +459,7 @@ class MapScreenState extends State<MapScreen>
     return MarkerLayer(markers: activeMarkers);
   }
 
-  // ✅ MODERNISIERTE INSTRUCTION CARD mit intelligenter Positionierung
+  // MODERNISIERTE INSTRUCTION CARD mit intelligenter Positionierung
   Widget _buildInstructionCard(bool isUiReady) {
     final bool instructionCardVisible = controller.currentDisplayedManeuver != null &&
         controller.currentDisplayedManeuver!.turnType != TurnType.depart &&
@@ -476,7 +470,7 @@ class MapScreenState extends State<MapScreen>
       return const SizedBox.shrink();
     }
 
-    // ✅ INTELLIGENTE POSITIONIERUNG basierend auf Interface State
+    // INTELLIGENTE POSITIONIERUNG basierend auf Interface State
     final double instructionCardTop = _getInstructionCardTopOffset();
 
     return Positioned(
@@ -491,7 +485,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ NEUE METHODE: Intelligente Instruction Card Positionierung
+  // NEUE METHODE: Intelligente Instruction Card Positionierung
   double _getInstructionCardTopOffset() {
     switch (controller.searchInterfaceState) {
       case SearchInterfaceState.navigationMode:
@@ -569,7 +563,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ MODERNISIERTE FLOATING ACTION BUTTONS
+  // MODERNISIERTE FLOATING ACTION BUTTONS
   Widget _buildFloatingActionButtons(bool isUiReady) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -632,7 +626,7 @@ class MapScreenState extends State<MapScreen>
             ),
           ),
 
-        // ✅ NEU: Context Switch Button (nur in Debug Mode)
+        // Context Switch Button (nur in Debug Mode)
         if (kDebugMode && isUiReady)
           Padding(
             padding: const EdgeInsets.only(top: 8.0),
@@ -649,9 +643,9 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ NEUE METHODE: Context Cycling für Development
+  // NEUE METHODE: Context Cycling für Development
   void _cycleSearchContext() {
-    final contexts = SearchContext.values;
+    const contexts = SearchContext.values;
     final currentIndex = contexts.indexOf(_currentSearchContext);
     final nextIndex = (currentIndex + 1) % contexts.length;
     
@@ -712,8 +706,9 @@ class MapScreenState extends State<MapScreen>
   }
 
   void _centerOnGps() {
-    final selectedLocation =
-        Provider.of<LocationProvider>(context, listen: false).selectedLocation;
+    final locationProvider =
+        Provider.of<LocationProvider>(context, listen: false);
+    final selectedLocation = locationProvider.selectedLocation;
 
     if (gpsHandler.canCenterOnGps(selectedLocation?.initialCenter)) {
       gpsHandler.centerOnGps();
