@@ -218,8 +218,13 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
       final aExactType = category.osmTypes.contains(a.type.toLowerCase());
       final bExactType = category.osmTypes.contains(b.type.toLowerCase());
       
-      if (aExactType && !bExactType) return -1;
-      if (!aExactType && bExactType) return 1;
+      // ✅ FIX: Curly Braces hinzugefügt
+      if (aExactType && !bExactType) {
+        return -1;
+      }
+      if (!aExactType && bExactType) {
+        return 1;
+      }
       
       return a.name.compareTo(b.name);
     });
@@ -305,7 +310,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   }
 
   bool _isAccommodationType(String type) {
-    final accommodationTypes = [
+    const accommodationTypes = [
       'accommodation', 'building', 'house', 'pitch', 'camp_pitch',
       'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin'
     ];
@@ -519,7 +524,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   }
 
   Widget _buildQuickAccessButtons(bool isSmallScreen) {
-    final quickActions = [
+    const quickActions = [
       ('🅿️', 'parkplatz', 'Parkplatz'),
       ('👨‍👩‍👧‍👦', 'spielplatz', 'Familie'),
       ('🏖️', 'beach pool', 'Beach'),
