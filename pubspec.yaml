@@ -31,15 +31,16 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  mockito: ^5.4.4 # Hinzugefügt
-  build_runner: ^2.4.9 # Hinzugefügt
+  mockito: ^5.4.4
+  build_runner: ^2.4.9
 
 flutter:
   uses-material-design: true
 
   assets:
     - .env
-    # Alle 3 GeoJSON-Dateien mit den korrekten Namen:
-    - assets/data/export.geojson                # Sittard
-    - assets/data/export_kamperland.geojson     # Kamperland
-    - assets/data/zuhause_umgebung.geojson      # Zuhause/Gangelt
+    # ✅ ALLE GEOJSON-DATEIEN INKLUSIVE ENHANCED KAMPERLAND
+    - assets/data/export.geojson                                      # Sittard
+    - assets/data/export_kamperland.geojson                          # Kamperland Basic (43 POIs)
+    - assets/data/export_kamperland_enhanced_with_converted_pois.geojson  # Kamperland Enhanced (214 POIs) - NEU
+    - assets/data/zuhause_umgebung.geojson                           # Zuhause/Gangelt
