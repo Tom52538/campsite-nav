@@ -1,4 +1,5 @@
-// lib/widgets/campsite_search_input.dart - PREMIUM SMARTPHONE-OPTIMIERT COMPLETE
+// lib/widgets/campsite_search_input.dart - KOMPLETTE DATEI FIXED
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
@@ -6,7 +7,7 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/camping_search_categories.dart';
 
 /// Premium Campsite Search Input - Smartphone-First Design
-/// 
+///
 /// Features:
 /// - Touch-optimierte Größen (44px+ targets)
 /// - Intelligente Keyboard-Behandlung
@@ -45,51 +46,66 @@ class CampsiteSearchInput extends StatefulWidget {
 
 class _CampsiteSearchInputState extends State<CampsiteSearchInput>
     with TickerProviderStateMixin {
-  
   late AnimationController _quickAccessController;
   late AnimationController _resultsController;
   late Animation<double> _quickAccessAnimation;
   late Animation<double> _resultsAnimation;
-  
+
   List<SearchableFeature> _searchResults = [];
   bool _showResults = false;
   bool _isSearching = false;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
     super.initState();
-    
+
+    // ✅ DEBUG: Prüfe ob Features verfügbar sind
+    print('[POI-DEBUG] === CAMPSITE SEARCH INPUT INIT ===');
+    print('[POI-DEBUG] Available features: ${widget.allFeatures.length}');
+
+    if (widget.allFeatures.isNotEmpty) {
+      for (int i = 0; i < widget.allFeatures.take(5).length; i++) {
+        final f = widget.allFeatures[i];
+        print('[POI-DEBUG] Feature $i: "${f.name}" (${f.type})');
+      }
+    } else {
+      print('[POI-DEBUG] ❌ NO FEATURES AVAILABLE!');
+    }
+
     _quickAccessController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
+
     _resultsController = AnimationController(
       duration: const Duration(milliseconds: 250),
       vsync: this,
     );
-    
+
     _quickAccessAnimation = CurvedAnimation(
       parent: _quickAccessController,
       curve: PremiumCurves.smooth,
     );
-    
+
     _resultsAnimation = CurvedAnimation(
       parent: _resultsController,
       curve: PremiumCurves.material,
     );
-    
+
     // Quick Access nur für Destination anzeigen
-    if (widget.fieldType == SearchFieldType.destination && widget.showQuickAccess) {
+    if (widget.fieldType == SearchFieldType.destination &&
+        widget.showQuickAccess) {
       _quickAccessController.forward();
     }
-    
+
     widget.controller.addListener(_onTextChanged);
     widget.focusNode.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _quickAccessController.dispose();
     _resultsController.dispose();
     widget.controller.removeListener(_onTextChanged);
@@ -99,7 +115,12 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
 
   void _onTextChanged() {
     final query = widget.controller.text.trim();
-    
+
+    print('[POI-DEBUG] Text changed: "$query"');
+
+    // Cancel previous timer
+    _debounceTimer?.cancel();
+
     if (query.isEmpty) {
       setState(() {
         _searchResults.clear();
@@ -114,10 +135,14 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
       _isSearching = true;
     });
 
-    // Debounced Search für Performance
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted && widget.controller.text.trim() == query) {
-        _performIntelligentSearch(query);
+    // ✅ FIX: Proper debounce with immediate search for short queries
+    final delay = query.length <= 2
+        ? const Duration(milliseconds: 100) // Fast for short queries
+        : const Duration(milliseconds: 300); // Normal for longer queries
+
+    _debounceTimer = Timer(delay, () {
+      if (mounted) {
+        _performActualSearch(query);
       }
     });
   }
@@ -126,195 +151,144 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
     if (widget.focusNode.hasFocus && widget.controller.text.isNotEmpty) {
       _showSearchResults();
     } else if (!widget.focusNode.hasFocus) {
-      _hideSearchResults();
+      // ✅ FIX: Delay hiding to allow result selection
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted && !widget.focusNode.hasFocus) {
+          _hideSearchResults();
+        }
+      });
     }
   }
 
-  void _performIntelligentSearch(String query) {
-    final results = _getIntelligentSearchResults(query);
-    
+  void _performActualSearch(String query) {
+    print('[POI-DEBUG] === PERFORMING SEARCH ===');
+    print('[POI-DEBUG] Query: "$query"');
+    print('[POI-DEBUG] Available features: ${widget.allFeatures.length}');
+
+    if (widget.allFeatures.isEmpty) {
+      print('[POI-DEBUG] ❌ No features available for search!');
+      setState(() {
+        _searchResults.clear();
+        _showResults = false;
+        _isSearching = false;
+      });
+      return;
+    }
+
+    final cleanQuery = query.toLowerCase().trim();
+    final results = <SearchableFeature>[];
+
+    // ✅ STEP 1: Direkte Namenssuche (höchste Priorität)
+    for (final feature in widget.allFeatures) {
+      if (feature.name.toLowerCase().contains(cleanQuery)) {
+        results.add(feature);
+        print('[POI-DEBUG] Name match: "${feature.name}"');
+      }
+    }
+
+    // ✅ STEP 2: Type-Suche (wenn weniger als 5 Ergebnisse)
+    if (results.length < 5) {
+      for (final feature in widget.allFeatures) {
+        if (feature.type.toLowerCase().contains(cleanQuery) &&
+            !results.any((r) => r.id == feature.id)) {
+          results.add(feature);
+          print('[POI-DEBUG] Type match: "${feature.name}" (${feature.type})');
+        }
+      }
+    }
+
+    // ✅ STEP 3: Spezielle Parkplatz-Suche
+    if (cleanQuery.contains('park') || cleanQuery.contains('p')) {
+      for (final feature in widget.allFeatures) {
+        if ((feature.type.toLowerCase().contains('parking') ||
+                feature.name.toLowerCase().contains('parkplatz')) &&
+            !results.any((r) => r.id == feature.id)) {
+          results.add(feature);
+          print('[POI-DEBUG] Parking match: "${feature.name}"');
+        }
+      }
+    }
+
+    // ✅ STEP 4: Nummer-Suche für Accommodations
+    if (RegExp(r'\d+').hasMatch(cleanQuery)) {
+      final numberMatch = RegExp(r'\d+').firstMatch(cleanQuery);
+      if (numberMatch != null) {
+        final number = numberMatch.group(0);
+        for (final feature in widget.allFeatures) {
+          if (feature.name.contains(number!) &&
+              !results.any((r) => r.id == feature.id)) {
+            results.add(feature);
+            print(
+                '[POI-DEBUG] Number match: "${feature.name}" for number $number');
+          }
+        }
+      }
+    }
+
+    // ✅ STEP 5: Emoji Shortcuts
+    final shortcutQuery = CampingSearchCategories.quickSearchShortcuts[query];
+    if (shortcutQuery != null) {
+      print('[POI-DEBUG] Emoji shortcut detected: $query -> $shortcutQuery');
+      _performActualSearch(shortcutQuery);
+      return;
+    }
+
+    // ✅ STEP 6: Category-based search
+    final category = CampingSearchCategories.matchCategory(cleanQuery);
+    if (category != null && results.length < 8) {
+      for (final feature in widget.allFeatures) {
+        // OSM Type Matching
+        for (final osmType in category.osmTypes) {
+          if (feature.type.toLowerCase().contains(osmType.toLowerCase()) &&
+              !results.any((r) => r.id == feature.id)) {
+            results.add(feature);
+            print(
+                '[POI-DEBUG] Category OSM match: "${feature.name}" (${feature.type})');
+            break;
+          }
+        }
+
+        // Keyword Matching
+        final featureName = feature.name.toLowerCase();
+        for (final keyword in category.keywords) {
+          if (featureName.contains(keyword.toLowerCase()) &&
+              !results.any((r) => r.id == feature.id)) {
+            results.add(feature);
+            print(
+                '[POI-DEBUG] Category keyword match: "${feature.name}" for "$keyword"');
+            break;
+          }
+        }
+      }
+    }
+
+    print('[POI-DEBUG] Total results found: ${results.length}');
+
+    // ✅ Sortiere nach Relevanz
+    results.sort((a, b) {
+      // Exakte Name-Matches zuerst
+      final aExact = a.name.toLowerCase() == cleanQuery;
+      final bExact = b.name.toLowerCase() == cleanQuery;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+
+      // Dann nach Name-Länge (kürzere Namen zuerst)
+      return a.name.length.compareTo(b.name.length);
+    });
+
     setState(() {
       _searchResults = results.take(8).toList(); // Max 8 für Smartphone
-      _showResults = results.isNotEmpty;
+      _showResults = _searchResults.isNotEmpty;
       _isSearching = false;
     });
 
     if (_showResults) {
       _showSearchResults();
+      print('[POI-DEBUG] ✅ Showing ${_searchResults.length} results');
     } else {
       _hideSearchResults();
+      print('[POI-DEBUG] ❌ No results to show');
     }
-  }
-
-  List<SearchableFeature> _getIntelligentSearchResults(String query) {
-    final cleanQuery = query.toLowerCase().trim();
-    
-    // 1. Emoji Shortcuts
-    final shortcutQuery = CampingSearchCategories.quickSearchShortcuts[query];
-    if (shortcutQuery != null) {
-      return _getIntelligentSearchResults(shortcutQuery);
-    }
-
-    // 2. Accommodation Number Search (höchste Priorität)
-    if (CampingSearchCategories.isAccommodationNumberSearch(cleanQuery)) {
-      return _searchAccommodationByNumber(cleanQuery);
-    }
-
-    // 3. Category-based Search
-    final category = CampingSearchCategories.matchCategory(cleanQuery);
-    if (category != null) {
-      return _searchByCategory(category);
-    }
-
-    // 4. Fuzzy Name Search
-    return _fuzzyNameSearch(cleanQuery);
-  }
-
-  List<SearchableFeature> _searchAccommodationByNumber(String query) {
-    final numberMatches = RegExp(r'\d+').allMatches(query);
-    if (numberMatches.isEmpty) return [];
-
-    final searchNumbers = numberMatches.map((m) => m.group(0)!).toList();
-    final results = <SearchableFeature>[];
-
-    for (final searchNum in searchNumbers) {
-      final matches = widget.allFeatures.where((feature) {
-        if (!_isAccommodationType(feature.type)) return false;
-        
-        final name = feature.name.toLowerCase();
-        return name.contains(searchNum);
-      }).toList();
-      
-      results.addAll(matches);
-    }
-
-    // Sortiere nach Exaktheit
-    results.sort((a, b) => a.name.length.compareTo(b.name.length));
-    return results.toSet().toList();
-  }
-
-  List<SearchableFeature> _searchByCategory(CampingSearchCategory category) {
-    final results = widget.allFeatures.where((feature) {
-      // OSM Type Matching
-      for (final osmType in category.osmTypes) {
-        if (feature.type.toLowerCase().contains(osmType.toLowerCase())) {
-          return true;
-        }
-      }
-      
-      // Keyword Matching
-      final featureName = feature.name.toLowerCase();
-      for (final keyword in category.keywords) {
-        if (featureName.contains(keyword.toLowerCase())) {
-          return true;
-        }
-      }
-      
-      return false;
-    }).toList();
-
-    // Priorität-basierte Sortierung
-    results.sort((a, b) {
-      final aExactType = category.osmTypes.contains(a.type.toLowerCase());
-      final bExactType = category.osmTypes.contains(b.type.toLowerCase());
-      
-      // ✅ FIX: Curly Braces hinzugefügt
-      if (aExactType && !bExactType) {
-        return -1;
-      }
-      if (!aExactType && bExactType) {
-        return 1;
-      }
-      
-      return a.name.compareTo(b.name);
-    });
-
-    return results;
-  }
-
-  List<SearchableFeature> _fuzzyNameSearch(String query) {
-    final results = widget.allFeatures.where((feature) {
-      final name = feature.name.toLowerCase();
-      final type = feature.type.toLowerCase();
-      
-      // Exakte Matches
-      if (name.contains(query) || type.contains(query)) {
-        return true;
-      }
-      
-      // Fuzzy Matching für Typos
-      return _fuzzyMatch(name, query) || _fuzzyMatch(type, query);
-    }).toList();
-
-    // Relevanz-Sortierung
-    results.sort((a, b) {
-      final aScore = _calculateRelevanceScore(a, query);
-      final bScore = _calculateRelevanceScore(b, query);
-      return bScore.compareTo(aScore);
-    });
-
-    return results;
-  }
-
-  bool _fuzzyMatch(String text, String query) {
-    if (query.length < 3) return false;
-    
-    // Einfaches Fuzzy Matching für 1-2 Charaktere Unterschied
-    int differences = 0;
-    int minLength = [text.length, query.length].reduce((a, b) => a < b ? a : b);
-    
-    for (int i = 0; i < minLength; i++) {
-      if (text[i] != query[i]) {
-        differences++;
-        if (differences > 2) return false;
-      }
-    }
-    
-    return differences <= 2;
-  }
-
-  int _calculateRelevanceScore(SearchableFeature feature, String query) {
-    int score = 0;
-    final name = feature.name.toLowerCase();
-    
-    // Exact start match
-    if (name.startsWith(query)) score += 100;
-    
-    // Contains match
-    if (name.contains(query)) score += 50;
-    
-    // Resort priority
-    final category = CampingSearchCategories.getCategoryByOsmType(feature.type);
-    if (category?.isRoompotPriority == true) score += 25;
-    
-    // Context priority
-    final resultType = _getSearchResultType(feature.type);
-    if (widget.context.prioritizedTypes.contains(resultType)) {
-      score += 10;
-    }
-    
-    return score;
-  }
-
-  SearchResultType _getSearchResultType(String type) {
-    if (type.toLowerCase().contains('parking')) return SearchResultType.parking;
-    if (type.toLowerCase().contains('accommodation') || 
-        type.toLowerCase().contains('building')) return SearchResultType.accommodation;
-    if (type.toLowerCase().contains('restaurant') || 
-        type.toLowerCase().contains('cafe')) return SearchResultType.dining;
-    if (type.toLowerCase().contains('playground')) return SearchResultType.family;
-    if (type.toLowerCase().contains('beach') || 
-        type.toLowerCase().contains('pool')) return SearchResultType.beach;
-    
-    return SearchResultType.amenity;
-  }
-
-  bool _isAccommodationType(String type) {
-    const accommodationTypes = [
-      'accommodation', 'building', 'house', 'pitch', 'camp_pitch',
-      'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin'
-    ];
-    return accommodationTypes.any((t) => type.toLowerCase().contains(t));
   }
 
   void _showSearchResults() {
@@ -328,11 +302,13 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   }
 
   void _onFeatureSelected(SearchableFeature feature) {
+    print('[POI-DEBUG] Feature selected: "${feature.name}"');
+
     // Haptic Feedback für Premium Feel
     HapticFeedback.lightImpact();
-    
+
     widget.onFeatureSelected(feature);
-    
+
     if (widget.autoDismissOnSelection) {
       widget.focusNode.unfocus();
       _hideSearchResults();
@@ -340,35 +316,41 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   }
 
   void _onQuickActionTap(String searchTerm, String categoryName) {
+    print('[POI-DEBUG] Quick action tapped: "$searchTerm" ($categoryName)');
+
     HapticFeedback.selectionClick();
-    
+
     widget.controller.text = searchTerm;
-    _performIntelligentSearch(searchTerm);
-    
+    _performActualSearch(searchTerm); // ✅ Direkte Suche statt Text Change
+
     // Quick feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$categoryName suchen...'),
-        duration: const Duration(milliseconds: 1500),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$categoryName wird gesucht...'),
+          duration: const Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = MediaQuery.of(context).size.width < SmartphoneBreakpoints.small;
-    
+    final isSmallScreen =
+        MediaQuery.of(context).size.width < SmartphoneBreakpoints.small;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Premium Search Input Field
         _buildPremiumSearchField(isSmallScreen),
-        
+
         // Quick Access Buttons (nur für Destination)
-        if (widget.fieldType == SearchFieldType.destination && widget.showQuickAccess)
+        if (widget.fieldType == SearchFieldType.destination &&
+            widget.showQuickAccess)
           _buildQuickAccessSection(isSmallScreen),
-        
+
         // Search Results
         _buildSearchResults(isSmallScreen),
       ],
@@ -382,8 +364,8 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.0),
         border: Border.all(
-          color: widget.focusNode.hasFocus 
-              ? Theme.of(context).colorScheme.primary 
+          color: widget.focusNode.hasFocus
+              ? Theme.of(context).colorScheme.primary
               : Colors.grey.shade300,
           width: widget.focusNode.hasFocus ? 2.0 : 1.0,
         ),
@@ -416,7 +398,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
               ),
             ),
           ),
-          
+
           // Text Input
           Expanded(
             child: TextField(
@@ -440,7 +422,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
               enableSuggestions: false,
             ),
           ),
-          
+
           // Action Buttons
           _buildActionButtons(isSmallScreen),
         ],
@@ -463,7 +445,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-        
+
         // Clear Button
         if (!_isSearching && widget.controller.text.isNotEmpty)
           IconButton(
@@ -478,9 +460,10 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
               minHeight: SmartphoneTouchTargets.minimumSize,
             ),
           ),
-        
+
         // Current Location (nur für Start)
-        if (widget.fieldType == SearchFieldType.start && widget.onCurrentLocationTap != null)
+        if (widget.fieldType == SearchFieldType.start &&
+            widget.onCurrentLocationTap != null)
           IconButton(
             icon: const Icon(Icons.my_location, size: 20),
             color: Theme.of(context).colorScheme.primary,
@@ -491,7 +474,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
               minHeight: SmartphoneTouchTargets.minimumSize,
             ),
           ),
-        
+
         // Map Selection
         if (widget.onMapSelectionTap != null)
           IconButton(
@@ -564,13 +547,14 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
                           child: Center(
                             child: Text(
                               action.$1,
-                              style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                              style:
+                                  TextStyle(fontSize: isSmallScreen ? 16 : 18),
                             ),
                           ),
                         ),
-                        
+
                         SizedBox(height: isSmallScreen ? 4 : 6),
-                        
+
                         // Label
                         Text(
                           action.$3,
@@ -625,7 +609,44 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   }
 
   Widget _buildResultsList(bool isSmallScreen) {
-    if (_searchResults.isEmpty) return const SizedBox.shrink();
+    if (_searchResults.isEmpty &&
+        widget.controller.text.isNotEmpty &&
+        !_isSearching) {
+      // ✅ FIX: Zeige "No Results" Message
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off, color: Colors.grey.shade400, size: 32),
+              const SizedBox(height: 8),
+              Text(
+                'Keine Ergebnisse für "${widget.controller.text}"',
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Versuchen Sie: "parkplatz", "restaurant", oder eine Nummer',
+                style: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_searchResults.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return ListView.separated(
       shrinkWrap: true,
@@ -639,8 +660,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
       ),
       itemBuilder: (context, index) {
         final feature = _searchResults[index];
-        final resultType = _getSearchResultType(feature.type);
-        
+
         return Material(
           color: Colors.transparent,
           child: InkWell(
@@ -649,28 +669,29 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
               constraints: const BoxConstraints(
                 minHeight: SmartphoneTouchTargets.comfortableSize,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   // Category Icon
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: Color(int.parse('0xFF${resultType.colorHex.substring(1)}')).withAlpha(20),
+                      color:
+                          _getColorForFeatureType(feature.type).withAlpha(30),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Center(
                       child: Icon(
-                        _getIconForResultType(resultType),
-                        size: 16,
-                        color: Color(int.parse('0xFF${resultType.colorHex.substring(1)}')),
+                        _getIconForFeatureType(feature.type),
+                        size: 18,
+                        color: _getColorForFeatureType(feature.type),
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 12),
-                  
+
                   // Feature Info
                   Expanded(
                     child: Column(
@@ -680,7 +701,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
                         Text(
                           feature.name,
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 15,
+                            fontSize: isSmallScreen ? 15 : 16,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
@@ -699,22 +720,12 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
                       ],
                     ),
                   ),
-                  
-                  // Priority Indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '${resultType.priority}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
+
+                  // Selection Arrow
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: Colors.grey.shade400,
                   ),
                 ],
               ),
@@ -725,22 +736,55 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
     );
   }
 
-  IconData _getIconForResultType(SearchResultType type) {
-    switch (type) {
-      case SearchResultType.parking:
+  IconData _getIconForFeatureType(String type) {
+    switch (type.toLowerCase()) {
+      case 'parking':
         return Icons.local_parking;
-      case SearchResultType.accommodation:
+      case 'accommodation':
+      case 'building':
         return Icons.business;
-      case SearchResultType.dining:
+      case 'restaurant':
+      case 'cafe':
         return Icons.restaurant;
-      case SearchResultType.family:
+      case 'shop':
+        return Icons.store;
+      case 'playground':
         return Icons.child_friendly;
-      case SearchResultType.beach:
-        return Icons.beach_access;
-      case SearchResultType.amenity:
+      case 'toilets':
+      case 'sanitary':
+        return Icons.wc;
+      case 'tourism':
+        return Icons.attractions;
+      case 'amenity':
         return Icons.place;
-      case SearchResultType.emergency:
-        return Icons.emergency;
+      default:
+        return Icons.location_on;
+    }
+  }
+
+  Color _getColorForFeatureType(String type) {
+    switch (type.toLowerCase()) {
+      case 'parking':
+        return Colors.indigo;
+      case 'accommodation':
+      case 'building':
+        return Colors.brown;
+      case 'restaurant':
+      case 'cafe':
+        return Colors.orange;
+      case 'shop':
+        return Colors.purple;
+      case 'playground':
+        return Colors.pink;
+      case 'toilets':
+      case 'sanitary':
+        return Colors.cyan;
+      case 'tourism':
+        return Colors.green;
+      case 'amenity':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
   }
 }
