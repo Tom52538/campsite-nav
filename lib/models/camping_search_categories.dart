@@ -10,7 +10,7 @@ enum CampingPOICategory {
   utility, // Versorgung (Müll, Wasser, Strom)
   medical, // Medizinisch (Erste Hilfe)
   transport, // Transport (Bus, etc.)
-  water_sports, // NEU: Wassersport (für Beach Resort)
+  waterSports, // NEU: Wassersport (für Beach Resort) - FIXED: camelCase
   family, // NEU: Familien-Aktivitäten
 }
 
@@ -82,7 +82,7 @@ class CampingSearchCategories {
 
     // 🏊 WASSERSPORT & STRAND - BEACH RESORT SPEZIFISCH
     CampingSearchCategory(
-      category: CampingPOICategory.water_sports,
+      category: CampingPOICategory.waterSports,
       displayName: "Wassersport & Strand",
       icon: "🏄‍♂️",
       keywords: [
@@ -242,21 +242,29 @@ class CampingSearchCategories {
     ),
   ];
 
-  // ✅ ROOMPOT-SPEZIFISCHE QUICK-SEARCH SHORTCUTS
+  // ✅ ROOMPOT-SPEZIFISCHE QUICK-SEARCH SHORTCUTS - FIXED: Keine Duplikate
   static const Map<String, String> roompotQuickSearchShortcuts = {
-    // Standard Shortcuts
-    '🚿': 'wc',
-    '🍽️': 'restaurant', 
-    '🅿️': 'parkplatz',
-    'ℹ️': 'rezeption',
-    '⚽': 'spielplatz',
-    
     // ROOMPOT-SPEZIFISCHE SHORTCUTS
     '🏖️': 'beach', // Strand-Zugang
     '🏊': 'pool', // Schwimmbäder
     '👨‍👩‍👧‍👦': 'family', // Familien-Bereiche
     '🏠': 'villa', // Unterkünfte
     '🛒': 'shop', // Resort Shopping
+  };
+
+  // ✅ STANDARD QUICK-SEARCH SHORTCUTS - FIXED: Separate Map
+  static const Map<String, String> standardQuickSearchShortcuts = {
+    '🚿': 'wc',
+    '🍽️': 'restaurant', 
+    '🅿️': 'parkplatz',
+    'ℹ️': 'rezeption',
+    '⚽': 'spielplatz',
+  };
+
+  // ✅ COMBINED SHORTCUTS - FIXED: Merge Maps ohne Duplikate
+  static const Map<String, String> quickSearchShortcuts = {
+    ...roompotQuickSearchShortcuts,
+    ...standardQuickSearchShortcuts,
   };
 
   // ✅ ROOMPOT PRIORITY SEARCH - Zeigt wichtigste Kategorien zuerst
@@ -353,15 +361,4 @@ class CampingSearchCategories {
     return waterKeywords.any((keyword) => 
         cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
   }
-
-  // ✅ Erweiterte Quick-Search mit Roompot Shortcuts
-  static const Map<String, String> quickSearchShortcuts = {
-    ...roompotQuickSearchShortcuts, // Roompot-spezifische zuerst
-    // Standard Shortcuts als Fallback
-    '🚿': 'wc',
-    '🍽️': 'restaurant',
-    '🅿️': 'parkplatz',
-    'ℹ️': 'rezeption',
-    '⚽': 'spielplatz',
-  };
 }
