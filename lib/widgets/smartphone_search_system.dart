@@ -117,6 +117,19 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     });
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    widget.controller.removeListener(_handleControllerChanges);
+    _masterController.dispose();
+    _stateController.dispose();
+    _routeInfoController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    _pulseController.dispose();
+    super.dispose();
+  }
+
   void _initializeAnimations() {
     // Master Controller für Overall System State
     _masterController = AnimationController(
@@ -341,7 +354,9 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       } else {
         // Reset user interaction flag after keyboard hide
         Future.delayed(const Duration(seconds: 2), () {
-          _userInteractionDetected = false;
+          if (mounted) {
+            _userInteractionDetected = false;
+          }
         });
       }
     }
@@ -381,7 +396,9 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     // Disable auto-transitions temporarily
     _autoTransitionsEnabled = false;
     Future.delayed(const Duration(seconds: 5), () {
-      _autoTransitionsEnabled = true;
+      if (mounted) {
+        _autoTransitionsEnabled = true;
+      }
     });
   }
 
@@ -461,30 +478,32 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     // Hide interface for map selection
     _scheduleStateTransition(SearchInterfaceState.hidden);
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Tippen Sie auf die Karte um ${fieldType.displayName} zu wählen',
-          style: const TextStyle(color: Colors.white),
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Tippen Sie auf die Karte um ${fieldType.displayName} zu wählen',
+            style: const TextStyle(color: Colors.white),
+          ),
+          duration: const Duration(seconds: 3),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: _safeArea.bottom + 80,
+            left: 16,
+            right: 16,
+          ),
+          action: SnackBarAction(
+            label: 'Abbrechen',
+            textColor: Colors.white,
+            onPressed: () {
+              widget.controller.handleMapTapForSelection(const LatLng(0, 0));
+              _scheduleStateTransition(SearchInterfaceState.expanded);
+            },
+          ),
         ),
-        duration: const Duration(seconds: 3),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        margin: EdgeInsets.only(
-          bottom: _safeArea.bottom + 80,
-          left: 16,
-          right: 16,
-        ),
-        action: SnackBarAction(
-          label: 'Abbrechen',
-          textColor: Colors.white,
-          onPressed: () {
-            widget.controller.handleMapTapForSelection(const LatLng(0, 0));
-            _scheduleStateTransition(SearchInterfaceState.expanded);
-          },
-        ),
-      ),
-    );
+      );
+    }
   }
 
   void _swapStartAndDestination() {
@@ -525,6 +544,19 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   double get _cardPadding => _isSmallScreen ? 12.0 : 16.0;
   double get _headerFontSize => _isSmallScreen ? 14.0 : 16.0;
   double get _bodyFontSize => _isSmallScreen ? 12.0 : 14.0;
+
+  // Logging Methods
+  void _logSystemInitialization() {
+    debugPrint('[SmartphoneSearchSystem] Initialized with context: ${widget.context.value}');
+  }
+
+  void _logEvent(String event) {
+    debugPrint('[SmartphoneSearchSystem] $event');
+  }
+
+  void _logStateTransition(SearchInterfaceState from, SearchInterfaceState to) {
+    debugPrint('[SmartphoneSearchSystem] State transition: ${from.value} → ${to.value}');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -936,4 +968,328 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
             size: 16,
             color: Colors.green.shade700,
           ),
-          const Size
+          const SizedBox(width: 8),
+          Text(
+            widget.isStartLocked && widget.isDestinationLocked
+                ? 'Start und Ziel gesperrt'
+                : widget.isStartLocked
+                    ? 'Start gesperrt'
+                    : 'Ziel gesperrt',
+            style: TextStyle(
+              fontSize: _bodyFontSize,
+              fontWeight: FontWeight.w600,
+              color: Colors.green.shade700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessSection() {
+    return Container(
+      margin: EdgeInsets.only(top: _verticalMargin),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Text(
+              'Beliebte Ziele',
+              style: TextStyle(
+                fontSize: _bodyFontSize,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          
+          // Quick Access Buttons
+          _buildQuickAccessButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAccessButtons() {
+    final quickActions = [
+      ('🅿️', 'parkplatz', 'Parkplatz', Colors.indigo),
+      ('👨‍👩‍👧‍👦', 'spielplatz', 'Familie', Colors.pink),
+      ('🏖️', 'beach pool', 'Beach', Colors.cyan),
+      ('🍽️', 'restaurant', 'Essen', Colors.orange),
+    ];
+
+    if (_isSmallScreen) {
+      // 2x2 Grid für kleine Screens
+      return Column(
+        children: [
+          Row(
+            children: quickActions.take(2).map((action) {
+              return Expanded(
+                child: _buildQuickActionButton(action),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: quickActions.skip(2).map((action) {
+              return Expanded(
+                child: _buildQuickActionButton(action),
+              );
+            }).toList(),
+          ),
+        ],
+      );
+    } else {
+      // 1x4 Row für normale Screens
+      return Row(
+        children: quickActions.map((action) {
+          return Expanded(
+            child: _buildQuickActionButton(action),
+          );
+        }).toList(),
+      );
+    }
+  }
+
+  Widget _buildQuickActionButton((String, String, String, Color) action) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => _onQuickActionTap(action.$2, action.$3),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: _isSmallScreen ? 70 : 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  action.$4.withAlpha(15),
+                  action.$4.withAlpha(25),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: action.$4.withAlpha(60),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Emoji Icon
+                Container(
+                  width: _isSmallScreen ? 32 : 36,
+                  height: _isSmallScreen ? 32 : 36,
+                  decoration: BoxDecoration(
+                    color: action.$4.withAlpha(40),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(
+                      action.$1,
+                      style: TextStyle(fontSize: _isSmallScreen ? 16 : 18),
+                    ),
+                  ),
+                ),
+                
+                SizedBox(height: _isSmallScreen ? 6 : 8),
+                
+                // Label
+                Text(
+                  action.$3,
+                  style: TextStyle(
+                    fontSize: _isSmallScreen ? 11 : 12,
+                    fontWeight: FontWeight.w700,
+                    color: action.$4.shade700,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _onQuickActionTap(String searchTerm, String categoryName) {
+    _onUserInteraction();
+    
+    if (widget.enableHapticFeedback) {
+      HapticFeedback.selectionClick();
+    }
+    
+    // Set destination field
+    widget.controller.endSearchController.text = searchTerm;
+    widget.controller.endFocusNode.requestFocus();
+    
+    // Show feedback
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$categoryName wird gesucht...'),
+          duration: const Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          margin: EdgeInsets.only(
+            bottom: _safeArea.bottom + 20,
+            left: 16,
+            right: 16,
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildRouteInfoOverlay() {
+    return CompactRouteWidget(
+      destinationName: widget.controller.endSearchController.text,
+      remainingDistance: widget.controller.remainingRouteDistance,
+      totalDistance: widget.controller.routeDistance,
+      remainingTime: widget.controller.remainingRouteTimeMinutes,
+      totalTime: widget.controller.routeTimeMinutes,
+      isNavigating: widget.controller.followGps && widget.controller.currentGpsPosition != null,
+      onEditPressed: () {
+        _onUserInteraction();
+        _scheduleStateTransition(SearchInterfaceState.expanded);
+      },
+      onClosePressed: () {
+        _clearRouteAndReset();
+      },
+    );
+  }
+
+  Widget _buildExpandHint() {
+    if (_currentState == SearchInterfaceState.navigationMode) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withAlpha(180),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Tippen zum Bearbeiten',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: _isSmallScreen ? 11 : 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return const SizedBox.shrink();
+  }
+}
+
+/// Development Helper für Testing verschiedener Search Modes
+class SearchSystemTester extends StatefulWidget {
+  final MapScreenController controller;
+  final List<SearchableFeature> allFeatures;
+
+  const SearchSystemTester({
+    super.key,
+    required this.controller,
+    required this.allFeatures,
+  });
+
+  @override
+  State<SearchSystemTester> createState() => _SearchSystemTesterState();
+}
+
+class _SearchSystemTesterState extends State<SearchSystemTester> {
+  SearchContext _currentContext = SearchContext.guest;
+  SearchInterfaceState _testState = SearchInterfaceState.expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // Context Switcher
+        Container(
+          padding: const EdgeInsets.all(8),
+          color: Colors.amber.shade100,
+          child: Row(
+            children: [
+              const Text('Context: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              DropdownButton<SearchContext>(
+                value: _currentContext,
+                onChanged: (context) {
+                  if (context != null) {
+                    setState(() {
+                      _currentContext = context;
+                    });
+                  }
+                },
+                items: SearchContext.values.map((context) {
+                  return DropdownMenuItem(
+                    value: context,
+                    child: Text(context.value),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(width: 16),
+              const Text('State: ', style: TextStyle(fontWeight: FontWeight.bold)),
+              DropdownButton<SearchInterfaceState>(
+                value: _testState,
+                onChanged: (state) {
+                  if (state != null) {
+                    setState(() {
+                      _testState = state;
+                    });
+                    widget.controller.setSearchInterfaceState(state);
+                  }
+                },
+                items: SearchInterfaceState.values.map((state) {
+                  return DropdownMenuItem(
+                    value: state,
+                    child: Text(state.value),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+        
+        // Main Search System
+        Expanded(
+          child: SmartphoneSearchSystem(
+            controller: widget.controller,
+            allFeatures: widget.allFeatures,
+            isStartLocked: widget.controller.isStartLocked,
+            isDestinationLocked: widget.controller.isDestinationLocked,
+            showRouteInfoAndFadeFields: widget.controller.showRouteInfoAndFadeFields,
+            context: _currentContext,
+          ),
+        ),
+      ],
+    );
+  }
+}
