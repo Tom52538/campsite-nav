@@ -5,7 +5,6 @@ import 'package:camping_osm_navi/models/camping_search_categories.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
-import 'package:camping_osm_navi/models/search_types.dart';
 
 class SimpleSearchContainer extends StatefulWidget {
   final MapScreenController controller;

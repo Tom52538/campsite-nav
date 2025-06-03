@@ -2,10 +2,6 @@
 /// Zentrale Type-Definitionen für das Premium Search System
 /// Smartphone-optimiert für Resort-Navigation
 
-library search_types;
-
-import 'package:flutter/widgets.dart';
-
 /// Such-Feld Typen für Start/Ziel Unterscheidung
 enum SearchFieldType {
   start('start'),

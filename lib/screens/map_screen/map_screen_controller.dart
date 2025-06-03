@@ -11,7 +11,6 @@ import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/widgets/modern_map_markers.dart'; // ✅ NEU
 import 'package:camping_osm_navi/services/tts_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
-import 'package:camping_osm_navi/models/search_types.dart';
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
@@ -372,9 +371,9 @@ class MapScreenController with ChangeNotifier {
     remainingRouteTimeMinutes = timeMinutes;
 
     if (distance != null && timeMinutes != null) {
-      if (lastSpokenDistance == null || lastSpokenTime == null ||
-          (distance - lastSpokenDistance!).abs() > 100 ||
-          (timeMinutes - lastSpokenTime!).abs() >= 1) {
+      if (this.lastSpokenDistance == null || this.lastSpokenTime == null ||
+          (distance - this.lastSpokenDistance!).abs() > 100 ||
+          (timeMinutes - this.lastSpokenTime!).abs() >= 1) {
 
         if (timeMinutes <= 1) {
           ttsService.speakImmediate("Destination almost reached.");
@@ -382,8 +381,8 @@ class MapScreenController with ChangeNotifier {
           ttsService.speakImmediate("About $timeMinutes minutes to destination.");
         }
 
-        lastSpokenDistance = distance;
-        lastSpokenTime = timeMinutes;
+        this.lastSpokenDistance = distance;
+        this.lastSpokenTime = timeMinutes;
       }
     }
 
