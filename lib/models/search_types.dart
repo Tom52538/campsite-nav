@@ -1,6 +1,8 @@
 // lib/models/search_types.dart - ZENTRALE TYPE DEFINITIONEN
 /// Zentrale Type-Definitionen für das Premium Search System
 /// Smartphone-optimiert für Resort-Navigation
+library;
+
 
 /// Such-Feld Typen für Start/Ziel Unterscheidung
 enum SearchFieldType {

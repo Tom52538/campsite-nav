@@ -371,9 +371,9 @@ class MapScreenController with ChangeNotifier {
     remainingRouteTimeMinutes = timeMinutes;
 
     if (distance != null && timeMinutes != null) {
-      if (this.lastSpokenDistance == null || this.lastSpokenTime == null ||
-          (distance - this.lastSpokenDistance!).abs() > 100 ||
-          (timeMinutes - this.lastSpokenTime!).abs() >= 1) {
+      if (lastSpokenDistance == null || lastSpokenTime == null ||
+          (distance - lastSpokenDistance!).abs() > 100 ||
+          (timeMinutes - lastSpokenTime!).abs() >= 1) {
 
         if (timeMinutes <= 1) {
           ttsService.speakImmediate("Destination almost reached.");
@@ -381,8 +381,8 @@ class MapScreenController with ChangeNotifier {
           ttsService.speakImmediate("About $timeMinutes minutes to destination.");
         }
 
-        this.lastSpokenDistance = distance;
-        this.lastSpokenTime = timeMinutes;
+        lastSpokenDistance = distance;
+        lastSpokenTime = timeMinutes;
       }
     }
 

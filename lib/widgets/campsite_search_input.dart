@@ -295,12 +295,18 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   SearchResultType _getSearchResultType(String type) {
     if (type.toLowerCase().contains('parking')) return SearchResultType.parking;
     if (type.toLowerCase().contains('accommodation') || 
-        type.toLowerCase().contains('building')) return SearchResultType.accommodation;
+        type.toLowerCase().contains('building')) {
+      return SearchResultType.accommodation;
+    }
     if (type.toLowerCase().contains('restaurant') || 
-        type.toLowerCase().contains('cafe')) return SearchResultType.dining;
+        type.toLowerCase().contains('cafe')) {
+      return SearchResultType.dining;
+    }
     if (type.toLowerCase().contains('playground')) return SearchResultType.family;
     if (type.toLowerCase().contains('beach') || 
-        type.toLowerCase().contains('pool')) return SearchResultType.beach;
+        type.toLowerCase().contains('pool')) {
+      return SearchResultType.beach;
+    }
     
     return SearchResultType.amenity;
   }
@@ -527,7 +533,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
       ('🍽️', 'restaurant', 'Essen'),
     ];
 
-    return Container(
+    return SizedBox(
       height: isSmallScreen ? 60 : 70,
       child: Row(
         children: quickActions.map((action) {

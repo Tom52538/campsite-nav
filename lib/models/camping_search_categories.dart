@@ -328,9 +328,13 @@ class CampingSearchCategories {
     if (RegExp(r'^\d+$').hasMatch(cleanQuery)) return true;
     if (RegExp(r'^\d+[a-z]$').hasMatch(cleanQuery)) return true;
     if (RegExp(r'^(nr|no|nummer|haus|platz|stelle|parzelle|villa)\.?\s*\d+[a-z]?$')
-        .hasMatch(cleanQuery)) return true;
+        .hasMatch(cleanQuery)) {
+      return true;
+    }
     if (RegExp(r'^(house|pitch|site|lot|villa|chalet)\.?\s*\d+[a-z]?$')
-        .hasMatch(cleanQuery)) return true;
+        .hasMatch(cleanQuery)) {
+      return true;
+    }
 
     return false;
   }
