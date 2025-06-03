@@ -1,375 +1,674 @@
-// lib/models/camping_search_categories.dart - ROOMPOT RESORT OPTIMIERT
-enum CampingPOICategory {
-  accommodation, // Unterkünfte (Parzellen, Häuser, etc.)
-  amenity, // Services (Rezeption, Information)
-  sanitary, // Sanitär (WC, Dusche, etc.)
-  food, // Gastronomie (Restaurant, Café, Bar)
-  shopping, // Einkaufen (Shop, Supermarkt)
-  recreation, // Freizeit (Spielplatz, Pool, Sport)
-  parking, // Parkplätze - ROOMPOT FOKUS!
-  utility, // Versorgung (Müll, Wasser, Strom)
-  medical, // Medizinisch (Erste Hilfe)
-  transport, // Transport (Bus, etc.)
-  waterSports, // ✅ FIXED: Wassersport (für Beach Resort)
-  family, // Familien-Aktivitäten
-}
+// lib/widgets/campsite_search_input.dart - PREMIUM SMARTPHONE-OPTIMIERT
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:camping_osm_navi/models/search_types.dart';
+import 'package:camping_osm_navi/models/searchable_feature.dart';
+import 'package:camping_osm_navi/models/camping_search_categories.dart';
+import 'package:camping_osm_navi/widgets/stable_search_input.dart';
 
-class CampingSearchCategory {
-  final CampingPOICategory category;
-  final String displayName;
-  final String icon;
-  final List<String> keywords;
-  final List<String> osmTypes;
-  final int priority; // Höher = wichtiger bei Suchergebnissen
-  final bool isRoompotPriority; // Markiert Resort-spezifische Kategorien
+/// Premium Campsite Search Input - Smartphone-First Design
+/// 
+/// Features:
+/// - Touch-optimierte Größen (44px+ targets)
+/// - Intelligente Keyboard-Behandlung
+/// - Resort-spezifische Quick-Actions
+/// - Automatisches Verschwinden nach Eingabe
+/// - Accessibility-optimiert
+class CampsiteSearchInput extends StatefulWidget {
+  final SearchFieldType fieldType;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final List<SearchableFeature> allFeatures;
+  final Function(SearchableFeature) onFeatureSelected;
+  final VoidCallback? onCurrentLocationTap;
+  final VoidCallback? onMapSelectionTap;
+  final bool showQuickAccess;
+  final SearchContext context;
+  final bool autoDismissOnSelection;
 
-  const CampingSearchCategory({
-    required this.category,
-    required this.displayName,
-    required this.icon,
-    required this.keywords,
-    required this.osmTypes,
-    required this.priority,
-    this.isRoompotPriority = false,
+  const CampsiteSearchInput({
+    super.key,
+    required this.fieldType,
+    required this.controller,
+    required this.focusNode,
+    required this.allFeatures,
+    required this.onFeatureSelected,
+    this.onCurrentLocationTap,
+    this.onMapSelectionTap,
+    this.showQuickAccess = true,
+    this.context = SearchContext.guest,
+    this.autoDismissOnSelection = true,
   });
+
+  @override
+  State<CampsiteSearchInput> createState() => _CampsiteSearchInputState();
 }
 
-// ✅ ROOMPOT-OPTIMIERTE Camping-Kategorien
-class CampingSearchCategories {
-  static const List<CampingSearchCategory> categories = [
+class _CampsiteSearchInputState extends State<CampsiteSearchInput>
+    with TickerProviderStateMixin {
+  
+  late AnimationController _quickAccessController;
+  late AnimationController _resultsController;
+  late Animation<double> _quickAccessAnimation;
+  late Animation<double> _resultsAnimation;
+  
+  List<SearchableFeature> _searchResults = [];
+  bool _showResults = false;
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
     
-    // 🅿️ PARKPLÄTZE - HÖCHSTE PRIORITÄT FÜR ROOMPOT (81 POIs!)
-    CampingSearchCategory(
-      category: CampingPOICategory.parking,
-      displayName: "Parkplätze",
-      icon: "🅿️",
-      keywords: [
-        'parking', 'parkplatz', 'parkplätze', 'parken',
-        'stellplatz', 'auto', 'car', 'fahrzeug', 'garage',
-        'tiefgarage', 'parkhaus', 'parkzone', 'p1', 'p2', 'p3',
-        // ROOMPOT-SPEZIFISCH:
-        'guest parking', 'visitor parking', 'holiday parking',
-        'resort parking', 'beach parking', 'villa parking'
-      ],
-      osmTypes: [
-        'parking', 'parking_space', 'garage', 'parking_entrance',
-        'amenity=parking', 'leisure=parking'
-      ],
-      priority: 10, // HÖCHSTE PRIORITÄT
-      isRoompotPriority: true,
-    ),
+    _quickAccessController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    
+    _resultsController = AnimationController(
+      duration: const Duration(milliseconds: 250),
+      vsync: this,
+    );
+    
+    _quickAccessAnimation = CurvedAnimation(
+      parent: _quickAccessController,
+      curve: PremiumCurves.smooth,
+    );
+    
+    _resultsAnimation = CurvedAnimation(
+      parent: _resultsController,
+      curve: PremiumCurves.material,
+    );
+    
+    // Quick Access nur für Destination anzeigen
+    if (widget.fieldType == SearchFieldType.destination && widget.showQuickAccess) {
+      _quickAccessController.forward();
+    }
+    
+    widget.controller.addListener(_onTextChanged);
+    widget.focusNode.addListener(_onFocusChanged);
+  }
 
-    // 🎠 FAMILIEN & SPIELPLÄTZE - ROOMPOT FOKUS
-    CampingSearchCategory(
-      category: CampingPOICategory.family,
-      displayName: "Familie & Kinder",
-      icon: "👨‍👩‍👧‍👦",
-      keywords: [
-        'spielplatz', 'playground', 'kinder', 'children', 'kids',
-        'spiel', 'spielbereich', 'spielwiese', 'kinderspielplatz',
-        'familie', 'family', 'kinderbetreuung', 'animation',
-        // ROOMPOT-SPEZIFISCH:
-        'kids club', 'kinderclub', 'miniclub', 'playground area',
-        'family area', 'kinderbereich', 'spielzone'
-      ],
-      osmTypes: [
-        'playground', 'leisure=playground', 'amenity=playground',
-        'tourism=attraction', 'leisure=recreation_ground'
-      ],
-      priority: 9,
-      isRoompotPriority: true,
-    ),
+  @override
+  void dispose() {
+    _quickAccessController.dispose();
+    _resultsController.dispose();
+    widget.controller.removeListener(_onTextChanged);
+    widget.focusNode.removeListener(_onFocusChanged);
+    super.dispose();
+  }
 
-    // 🏊 WASSERSPORT & STRAND - BEACH RESORT SPEZIFISCH
-    CampingSearchCategory(
-      category: CampingPOICategory.waterSports,
-      displayName: "Wassersport & Strand",
-      icon: "🏄‍♂️",
-      keywords: [
-        'pool', 'schwimmbad', 'schwimmen', 'swimming', 'beach', 'strand',
-        'wassersport', 'water sport', 'surfing', 'surfen', 'sailing',
-        'segeln', 'diving', 'tauchen', 'water', 'wasser',
-        // ROOMPOT BEACH RESORT SPEZIFISCH:
-        'beach access', 'strandzugang', 'water village', 'aqua park',
-        'swimming pool', 'outdoor pool', 'indoor pool', 'spa'
-      ],
-      osmTypes: [
-        'swimming_pool', 'leisure=swimming_pool', 'natural=beach',
-        'leisure=beach_resort', 'sport=swimming', 'sport=diving',
-        'sport=sailing', 'amenity=spa'
-      ],
-      priority: 8,
-      isRoompotPriority: true,
-    ),
+  void _onTextChanged() {
+    final query = widget.controller.text.trim();
+    
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults.clear();
+        _showResults = false;
+        _isSearching = false;
+      });
+      _resultsController.reverse();
+      return;
+    }
 
-    // 🏠 UNTERKÜNFTE - Erweitert für Resort
-    CampingSearchCategory(
-      category: CampingPOICategory.accommodation,
-      displayName: "Unterkünfte",
-      icon: "🏠",
-      keywords: [
-        // Standard Keywords
-        'nr', 'nummer', 'no', 'house', 'haus', 'platz', 'pitch', 'stelle',
-        'parzelle', 'unterkunft', 'accommodation',
-        // ROOMPOT RESORT SPEZIFISCH:
-        'villa', 'chalet', 'bungalow', 'lodge', 'cabin', 'ferienhaus',
-        'holiday home', 'vacation rental', 'comfort', 'wellness', 
-        'luxury', 'premium', 'standard', 'basic', 'beach house',
-        'mobilheim', 'caravan', 'wohnwagen', 'wohnmobil'
-      ],
-      osmTypes: [
-        'accommodation', 'building', 'house', 'pitch', 'camp_pitch',
-        'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin',
-        'tourism=chalet', 'tourism=holiday_home'
-      ],
-      priority: 7,
-      isRoompotPriority: true,
-    ),
+    setState(() {
+      _isSearching = true;
+    });
 
-    // 🍽️ GASTRONOMIE - Resort-Restaurants
-    CampingSearchCategory(
-      category: CampingPOICategory.food,
-      displayName: "Restaurants & Bars",
-      icon: "🍽️",
-      keywords: [
-        'restaurant', 'restaurants', 'gastronomie', 'cafe', 'café',
-        'kaffee', 'coffee', 'bar', 'bars', 'kneipe', 'pub',
-        'snack', 'snackbar', 'imbiss', 'bistro', 'essen', 'food',
-        // ROOMPOT SPEZIFISCH:
-        'beach bar', 'poolbar', 'resort restaurant', 'main restaurant',
-        'buffet', 'à la carte', 'takeaway', 'pizza', 'grill'
-      ],
-      osmTypes: [
-        'restaurant', 'cafe', 'bar', 'pub', 'fast_food',
-        'food_court', 'snack_bar', 'bistro', 'amenity=restaurant',
-        'amenity=cafe', 'amenity=bar'
-      ],
-      priority: 6,
-      isRoompotPriority: true,
-    ),
+    // Debounced Search für Performance
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted && widget.controller.text.trim() == query) {
+        _performIntelligentSearch(query);
+      }
+    });
+  }
 
-    // 🚿 SANITÄR - Wichtig für Resort-Gäste
-    CampingSearchCategory(
-      category: CampingPOICategory.sanitary,
-      displayName: "Sanitär & WC",
-      icon: "🚿",
-      keywords: [
-        'wc', 'toilet', 'toilette', 'toiletten', 'klo', 'sanitär',
-        'sanitary', 'bad', 'bäder', 'waschraum', 'dusche', 'duschen',
-        'shower', 'showers', 'waschhaus', 'sanitärhaus', 'sanitärgebäude',
-        // ROOMPOT SPEZIFISCH:
-        'restroom', 'bathroom', 'wash facility', 'shower block'
-      ],
-      osmTypes: [
-        'toilets', 'sanitary', 'shower', 'bathroom', 'restroom',
-        'amenity=toilets', 'amenity=shower', 'sanitary_dump_station'
-      ],
-      priority: 5,
-    ),
+  void _onFocusChanged() {
+    if (widget.focusNode.hasFocus && widget.controller.text.isNotEmpty) {
+      _showSearchResults();
+    } else if (!widget.focusNode.hasFocus) {
+      _hideSearchResults();
+    }
+  }
 
-    // ℹ️ SERVICES - Rezeption & Info
-    CampingSearchCategory(
-      category: CampingPOICategory.amenity,
-      displayName: "Service & Info",
-      icon: "ℹ️",
-      keywords: [
-        'rezeption', 'reception', 'empfang', 'anmeldung', 'check-in',
-        'büro', 'office', 'verwaltung', 'administration', 'info',
-        'information', 'tourist-info', 'auskunft', 'service',
-        // ROOMPOT SPEZIFISCH:
-        'guest services', 'concierge', 'resort office', 'help desk'
-      ],
-      osmTypes: [
-        'reception', 'information', 'office', 'tourist_information',
-        'amenity=information', 'tourism=information'
-      ],
-      priority: 4,
-    ),
+  void _performIntelligentSearch(String query) {
+    final results = _getIntelligentSearchResults(query);
+    
+    setState(() {
+      _searchResults = results.take(8).toList(); // Max 8 für Smartphone
+      _showResults = results.isNotEmpty;
+      _isSearching = false;
+    });
 
-    // 🛒 EINKAUFEN - Resort Shops
-    CampingSearchCategory(
-      category: CampingPOICategory.shopping,
-      displayName: "Shopping",
-      icon: "🛒",
-      keywords: [
-        'shop', 'laden', 'geschäft', 'store', 'supermarkt', 'market',
-        'markt', 'minimarkt', 'kiosk', 'convenience', 'lebensmittel',
-        'einkaufen', 'shopping', 'verkauf',
-        // ROOMPOT SPEZIFISCH:
-        'resort shop', 'holiday shop', 'beach shop', 'souvenir'
-      ],
-      osmTypes: [
-        'shop', 'supermarket', 'convenience', 'kiosk', 'marketplace',
-        'shop=convenience', 'shop=supermarket'
-      ],
-      priority: 3,
-    ),
+    if (_showResults) {
+      _showSearchResults();
+    } else {
+      _hideSearchResults();
+    }
+  }
 
-    // ⚽ FREIZEIT & SPORT
-    CampingSearchCategory(
-      category: CampingPOICategory.recreation,
-      displayName: "Sport & Freizeit",
-      icon: "⚽",
-      keywords: [
-        'sport', 'sportplatz', 'tennis', 'fußball', 'volleyball',
-        'basketball', 'animation', 'unterhaltung', 'entertainment',
-        'fitness', 'gym', 'wellness', 'spa',
-        // ROOMPOT SPEZIFISCH:
-        'sports center', 'activity center', 'recreation', 'leisure'
-      ],
-      osmTypes: [
-        'sports_centre', 'pitch', 'tennis', 'football', 'volleyball',
-        'basketball', 'fitness_centre', 'leisure=sports_centre'
-      ],
-      priority: 2,
-    ),
+  List<SearchableFeature> _getIntelligentSearchResults(String query) {
+    final cleanQuery = query.toLowerCase().trim();
+    
+    // 1. Emoji Shortcuts
+    final shortcutQuery = CampingSearchCategories.quickSearchShortcuts[query];
+    if (shortcutQuery != null) {
+      return _getIntelligentSearchResults(shortcutQuery);
+    }
 
-    // ⚡ VERSORGUNG
-    CampingSearchCategory(
-      category: CampingPOICategory.utility,
-      displayName: "Versorgung",
-      icon: "⚡",
-      keywords: [
-        'müll', 'mülltonne', 'abfall', 'waste', 'disposal',
-        'wasser', 'water', 'trinkwasser', 'drinking_water',
-        'strom', 'electricity', 'stromanschluss', 'power'
-      ],
-      osmTypes: [
-        'waste_disposal', 'waste_basket', 'drinking_water',
-        'water_point', 'power', 'amenity=waste_disposal'
-      ],
-      priority: 1,
-    ),
-  ];
+    // 2. Accommodation Number Search (höchste Priorität)
+    if (CampingSearchCategories.isAccommodationNumberSearch(cleanQuery)) {
+      return _searchAccommodationByNumber(cleanQuery);
+    }
 
-  // ✅ KATEGORIE-MATCHING für intelligente Suche
-  static CampingSearchCategory? matchCategory(String query) {
-    final cleanQuery = query.trim().toLowerCase();
+    // 3. Category-based Search
+    final category = CampingSearchCategories.matchCategory(cleanQuery);
+    if (category != null) {
+      return _searchByCategory(category);
+    }
 
-    // Durchsuche alle Kategorien nach Keywords
-    for (final category in categories) {
+    // 4. Fuzzy Name Search
+    return _fuzzyNameSearch(cleanQuery);
+  }
+
+  List<SearchableFeature> _searchAccommodationByNumber(String query) {
+    final numberMatches = RegExp(r'\d+').allMatches(query);
+    if (numberMatches.isEmpty) return [];
+
+    final searchNumbers = numberMatches.map((m) => m.group(0)!).toList();
+    final results = <SearchableFeature>[];
+
+    for (final searchNum in searchNumbers) {
+      final matches = widget.allFeatures.where((feature) {
+        if (!_isAccommodationType(feature.type)) return false;
+        
+        final name = feature.name.toLowerCase();
+        return name.contains(searchNum);
+      }).toList();
+      
+      results.addAll(matches);
+    }
+
+    // Sortiere nach Exaktheit
+    results.sort((a, b) => a.name.length.compareTo(b.name.length));
+    return results.toSet().toList();
+  }
+
+  List<SearchableFeature> _searchByCategory(CampingSearchCategory category) {
+    final results = widget.allFeatures.where((feature) {
+      // OSM Type Matching
+      for (final osmType in category.osmTypes) {
+        if (feature.type.toLowerCase().contains(osmType.toLowerCase())) {
+          return true;
+        }
+      }
+      
+      // Keyword Matching
+      final featureName = feature.name.toLowerCase();
       for (final keyword in category.keywords) {
-        if (cleanQuery.contains(keyword.toLowerCase()) ||
-            keyword.toLowerCase().contains(cleanQuery)) {
-          return category;
+        if (featureName.contains(keyword.toLowerCase())) {
+          return true;
         }
       }
-    }
-    return null;
+      
+      return false;
+    }).toList();
+
+    // Priorität-basierte Sortierung
+    results.sort((a, b) {
+      final aExactType = category.osmTypes.contains(a.type.toLowerCase());
+      final bExactType = category.osmTypes.contains(b.type.toLowerCase());
+      
+      if (aExactType && !bExactType) return -1;
+      if (!aExactType && bExactType) return 1;
+      
+      return a.name.compareTo(b.name);
+    });
+
+    return results;
   }
 
-  // ✅ OSM-Type zu Kategorie Mapping
-  static CampingSearchCategory? getCategoryByOsmType(String osmType) {
-    final cleanType = osmType.trim().toLowerCase();
+  List<SearchableFeature> _fuzzyNameSearch(String query) {
+    final results = widget.allFeatures.where((feature) {
+      final name = feature.name.toLowerCase();
+      final type = feature.type.toLowerCase();
+      
+      // Exakte Matches
+      if (name.contains(query) || type.contains(query)) {
+        return true;
+      }
+      
+      // Fuzzy Matching für Typos
+      return _fuzzyMatch(name, query) || _fuzzyMatch(type, query);
+    }).toList();
 
-    for (final category in categories) {
-      for (final type in category.osmTypes) {
-        if (cleanType == type.toLowerCase() ||
-            cleanType.contains(type.toLowerCase()) ||
-            type.toLowerCase().contains(cleanType)) {
-          return category;
-        }
+    // Relevanz-Sortierung
+    results.sort((a, b) {
+      final aScore = _calculateRelevanceScore(a, query);
+      final bScore = _calculateRelevanceScore(b, query);
+      return bScore.compareTo(aScore);
+    });
+
+    return results;
+  }
+
+  bool _fuzzyMatch(String text, String query) {
+    if (query.length < 3) return false;
+    
+    // Einfaches Fuzzy Matching für 1-2 Charaktere Unterschied
+    int differences = 0;
+    int minLength = [text.length, query.length].reduce((a, b) => a < b ? a : b);
+    
+    for (int i = 0; i < minLength; i++) {
+      if (text[i] != query[i]) {
+        differences++;
+        if (differences > 2) return false;
       }
     }
-    return null;
+    
+    return differences <= 2;
   }
 
-  // ✅ Prioritäts-basierte Sortierung
-  static List<CampingSearchCategory> getSortedCategories() {
-    final sorted = List<CampingSearchCategory>.from(categories);
-    sorted.sort((a, b) => b.priority.compareTo(a.priority));
-    return sorted;
+  int _calculateRelevanceScore(SearchableFeature feature, String query) {
+    int score = 0;
+    final name = feature.name.toLowerCase();
+    
+    // Exact start match
+    if (name.startsWith(query)) score += 100;
+    
+    // Contains match
+    if (name.contains(query)) score += 50;
+    
+    // Resort priority
+    final category = CampingSearchCategories.getCategoryByOsmType(feature.type);
+    if (category?.isRoompotPriority == true) score += 25;
+    
+    // Context priority
+    final resultType = _getSearchResultType(feature.type);
+    if (widget.context.prioritizedTypes.contains(resultType)) {
+      score += 10;
+    }
+    
+    return score;
   }
 
-  // ✅ Numerische Unterkunft-Erkennung (erweitert)
-  static bool isAccommodationNumberSearch(String query) {
-    final cleanQuery = query.trim().toLowerCase();
-
-    // Reine Zahlen
-    if (RegExp(r'^\d+$').hasMatch(cleanQuery)) {
-      return true;
-    }
-
-    // Zahlen mit Buchstaben (247a, 15b)
-    if (RegExp(r'^\d+[a-z]$').hasMatch(cleanQuery)) {
-      return true;
-    }
-
-    // Deutsche Muster
-    if (RegExp(r'^(nr|no|nummer|haus|platz|stelle|parzelle)\.?\s*\d+[a-z]?$')
-        .hasMatch(cleanQuery)) {
-      return true;
-    }
-
-    // Englische Muster
-    if (RegExp(r'^(house|pitch|site|lot)\.?\s*\d+[a-z]?$')
-        .hasMatch(cleanQuery)) {
-      return true;
-    }
-
-    return false;
+  SearchResultType _getSearchResultType(String type) {
+    if (type.toLowerCase().contains('parking')) return SearchResultType.parking;
+    if (type.toLowerCase().contains('accommodation') || 
+        type.toLowerCase().contains('building')) return SearchResultType.accommodation;
+    if (type.toLowerCase().contains('restaurant') || 
+        type.toLowerCase().contains('cafe')) return SearchResultType.dining;
+    if (type.toLowerCase().contains('playground')) return SearchResultType.family;
+    if (type.toLowerCase().contains('beach') || 
+        type.toLowerCase().contains('pool')) return SearchResultType.beach;
+    
+    return SearchResultType.amenity;
   }
 
-  // ✅ ROOMPOT PRIORITY SEARCH - Zeigt wichtigste Kategorien zuerst
-  static List<CampingSearchCategory> getRoompotPriorityCategories() {
-    return categories.where((cat) => cat.isRoompotPriority).toList();
-  }
-
-  // ✅ Erweiterte Parkplatz-Suche (wichtig bei 81 Parkplätzen!)
-  static List<String> getParkingSpecificKeywords() {
-    return [
-      // Parkplatz-Nummern
-      'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10',
-      // Bereiche
-      'hauptparkplatz', 'main parking', 'central parking',
-      'beach parking', 'villa parking', 'restaurant parking',
-      // Typen
-      'guest parking', 'visitor parking', 'disabled parking',
-      'family parking', 'oversized parking'
+  bool _isAccommodationType(String type) {
+    final accommodationTypes = [
+      'accommodation', 'building', 'house', 'pitch', 'camp_pitch',
+      'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin'
     ];
+    return accommodationTypes.any((t) => type.toLowerCase().contains(t));
   }
 
-  // ✅ NEUE ROOMPOT-SPEZIFISCHE METHODEN
-  static bool isParkingSearch(String query) {
-    final cleanQuery = query.trim().toLowerCase();
-    final parkingKeywords = getParkingSpecificKeywords();
-    
-    return parkingKeywords.any((keyword) => 
-        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  void _showSearchResults() {
+    if (_searchResults.isNotEmpty) {
+      _resultsController.forward();
+    }
   }
 
-  static bool isFamilySearch(String query) {
-    final cleanQuery = query.trim().toLowerCase();
-    final familyKeywords = ['family', 'familie', 'kinder', 'kids', 'children', 
-                           'playground', 'spielplatz', 'animation'];
-    
-    return familyKeywords.any((keyword) => 
-        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  void _hideSearchResults() {
+    _resultsController.reverse();
   }
 
-  static bool isWaterSportsSearch(String query) {
-    final cleanQuery = query.trim().toLowerCase();
-    final waterKeywords = ['pool', 'beach', 'strand', 'swimming', 'water', 
-                          'wassersport', 'surf', 'sail'];
+  void _onFeatureSelected(SearchableFeature feature) {
+    // Haptic Feedback für Premium Feel
+    HapticFeedback.lightImpact();
     
-    return waterKeywords.any((keyword) => 
-        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+    widget.onFeatureSelected(feature);
+    
+    if (widget.autoDismissOnSelection) {
+      widget.focusNode.unfocus();
+      _hideSearchResults();
+    }
   }
 
-  // ✅ BEREINIGTE QUICK-SEARCH SHORTCUTS (keine Duplikate)
-  static const Map<String, String> quickSearchShortcuts = {
-    // ROOMPOT-SPEZIFISCHE SHORTCUTS (Priorität)
-    '🏖️': 'beach', // Strand-Zugang
-    '🏊': 'pool', // Schwimmbäder
-    '👨‍👩‍👧‍👦': 'family', // Familien-Bereiche
-    '🏠': 'villa', // Unterkünfte
-    '🛒': 'shop', // Resort Shopping
+  void _onQuickActionTap(String searchTerm, String categoryName) {
+    HapticFeedback.selectionClick();
     
-    // STANDARD SHORTCUTS (keine Duplikate)
-    '🚿': 'wc', // Sanitär
-    '🍽️': 'restaurant', // Gastronomie
-    '🅿️': 'parkplatz', // Parkplätze
-    'ℹ️': 'rezeption', // Information
-    '⚽': 'spielplatz', // Sport/Freizeit
-  };
-}
+    widget.controller.text = searchTerm;
+    _performIntelligentSearch(searchTerm);
+    
+    // Quick feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$categoryName suchen...'),
+        duration: const Duration(milliseconds: 1500),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < SmartphoneBreakpoints.small;
+    
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Premium Search Input Field
+        _buildPremiumSearchField(isSmallScreen),
+        
+        // Quick Access Buttons (nur für Destination)
+        if (widget.fieldType == SearchFieldType.destination && widget.showQuickAccess)
+          _buildQuickAccessSection(isSmallScreen),
+        
+        // Search Results
+        _buildSearchResults(isSmallScreen),
+      ],
+    );
+  }
+
+  Widget _buildPremiumSearchField(bool isSmallScreen) {
+    return Container(
+      height: SmartphoneTouchTargets.comfortableSize,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: widget.focusNode.hasFocus 
+              ? Theme.of(context).colorScheme.primary 
+              : Colors.grey.shade300,
+          width: widget.focusNode.hasFocus ? 2.0 : 1.0,
+        ),
+        boxShadow: [
+          if (widget.focusNode.hasFocus)
+            BoxShadow(
+              color: Theme.of(context).colorScheme.primary.withAlpha(25),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Field Type Icon
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withAlpha(20),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Center(
+                child: Text(
+                  widget.fieldType.emoji,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
+            ),
+          ),
+          
+          // Text Input
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              focusNode: widget.focusNode,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 15 : 16,
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: InputDecoration(
+                hintText: '${widget.fieldType.displayName} eingeben...',
+                hintStyle: TextStyle(
+                  color: Colors.grey.shade500,
+                  fontSize: isSmallScreen ? 14 : 15,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+              textInputAction: TextInputAction.search,
+              autocorrect: false,
+              enableSuggestions: false,
+            ),
+          ),
+          
+          // Action Buttons
+          _buildActionButtons(isSmallScreen),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(bool isSmallScreen) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Search Indicator
+        if (_isSearching)
+          Container(
+            width: SmartphoneTouchTargets.minimumSize,
+            height: SmartphoneTouchTargets.minimumSize,
+            padding: const EdgeInsets.all(12),
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        
+        // Clear Button
+        if (!_isSearching && widget.controller.text.isNotEmpty)
+          IconButton(
+            icon: const Icon(Icons.clear, size: 20),
+            color: Colors.grey.shade600,
+            onPressed: () {
+              widget.controller.clear();
+              _hideSearchResults();
+            },
+            constraints: const BoxConstraints(
+              minWidth: SmartphoneTouchTargets.minimumSize,
+              minHeight: SmartphoneTouchTargets.minimumSize,
+            ),
+          ),
+        
+        // Current Location (nur für Start)
+        if (widget.fieldType == SearchFieldType.start && widget.onCurrentLocationTap != null)
+          IconButton(
+            icon: const Icon(Icons.my_location, size: 20),
+            color: Theme.of(context).colorScheme.primary,
+            onPressed: widget.onCurrentLocationTap,
+            tooltip: 'Aktueller Standort',
+            constraints: const BoxConstraints(
+              minWidth: SmartphoneTouchTargets.minimumSize,
+              minHeight: SmartphoneTouchTargets.minimumSize,
+            ),
+          ),
+        
+        // Map Selection
+        if (widget.onMapSelectionTap != null)
+          IconButton(
+            icon: const Icon(Icons.location_searching, size: 20),
+            color: Theme.of(context).colorScheme.secondary,
+            onPressed: widget.onMapSelectionTap,
+            tooltip: 'Auf Karte wählen',
+            constraints: const BoxConstraints(
+              minWidth: SmartphoneTouchTargets.minimumSize,
+              minHeight: SmartphoneTouchTargets.minimumSize,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildQuickAccessSection(bool isSmallScreen) {
+    return AnimatedBuilder(
+      animation: _quickAccessAnimation,
+      builder: (context, child) {
+        return SizeTransition(
+          sizeFactor: _quickAccessAnimation,
+          child: Container(
+            margin: const EdgeInsets.only(top: 8),
+            child: _buildQuickAccessButtons(isSmallScreen),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickAccessButtons(bool isSmallScreen) {
+    final quickActions = [
+      ('🅿️', 'parkplatz', 'Parkplatz'),
+      ('👨‍👩‍👧‍👦', 'spielplatz', 'Familie'),
+      ('🏖️', 'beach pool', 'Beach'),
+      ('🍽️', 'restaurant', 'Essen'),
+    ];
+
+    return Container(
+      height: isSmallScreen ? 60 : 70,
+      child: Row(
+        children: quickActions.map((action) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  onTap: () => _onQuickActionTap(action.$2, action.$3),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          action.$1,
+                          style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          action.$3,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 9 : 10,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(bool isSmallScreen) {
+    return AnimatedBuilder(
+      animation: _resultsAnimation,
+      builder: (context, child) {
+        return SizeTransition(
+          sizeFactor: _resultsAnimation,
+          child: Container(
+            margin: const EdgeInsets.only(top: 4),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.4,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(10),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: _buildResultsList(isSmallScreen),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildResultsList(bool isSmallScreen) {
+    if (_searchResults.isEmpty) return const SizedBox.shrink();
+
+    return ListView.separated(
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: _searchResults.length,
+      separatorBuilder: (context, index) => Divider(
+        height: 1,
+        color: Colors.grey.shade200,
+        indent: 16,
+        endIndent: 16,
+      ),
+      itemBuilder: (context, index) {
+        final feature = _searchResults[index];
+        final resultType = _getSearchResultType(feature.type);
+        
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _onFeatureSelected(feature),
+            child: Container(
+              constraints: const BoxConstraints(
+                minHeight: SmartphoneTouchTargets.comfortableSize,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  // Category Icon
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Color(int.parse('0xFF${resultType.colorHex.substring(1)}')).withAlpha(20),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        _getIconForResultType(resultType),
+                        size: 16,
+                        color: Color(int.parse('0xFF${resultType.colorHex.substring(1)}')),
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 12),
+                  
+                  // Feature Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          feature.name,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          feature.type,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ?
