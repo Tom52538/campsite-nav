@@ -541,56 +541,64 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
             _slideAnimation,
           ]),
           builder: (context, child) {
-            return Stack(
-              children: [
-                // Main Search Interface
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: ScaleTransition(
-                        scale: _scaleAnimation,
-                        child: _buildMainSearchInterface(),
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // Route Info Overlay (Navigation Mode)
-                if (_hasActiveRoute)
+            // ✅ FIX: Explizite Größen-Constraints für Stack
+            return SizedBox(
+              width: constraints.maxWidth,
+              height: constraints.maxHeight.isFinite 
+                  ? constraints.maxHeight 
+                  : MediaQuery.of(context).size.height * 0.6, // Fallback height
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Main Search Interface
                   Positioned(
                     top: 0,
                     left: 0,
                     right: 0,
-                    child: FadeTransition(
-                      opacity: _routeInfoAnimation,
-                      child: ScaleTransition(
-                        scale: Tween<double>(begin: 0.9, end: 1.0).animate(_routeInfoAnimation),
-                        child: _buildRouteInfoOverlay(),
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: ScaleTransition(
+                          scale: _scaleAnimation,
+                          child: _buildMainSearchInterface(),
+                        ),
                       ),
                     ),
                   ),
-                
-                // Gesture Detection for Expansion
-                if (_currentState != SearchInterfaceState.expanded)
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 100,
-                    child: GestureDetector(
-                      onTap: _onExpandRequest,
-                      child: Container(
-                        color: Colors.transparent,
-                        child: _buildExpandHint(),
+                  
+                  // Route Info Overlay (Navigation Mode)
+                  if (_hasActiveRoute)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: FadeTransition(
+                        opacity: _routeInfoAnimation,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.9, end: 1.0).animate(_routeInfoAnimation),
+                          child: _buildRouteInfoOverlay(),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                  
+                  // Gesture Detection for Expansion
+                  if (_currentState != SearchInterfaceState.expanded)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 100,
+                      child: GestureDetector(
+                        onTap: _onExpandRequest,
+                        child: Container(
+                          color: Colors.transparent,
+                          child: _buildExpandHint(),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             );
           },
         );
