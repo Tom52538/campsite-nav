@@ -199,7 +199,23 @@ class TtsService {
 
   String _getLocalizedText(String key, [Map<String, String>? variables]) {
     final translations = _getTranslations();
-    String text = translations[key] ?? translations['en']?[key] ?? key;
+    
+    // Safe string extraction with explicit null checks
+    String text;
+    
+    // Try current language first
+    final currentLangTranslations = translations[_deviceLanguage];
+    if (currentLangTranslations != null && currentLangTranslations.containsKey(key)) {
+      text = currentLangTranslations[key]!;
+    } 
+    // Fallback to English
+    else if (translations['en'] != null && translations['en']!.containsKey(key)) {
+      text = translations['en']![key]!;
+    }
+    // Last fallback: Key itself
+    else {
+      text = key;
+    }
     
     // Replace variables in text
     if (variables != null) {
@@ -230,6 +246,7 @@ class TtsService {
         'turn_straight': 'geradeaus weiterfahren',
         'turn_depart': 'Route starten',
         'turn_arrive': 'Ziel erreicht',
+        'test_message': 'Dies ist eine Testansage auf Deutsch.',
       },
       'en': {
         'route_started': 'Route started',
@@ -248,6 +265,7 @@ class TtsService {
         'turn_straight': 'continue straight',
         'turn_depart': 'start route',
         'turn_arrive': 'destination reached',
+        'test_message': 'This is a test announcement in English.',
       },
       'fr': {
         'route_started': 'Itinéraire commencé',
@@ -266,6 +284,7 @@ class TtsService {
         'turn_straight': 'continuez tout droit',
         'turn_depart': 'commencer l\'itinéraire',
         'turn_arrive': 'destination atteinte',
+        'test_message': 'Ceci est un message de test en français.',
       },
       'es': {
         'route_started': 'Ruta iniciada',
@@ -284,6 +303,7 @@ class TtsService {
         'turn_straight': 'continúa recto',
         'turn_depart': 'iniciar ruta',
         'turn_arrive': 'destino alcanzado',
+        'test_message': 'Este es un mensaje de prueba en español.',
       },
       'nl': {
         'route_started': 'Route gestart',
@@ -302,6 +322,7 @@ class TtsService {
         'turn_straight': 'ga rechtdoor',
         'turn_depart': 'route starten',
         'turn_arrive': 'bestemming bereikt',
+        'test_message': 'Dit is een testbericht in het Nederlands.',
       },
       'it': {
         'route_started': 'Percorso iniziato',
@@ -320,6 +341,7 @@ class TtsService {
         'turn_straight': 'continua dritto',
         'turn_depart': 'inizia percorso',
         'turn_arrive': 'destinazione raggiunta',
+        'test_message': 'Questo è un messaggio di prova in italiano.',
       },
     };
   }
@@ -384,10 +406,7 @@ class TtsService {
   }
 
   Future<void> testSpeak() async {
-    final testMessage = _getLocalizedText('test_message') ?? 
-                       (_deviceLanguage == 'de' 
-                        ? "Dies ist eine Testansage auf Deutsch." 
-                        : "This is a test announcement.");
+    final testMessage = _getLocalizedText('test_message');
     await speak(testMessage);
   }
 
