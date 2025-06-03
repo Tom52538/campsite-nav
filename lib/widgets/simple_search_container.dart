@@ -1,9 +1,9 @@
-// lib/widgets/simple_search_container.dart - VOLLSTÄNDIG NEU & SMARTPHONE OPTIMIERT
+// lib/widgets/simple_search_container.dart - DEPRECATION WARNING FIXED
 import 'package:flutter/material.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
-import 'package:camping_osm_navi/models/search_types.dart'; // ✅ FIX: Eindeutiger Import
+import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
-import 'package:camping_osm_navi/widgets/smartphone_search_system.dart'; // ✅ FIX: Korrekte Datei
+import 'package:camping_osm_navi/widgets/smartphone_search_system.dart';
 
 /// Legacy Wrapper für SimpleSearchContainer
 /// 
@@ -34,10 +34,11 @@ class SimpleSearchContainer extends StatefulWidget {
   State<SimpleSearchContainer> createState() => _SimpleSearchContainerState();
 }
 
+// ✅ FIX: Entferne @Deprecated von State Class (nur Widget ist deprecated)
 class _SimpleSearchContainerState extends State<SimpleSearchContainer> {
   @override
   Widget build(BuildContext context) {
-    // ✅ FIX: Delegiere an das neue SmartphoneSearchSystem
+    // Delegiere an das neue SmartphoneSearchSystem
     return SmartphoneSearchSystem(
       controller: widget.controller,
       allFeatures: widget.allFeatures,
