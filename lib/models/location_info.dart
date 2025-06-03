@@ -10,8 +10,8 @@ class LocationInfo {
   final double initialLatitude;
   final double initialLongitude;
   final double radiusInMeters;
-  final String styleId; // NEU
-  final String styleUrl; // NEU
+  final String styleId;
+  final String styleUrl;
 
   const LocationInfo({
     required this.id,
@@ -20,15 +20,14 @@ class LocationInfo {
     required this.initialLatitude,
     required this.initialLongitude,
     required this.radiusInMeters,
-    required this.styleId, // NEU
-    required this.styleUrl, // NEU
+    required this.styleId,
+    required this.styleUrl,
   });
 
   LatLng get initialCenter => LatLng(initialLatitude, initialLongitude);
 }
 
 // Globale Liste der verfügbaren Standorte
-// Wir verwenden einen besseren Stil von MapTiler: "dataviz"
 final List<LocationInfo> appLocations = [
   LocationInfo(
     id: "sittard",
@@ -41,14 +40,27 @@ final List<LocationInfo> appLocations = [
     styleUrl:
         "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
   ),
+  // ✅ KAMPERLAND - ENHANCED MIT 214 POIs
   LocationInfo(
-    id: "kamperland",
-    name: "Camping Resort Kamperland",
+    id: "kamperland_enhanced", 
+    name: "Roompot Beach Resort Kamperland", // Vollständiger Name
+    geojsonAssetPath: "assets/data/export_kamperland_enhanced_with_converted_pois.geojson", // NEUE DATEI
+    initialLatitude: 51.5898, // Optimierte Zentrierung für Resort-Zentrum
+    initialLongitude: 3.7221, // Optimierte Zentrierung für Resort-Zentrum
+    radiusInMeters: 2000.0, // Vergrößerter Radius für das komplette Resort
+    styleId: "maptiler_dataviz_kamperland_enhanced",
+    styleUrl:
+        "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
+  ),
+  // ✅ ALTE KAMPERLAND VERSION - Als Fallback beibehalten
+  LocationInfo(
+    id: "kamperland_basic",
+    name: "Kamperland (Basic POIs)",
     geojsonAssetPath: "assets/data/export_kamperland.geojson",
     initialLatitude: 51.590186,
     initialLongitude: 3.722494,
     radiusInMeters: 1500.0,
-    styleId: "maptiler_dataviz_kamperland",
+    styleId: "maptiler_dataviz_kamperland_basic",
     styleUrl:
         "https://api.maptiler.com/maps/dataviz/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
   ),
