@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/camping_search_categories.dart';
-import 'package:camping_osm_navi/widgets/stable_search_input.dart';
+import 'package:camping_osm_navi/widgets/stable_search_input.dart' hide SearchFieldType;
 
 /// Premium Campsite Search Input - Smartphone-First Design
 /// 
@@ -253,7 +253,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   }
 
   bool _fuzzyMatch(String text, String query) {
-    if (query.length < 3) return false;
+    if (query.length < 3) { return false; }
     
     // Einfaches Fuzzy Matching für 1-2 Charaktere Unterschied
     int differences = 0;
@@ -262,7 +262,7 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
     for (int i = 0; i < minLength; i++) {
       if (text[i] != query[i]) {
         differences++;
-        if (differences > 2) return false;
+        if (differences > 2) { return false; }
       }
     }
     
@@ -303,6 +303,27 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
         type.toLowerCase().contains('pool')) return SearchResultType.beach;
     
     return SearchResultType.amenity;
+  }
+
+  IconData _getIconForResultType(SearchResultType type) {
+    switch (type) {
+      case SearchResultType.accommodation:
+        return Icons.hotel; // Or Icons.home, Icons.house
+      case SearchResultType.parking:
+        return Icons.local_parking;
+      case SearchResultType.dining:
+        return Icons.restaurant;
+      case SearchResultType.family:
+        return Icons.family_restroom; // Or Icons.child_friendly
+      case SearchResultType.beach:
+        return Icons.beach_access;
+      case SearchResultType.amenity:
+        return Icons.local_convenience_store; // Or Icons.info
+      case SearchResultType.emergency:
+        return Icons.emergency; // Or Icons.healing
+      default:
+        return Icons.place; // A generic fallback
+    }
   }
 
   bool _isAccommodationType(String type) {
@@ -671,4 +692,4 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
                         Text(
                           feature.type,
                           style: TextStyle(
-                            fontSize: isSmallScreen ?
+                            fontSize: isSmallScreen ? 12 : 13,
