@@ -1,7 +1,8 @@
-// lib/widgets/modern_map_markers.dart - GOOGLE MAPS STYLE MARKERS
+// lib/widgets/modern_map_markers.dart - PATH IMPORT KOMPLETT BEHOBEN
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path; // ✅ HIDE latlong2.Path
+import 'dart:ui' as ui; // ✅ EXPLIZITER IMPORT FÜR UI PATH
 
 class ModernMapMarkers {
   // ✅ GOOGLE MAPS STYLE START MARKER (Grüner Punkt)
@@ -147,8 +148,8 @@ class DestinationMarkerPainter extends CustomPainter {
     final pinHeight = size.height * 0.7; // 70% für die Pinnadel
     final radius = pinWidth * 0.4;
     
-    // Schatten
-    final shadowPath = Path();
+    // ✅ SCHATTEN MIT KORREKTEM UI.PATH
+    final shadowPath = ui.Path(); // ✅ EXPLIZITER UI.PATH
     final shadowCenter = Offset(pinWidth / 2, pinHeight / 2);
     shadowPath.addOval(Rect.fromCircle(center: shadowCenter, radius: radius + 2));
     shadowPath.moveTo(pinWidth / 2, pinHeight);
@@ -162,8 +163,8 @@ class DestinationMarkerPainter extends CustomPainter {
     
     canvas.drawPath(shadowPath, shadowPaint);
 
-    // Pinnadel Path
-    final pinPath = Path();
+    // ✅ PINNADEL PATH MIT KORREKTEM UI.PATH
+    final pinPath = ui.Path(); // ✅ EXPLIZITER UI.PATH
     final center = Offset(pinWidth / 2, pinHeight / 2);
     
     // Kreis
