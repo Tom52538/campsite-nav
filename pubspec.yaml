@@ -39,8 +39,8 @@ flutter:
 
   assets:
     - .env
-    # ✅ ALLE GEOJSON-DATEIEN INKLUSIVE ENHANCED KAMPERLAND
+    # ✅ ALLE GEOJSON-DATEIEN INKLUSIVE ENHANCED KAMPERLAND - FIXED TYPO
     - assets/data/export.geojson                                      # Sittard
     - assets/data/export_kamperland.geojson                          # Kamperland Basic (43 POIs)
-    - assets/data/export_kamperland_enhanced_with_converted_pois.geojson  # Kamperland Enhanced (214 POIs) - NEU
+    - assets/data/export_kamperland_enhanced_with_converted_pois.geojson  # Kamperland Enhanced (214 POIs) - FIXED TYPO
     - assets/data/zuhause_umgebung.geojson                           # Zuhause/Gangelt
