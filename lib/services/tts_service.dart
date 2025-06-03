@@ -1,5 +1,6 @@
 // lib/services/tts_service.dart
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 
@@ -7,16 +8,17 @@ class TtsService {
   late FlutterTts _flutterTts;
   bool _isInitialized = false;
   String? _currentLanguage;
+  String _deviceLanguage = 'en'; // Fallback
 
-  // ✅ NEU: Erweiterte Sprachanweisungen
+  // TTS state for route updates
   String? _lastSpokenInstruction;
   DateTime? _lastInstructionTime;
   static const int minSecondsBetweenInstructions = 5;
 
-  // Distanz-Schwellenwerte für Ansagen
-  static const double advanceWarningDistance = 100.0; // 100m Vorwarnung
-  static const double immediateWarningDistance = 50.0; // 50m Warnung
-  static const double executeDistance = 15.0; // Ausführen
+  // Distance thresholds for announcements
+  static const double advanceWarningDistance = 100.0;
+  static const double immediateWarningDistance = 50.0;
+  static const double executeDistance = 15.0;
 
   TtsService() {
     _flutterTts = FlutterTts();
@@ -24,24 +26,27 @@ class TtsService {
   }
 
   Future<void> _initializeTts() async {
-    _currentLanguage = "de-DE";
-    await _setLanguage(_currentLanguage!);
+    // Get device language
+    await _detectDeviceLanguage();
+    
+    // Set TTS language based on device language
+    await _setLanguage(_getPreferredTtsLanguage());
 
     _flutterTts.setStartHandler(() {
       if (kDebugMode) {
-        print("[TtsService] TTS gestartet");
+        print("[TtsService] TTS started");
       }
     });
 
     _flutterTts.setCompletionHandler(() {
       if (kDebugMode) {
-        print("[TtsService] TTS abgeschlossen");
+        print("[TtsService] TTS completed");
       }
     });
 
     _flutterTts.setErrorHandler((msg) {
       if (kDebugMode) {
-        print("[TtsService] TTS Fehler: $msg");
+        print("[TtsService] TTS Error: $msg");
       }
       _isInitialized = false;
     });
@@ -53,77 +58,108 @@ class TtsService {
       await _flutterTts.awaitSpeakCompletion(true);
       _isInitialized = true;
       if (kDebugMode) {
-        print(
-            "[TtsService] TTS erfolgreich initialisiert und Sprache auf '$_currentLanguage' gesetzt.");
+        print("[TtsService] TTS successfully initialized with language '$_currentLanguage'");
       }
     } catch (e) {
       if (kDebugMode) {
-        print(
-            "[TtsService] Fehler bei der TTS-Initialisierung oder Spracheinstellung: $e");
+        print("[TtsService] Error during TTS initialization: $e");
       }
       _isInitialized = false;
+    }
+  }
+
+  Future<void> _detectDeviceLanguage() async {
+    try {
+      // Get device locale
+      final deviceLocale = PlatformDispatcher.instance.locale;
+      _deviceLanguage = deviceLocale.languageCode;
+      
+      if (kDebugMode) {
+        print("[TtsService] Device language detected: $_deviceLanguage (${deviceLocale.toString()})");
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("[TtsService] Could not detect device language, using English fallback: $e");
+      }
+      _deviceLanguage = 'en';
+    }
+  }
+
+  String _getPreferredTtsLanguage() {
+    switch (_deviceLanguage) {
+      case 'de':
+        return 'de-DE';
+      case 'en':
+        return 'en-US';
+      case 'fr':
+        return 'fr-FR';
+      case 'es':
+        return 'es-ES';
+      case 'it':
+        return 'it-IT';
+      case 'nl':
+        return 'nl-NL';
+      default:
+        return 'en-US'; // Fallback to English
     }
   }
 
   Future<void> _setLanguage(String languageCode) async {
     try {
       List<dynamic> languages = await _flutterTts.getLanguages;
-      if (languages
-          .map((lang) => lang.toString().toLowerCase())
+      
+      if (languages.map((lang) => lang.toString().toLowerCase())
           .contains(languageCode.toLowerCase())) {
         await _flutterTts.setLanguage(languageCode);
         _currentLanguage = languageCode;
         if (kDebugMode) {
-          print("[TtsService] Sprache auf '$languageCode' gesetzt.");
+          print("[TtsService] Language set to '$languageCode'");
         }
       } else {
-        if (kDebugMode) {
-          print(
-              "[TtsService] Sprache '$languageCode' nicht verfügbar. Fallback auf Standard-Sprache der Engine.");
-        }
+        // Try base language (e.g., 'de' instead of 'de-DE')
         if (languageCode.contains('-')) {
           String baseLanguage = languageCode.split('-').first;
-          if (languages
-              .map((lang) => lang.toString().toLowerCase())
+          if (languages.map((lang) => lang.toString().toLowerCase())
               .contains(baseLanguage.toLowerCase())) {
             await _flutterTts.setLanguage(baseLanguage);
             _currentLanguage = baseLanguage;
             if (kDebugMode) {
-              print(
-                  "[TtsService] Fallback-Sprache auf '$baseLanguage' gesetzt.");
+              print("[TtsService] Fallback language set to '$baseLanguage'");
             }
+            return;
           }
+        }
+        
+        // Final fallback to English
+        await _flutterTts.setLanguage('en-US');
+        _currentLanguage = 'en-US';
+        if (kDebugMode) {
+          print("[TtsService] Language '$languageCode' not available, using English fallback");
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print("[TtsService] Fehler beim Setzen der Sprache: $e");
+        print("[TtsService] Error setting language: $e");
       }
     }
   }
 
-  // ✅ NEU: Erweiterte Sprachanweisungen mit Distanzangaben
-  Future<void> speakNavigationInstruction(
-      Maneuver maneuver, double distanceToManeuver) async {
+  Future<void> speakNavigationInstruction(Maneuver maneuver, double distanceToManeuver) async {
     if (!_isInitialized) {
       if (kDebugMode) {
-        print(
-            "[TtsService] TTS nicht initialisiert. Versuche erneute Initialisierung.");
+        print("[TtsService] TTS not initialized. Attempting re-initialization.");
       }
       await _initializeTts();
       if (!_isInitialized) {
         if (kDebugMode) {
-          print(
-              "[TtsService] TTS konnte nicht initialisiert werden. Ansage abgebrochen.");
+          print("[TtsService] TTS could not be initialized. Announcement cancelled.");
         }
         return;
       }
     }
 
-    String instruction =
-        _buildDistanceBasedInstruction(maneuver, distanceToManeuver);
+    String instruction = _buildDistanceBasedInstruction(maneuver, distanceToManeuver);
 
-    // Verhindere zu häufige Wiederholungen
     if (_shouldSpeakInstruction(instruction)) {
       await _speakWithLogging(instruction);
       _lastSpokenInstruction = instruction;
@@ -131,77 +167,170 @@ class TtsService {
     }
   }
 
-  String _buildDistanceBasedInstruction(
-      Maneuver maneuver, double distanceToManeuver) {
-    // Spezialbehandlung für Start und Ziel
+  String _buildDistanceBasedInstruction(Maneuver maneuver, double distanceToManeuver) {
+    // Special handling for start and destination
     if (maneuver.turnType == TurnType.depart) {
-      return "Route gestartet";
+      return _getLocalizedText('route_started');
     }
 
     if (maneuver.turnType == TurnType.arrive) {
-      return "Sie haben Ihr Ziel erreicht";
+      return _getLocalizedText('destination_reached');
     }
 
-    // Distanzbasierte Ansagen für normale Manöver
-    String baseInstruction = _getGermanInstruction(maneuver.turnType);
+    // Distance-based announcements for normal maneuvers
+    String baseInstruction = _getLocalizedInstruction(maneuver.turnType);
 
     if (distanceToManeuver > advanceWarningDistance) {
-      // Noch weit weg - keine Ansage
       return "";
     } else if (distanceToManeuver > immediateWarningDistance) {
-      // 100m Vorwarnung
-      int roundedDistance =
-          (distanceToManeuver / 10).round() * 10; // Auf 10m runden
-      return "In $roundedDistance Metern $baseInstruction";
+      int roundedDistance = (distanceToManeuver / 10).round() * 10;
+      return _getLocalizedText('in_distance', {'distance': roundedDistance.toString(), 'instruction': baseInstruction});
     } else if (distanceToManeuver > executeDistance) {
-      // 50m Warnung
-      return "In 50 Metern $baseInstruction";
+      return _getLocalizedText('in_50_meters', {'instruction': baseInstruction});
     } else {
-      // Jetzt ausführen
-      return "Jetzt $baseInstruction";
+      return _getLocalizedText('now_action', {'instruction': baseInstruction});
     }
   }
 
-  String _getGermanInstruction(TurnType turnType) {
-    switch (turnType) {
-      case TurnType.slightLeft:
-        return "leicht links halten";
-      case TurnType.slightRight:
-        return "leicht rechts halten";
-      case TurnType.turnLeft:
-        return "links abbiegen";
-      case TurnType.turnRight:
-        return "rechts abbiegen";
-      case TurnType.sharpLeft:
-        return "scharf links abbiegen";
-      case TurnType.sharpRight:
-        return "scharf rechts abbiegen";
-      case TurnType.uTurnLeft:
-        return "wenden";
-      case TurnType.uTurnRight:
-        return "wenden";
-      case TurnType.straight:
-        return "geradeaus weiterfahren";
-      case TurnType.depart:
-        return "Route starten";
-      case TurnType.arrive:
-        return "Ziel erreicht";
+  String _getLocalizedInstruction(TurnType turnType) {
+    final key = 'turn_${turnType.name}';
+    return _getLocalizedText(key);
+  }
+
+  String _getLocalizedText(String key, [Map<String, String>? variables]) {
+    final translations = _getTranslations();
+    String text = translations[key] ?? translations['en']?[key] ?? key;
+    
+    // Replace variables in text
+    if (variables != null) {
+      variables.forEach((variable, value) {
+        text = text.replaceAll('{$variable}', value);
+      });
     }
+    
+    return text;
+  }
+
+  Map<String, Map<String, String>> _getTranslations() {
+    return {
+      'de': {
+        'route_started': 'Route gestartet',
+        'destination_reached': 'Sie haben Ihr Ziel erreicht',
+        'in_distance': 'In {distance} Metern {instruction}',
+        'in_50_meters': 'In 50 Metern {instruction}',
+        'now_action': 'Jetzt {instruction}',
+        'turn_slightLeft': 'leicht links halten',
+        'turn_slightRight': 'leicht rechts halten',
+        'turn_turnLeft': 'links abbiegen',
+        'turn_turnRight': 'rechts abbiegen',
+        'turn_sharpLeft': 'scharf links abbiegen',
+        'turn_sharpRight': 'scharf rechts abbiegen',
+        'turn_uTurnLeft': 'wenden',
+        'turn_uTurnRight': 'wenden',
+        'turn_straight': 'geradeaus weiterfahren',
+        'turn_depart': 'Route starten',
+        'turn_arrive': 'Ziel erreicht',
+      },
+      'en': {
+        'route_started': 'Route started',
+        'destination_reached': 'You have reached your destination',
+        'in_distance': 'In {distance} meters {instruction}',
+        'in_50_meters': 'In 50 meters {instruction}',
+        'now_action': 'Now {instruction}',
+        'turn_slightLeft': 'keep slightly left',
+        'turn_slightRight': 'keep slightly right',
+        'turn_turnLeft': 'turn left',
+        'turn_turnRight': 'turn right',
+        'turn_sharpLeft': 'turn sharp left',
+        'turn_sharpRight': 'turn sharp right',
+        'turn_uTurnLeft': 'make a U-turn',
+        'turn_uTurnRight': 'make a U-turn',
+        'turn_straight': 'continue straight',
+        'turn_depart': 'start route',
+        'turn_arrive': 'destination reached',
+      },
+      'fr': {
+        'route_started': 'Itinéraire commencé',
+        'destination_reached': 'Vous avez atteint votre destination',
+        'in_distance': 'Dans {distance} mètres {instruction}',
+        'in_50_meters': 'Dans 50 mètres {instruction}',
+        'now_action': 'Maintenant {instruction}',
+        'turn_slightLeft': 'gardez légèrement à gauche',
+        'turn_slightRight': 'gardez légèrement à droite',
+        'turn_turnLeft': 'tournez à gauche',
+        'turn_turnRight': 'tournez à droite',
+        'turn_sharpLeft': 'tournez fortement à gauche',
+        'turn_sharpRight': 'tournez fortement à droite',
+        'turn_uTurnLeft': 'faites demi-tour',
+        'turn_uTurnRight': 'faites demi-tour',
+        'turn_straight': 'continuez tout droit',
+        'turn_depart': 'commencer l\'itinéraire',
+        'turn_arrive': 'destination atteinte',
+      },
+      'es': {
+        'route_started': 'Ruta iniciada',
+        'destination_reached': 'Has llegado a tu destino',
+        'in_distance': 'En {distance} metros {instruction}',
+        'in_50_meters': 'En 50 metros {instruction}',
+        'now_action': 'Ahora {instruction}',
+        'turn_slightLeft': 'mantente ligeramente a la izquierda',
+        'turn_slightRight': 'mantente ligeramente a la derecha',
+        'turn_turnLeft': 'gira a la izquierda',
+        'turn_turnRight': 'gira a la derecha',
+        'turn_sharpLeft': 'gira fuertemente a la izquierda',
+        'turn_sharpRight': 'gira fuertemente a la derecha',
+        'turn_uTurnLeft': 'da la vuelta',
+        'turn_uTurnRight': 'da la vuelta',
+        'turn_straight': 'continúa recto',
+        'turn_depart': 'iniciar ruta',
+        'turn_arrive': 'destino alcanzado',
+      },
+      'nl': {
+        'route_started': 'Route gestart',
+        'destination_reached': 'U heeft uw bestemming bereikt',
+        'in_distance': 'Over {distance} meter {instruction}',
+        'in_50_meters': 'Over 50 meter {instruction}',
+        'now_action': 'Nu {instruction}',
+        'turn_slightLeft': 'houd licht links aan',
+        'turn_slightRight': 'houd licht rechts aan',
+        'turn_turnLeft': 'ga linksaf',
+        'turn_turnRight': 'ga rechtsaf',
+        'turn_sharpLeft': 'ga scherp linksaf',
+        'turn_sharpRight': 'ga scherp rechtsaf',
+        'turn_uTurnLeft': 'keer om',
+        'turn_uTurnRight': 'keer om',
+        'turn_straight': 'ga rechtdoor',
+        'turn_depart': 'route starten',
+        'turn_arrive': 'bestemming bereikt',
+      },
+      'it': {
+        'route_started': 'Percorso iniziato',
+        'destination_reached': 'Hai raggiunto la tua destinazione',
+        'in_distance': 'Tra {distance} metri {instruction}',
+        'in_50_meters': 'Tra 50 metri {instruction}',
+        'now_action': 'Ora {instruction}',
+        'turn_slightLeft': 'mantieni leggermente a sinistra',
+        'turn_slightRight': 'mantieni leggermente a destra',
+        'turn_turnLeft': 'gira a sinistra',
+        'turn_turnRight': 'gira a destra',
+        'turn_sharpLeft': 'gira bruscamente a sinistra',
+        'turn_sharpRight': 'gira bruscamente a destra',
+        'turn_uTurnLeft': 'fai inversione',
+        'turn_uTurnRight': 'fai inversione',
+        'turn_straight': 'continua dritto',
+        'turn_depart': 'inizia percorso',
+        'turn_arrive': 'destinazione raggiunta',
+      },
+    };
   }
 
   bool _shouldSpeakInstruction(String instruction) {
     if (instruction.isEmpty) return false;
-
-    // Erste Ansage immer erlauben
     if (_lastSpokenInstruction == null) return true;
-
-    // Gleiche Ansage nicht wiederholen
     if (_lastSpokenInstruction == instruction) return false;
 
-    // Mindestabstand zwischen Ansagen
     if (_lastInstructionTime != null) {
-      final timeSinceLastInstruction =
-          DateTime.now().difference(_lastInstructionTime!);
+      final timeSinceLastInstruction = DateTime.now().difference(_lastInstructionTime!);
       if (timeSinceLastInstruction.inSeconds < minSecondsBetweenInstructions) {
         return false;
       }
@@ -212,9 +341,7 @@ class TtsService {
 
   Future<void> _speakWithLogging(String instruction) async {
     if (kDebugMode) {
-      if (kDebugMode) {
-        print("[TtsService] Spreche: '$instruction'");
-      }
+      print("[TtsService] Speaking: '$instruction'");
     }
 
     if (_currentLanguage != null) {
@@ -223,24 +350,16 @@ class TtsService {
 
     var result = await _flutterTts.speak(instruction);
     if (result != 1 && kDebugMode) {
-      if (kDebugMode) {
-        print("[TtsService] Fehler beim Starten der Ansage für: $instruction");
-      }
+      print("[TtsService] Error starting announcement for: $instruction");
     }
   }
 
-  // ✅ Behält alte Methode für Kompatibilität
   Future<void> speak(String text) async {
     if (!_isInitialized) {
-      if (kDebugMode) {
-        print(
-            "[TtsService] TTS nicht initialisiert. Versuche erneute Initialisierung.");
-      }
       await _initializeTts();
       if (!_isInitialized) {
         if (kDebugMode) {
-          print(
-              "[TtsService] TTS konnte nicht initialisiert werden. Ansage abgebrochen: $text");
+          print("[TtsService] TTS could not be initialized. Announcement cancelled: $text");
         }
         return;
       }
@@ -248,41 +367,35 @@ class TtsService {
 
     if (text.isNotEmpty) {
       await _speakWithLogging(text);
-    } else {
-      if (kDebugMode) {
-        print("[TtsService] Leerer Text für Ansage empfangen.");
-      }
     }
   }
 
-  // ✅ NEU: Sofortige wichtige Ansagen (für Rerouting etc.)
   Future<void> speakImmediate(String text) async {
-    _lastSpokenInstruction = null; // Reset, damit wichtige Ansagen durchkommen
+    _lastSpokenInstruction = null;
     await speak(text);
   }
 
   Future<void> stop() async {
     if (!_isInitialized) return;
     var result = await _flutterTts.stop();
-    if (result == 1) {
-      if (kDebugMode) {
-        print("[TtsService] TTS gestoppt");
-      }
+    if (result == 1 && kDebugMode) {
+      print("[TtsService] TTS stopped");
     }
   }
 
   Future<void> testSpeak() async {
-    await speak("Dies ist eine Testansage auf Deutsch.");
+    final testMessage = _getLocalizedText('test_message') ?? 
+                       (_deviceLanguage == 'de' 
+                        ? "Dies ist eine Testansage auf Deutsch." 
+                        : "This is a test announcement.");
+    await speak(testMessage);
   }
 
-  // ✅ NEU: Reset für neue Route
   void resetForNewRoute() {
     _lastSpokenInstruction = null;
     _lastInstructionTime = null;
     if (kDebugMode) {
-      if (kDebugMode) {
-        print("[TtsService] TTS für neue Route zurückgesetzt");
-      }
+      print("[TtsService] TTS reset for new route");
     }
   }
 }
