@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart - COMPLETE FILE
+// lib/screens/map_screen.dart - MODERNISIERT FÜR SMARTPHONE-FIRST UX
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -8,12 +8,12 @@ import 'package:vector_map_tiles/vector_map_tiles.dart' as vector_map_tiles;
 import 'package:latlong2/latlong.dart';
 
 import 'package:camping_osm_navi/models/location_info.dart';
+import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
-import 'package:camping_osm_navi/widgets/simple_search_container.dart';
-// import 'package:camping_osm_navi/widgets/route_info_display.dart'; // Original, replaced by CompactRouteWidget logic
-import 'package:camping_osm_navi/widgets/compact_route_widget.dart'; // ADDED IMPORT
+import 'package:camping_osm_navi/widgets/smartphone_search_system.dart'; // ✅ NEUE IMPORT
+import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen/map_screen_controller.dart';
@@ -32,6 +32,10 @@ class MapScreenState extends State<MapScreen>
   late MapScreenController controller;
   late MapScreenGpsHandler gpsHandler;
   late MapScreenRouteHandler routeHandler;
+  
+  // ✅ NEU: Smart Context Detection
+  SearchContext _currentSearchContext = SearchContext.guest;
+  bool _isFirstAppLaunch = true;
 
   @override
   void initState() {
@@ -47,11 +51,39 @@ class MapScreenState extends State<MapScreen>
     gpsHandler.setOnGpsChangeCallback(routeHandler.updateNavigationOnGpsChange);
 
     _initializeApp();
+    _detectInitialContext();
   }
 
   void _initializeApp() {
     final apiKey = dotenv.env['MAPTILER_API_KEY'];
     controller.initializeMaptilerUrl(apiKey);
+  }
+
+  // ✅ NEU: Intelligente Context-Erkennung
+  void _detectInitialContext() {
+    final now = DateTime.now();
+    
+    // Arrival Detection (Check-in Zeit)
+    if (now.hour >= 15 && now.hour <= 18) {
+      _currentSearchContext = SearchContext.arrival;
+    }
+    // Departure Detection (Check-out Zeit)
+    else if (now.hour >= 8 && now.hour <= 11) {
+      _currentSearchContext = SearchContext.departure;
+    }
+    // Standard Guest
+    else {
+      _currentSearchContext = SearchContext.guest;
+    }
+    
+    // Nach 5 Sekunden auf Guest Context wechseln
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _currentSearchContext != SearchContext.guest) {
+        setState(() {
+          _currentSearchContext = SearchContext.guest;
+        });
+      }
+    });
   }
 
   @override
@@ -132,6 +164,29 @@ class MapScreenState extends State<MapScreen>
     return AppBar(
       title: const Text("Campground Navigator"),
       actions: [
+        // Context Switcher für Development
+        if (kDebugMode)
+          PopupMenuButton<SearchContext>(
+            icon: Icon(_getContextIcon(_currentSearchContext)),
+            onSelected: (context) {
+              setState(() {
+                _currentSearchContext = context;
+              });
+            },
+            itemBuilder: (context) => SearchContext.values.map((context) {
+              return PopupMenuItem(
+                value: context,
+                child: Row(
+                  children: [
+                    Icon(_getContextIcon(context)),
+                    const SizedBox(width: 8),
+                    Text(context.value),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        
         IconButton(
           icon: const Icon(Icons.volume_up),
           tooltip: 'Test TTS',
@@ -159,6 +214,21 @@ class MapScreenState extends State<MapScreen>
         _buildMockLocationToggle(isLoading),
       ],
     );
+  }
+
+  // ✅ NEU: Context Icon Helper
+  IconData _getContextIcon(SearchContext context) {
+    switch (context) {
+      case SearchContext.arrival:
+        return Icons.celebration;
+      case SearchContext.departure:
+        return Icons.flight_takeoff;
+      case SearchContext.emergency:
+        return Icons.emergency;
+      case SearchContext.guest:
+      default:
+        return Icons.explore;
+    }
   }
 
   Widget _buildLocationDropdown(
@@ -206,7 +276,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ENHANCED: Body layout with intelligent UI positioning
+  // ✅ MODERNISIERTER BODY mit intelligenter UI-Positionierung
   Widget _buildBody(bool isUiReady, dynamic mapTheme,
       LocationInfo? selectedLocation, bool isLoading) {
     final locationProvider = Provider.of<LocationProvider>(context);
@@ -214,74 +284,112 @@ class MapScreenState extends State<MapScreen>
     return Stack(
       children: [
         _buildMap(isUiReady, mapTheme, selectedLocation),
-        _buildInstructionCard(isUiReady), // Positioned based on controller state
+        _buildInstructionCard(isUiReady), // ✅ Intelligente Positionierung
         _buildLoadingOverlays(isUiReady, isLoading, selectedLocation),
 
-        // Top UI elements (Search or Compact Route Info)
+        // ✅ MODERNISIERTES TOP UI - SmartphoneSearchSystem Integration
         Positioned(
           top: 10,
           left: 10,
           right: 10,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Compact route info (shown when route is active and fields should fade)
-              if (controller.showRouteInfoAndFadeFields)
-                _buildCompactRouteDisplayWidget(),
-
-              // Full search fields (shown when not in compact mode)
-              if (!controller.showRouteInfoAndFadeFields)
-                SimpleSearchContainer(
-                  controller: controller,
-                  allFeatures: locationProvider.currentSearchableFeatures,
-                  isStartLocked: controller.isStartLocked,
-                  isDestinationLocked: controller.isDestinationLocked,
-                  showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
-                ),
-            ],
-          ),
+          child: _buildModernSearchInterface(locationProvider),
         ),
 
-        // Route Progress Indicator (conditionally shown)
+        // ✅ NEU: Route Progress Indicator
         if (controller.followGps &&
             controller.routePolyline != null &&
             controller.remainingRouteDistance != null &&
             controller.routeDistance != null &&
-            controller.routeDistance! > 0) // Avoid division by zero
-          Positioned(
-            // Adjust top based on whether compact view is active
-            top: controller.showRouteInfoAndFadeFields ? 80 : 10,
-            left: 20,
-            right: 20,
-            child: RouteProgressIndicator(
-              progress: (1.0 - (controller.remainingRouteDistance! / controller.routeDistance!))
-                  .clamp(0.0, 1.0), // Ensure progress is between 0 and 1
-              color: Colors.blue,
-              height: 6.0,
-            ),
-          ),
+            controller.routeDistance! > 0)
+          _buildRouteProgressIndicator(),
       ],
     );
   }
 
-  // NEW: CompactRouteWidget integration
-  Widget _buildCompactRouteDisplayWidget() {
-    // This widget is now directly part of _buildBody's logic
-    // It's shown/hidden based on controller.showRouteInfoAndFadeFields
-    return CompactRouteWidget(
-      destinationName: controller.endSearchController.text,
-      remainingDistance: controller.remainingRouteDistance,
-      totalDistance: controller.routeDistance,
-      remainingTime: controller.remainingRouteTimeMinutes,
-      totalTime: controller.routeTimeMinutes,
-      isNavigating: controller.followGps && controller.currentGpsPosition != null,
-      onEditPressed: () {
-        controller.setRouteInfoAndFadeFields(false); // Switch back to full search
-      },
-      onClosePressed: () {
-        routeHandler.clearRoute(showConfirmation: true); // End navigation
-      },
+  // ✅ NEUE METHODE: Modernes Search Interface
+  Widget _buildModernSearchInterface(LocationProvider locationProvider) {
+    // Bestimme Interface State für intelligente Positionierung
+    final interfaceState = controller.searchInterfaceState;
+    
+    return AnimatedContainer(
+      duration: interfaceState.transitionDuration,
+      curve: PremiumCurves.smooth,
+      child: SmartphoneSearchSystem(
+        controller: controller,
+        allFeatures: locationProvider.currentSearchableFeatures,
+        isStartLocked: controller.isStartLocked,
+        isDestinationLocked: controller.isDestinationLocked,
+        showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
+        context: _currentSearchContext,
+        enableSmartTransitions: true,
+        enableHapticFeedback: true,
+        autoHideDelay: _getAutoHideDelayForContext(_currentSearchContext),
+      ),
     );
+  }
+
+  // ✅ NEUE METHODE: Context-basierte Auto-Hide Delays
+  Duration _getAutoHideDelayForContext(SearchContext context) {
+    switch (context) {
+      case SearchContext.emergency:
+        return const Duration(milliseconds: 500); // Schnell für Notfall
+      case SearchContext.arrival:
+        return const Duration(milliseconds: 2500); // Mehr Zeit für Neulinge
+      case SearchContext.departure:
+        return const Duration(milliseconds: 1200); // Standard
+      case SearchContext.guest:
+      default:
+        return const Duration(milliseconds: 1500); // Standard
+    }
+  }
+
+  // ✅ NEUE METHODE: Route Progress Indicator
+  Widget _buildRouteProgressIndicator() {
+    final progress = controller.routeDistance! > 0
+        ? (1.0 - (controller.remainingRouteDistance! / controller.routeDistance!))
+            .clamp(0.0, 1.0)
+        : 0.0;
+
+    // Intelligente Positionierung basierend auf Interface State
+    final topOffset = _getProgressIndicatorTopOffset();
+
+    return Positioned(
+      top: topOffset,
+      left: 20,
+      right: 20,
+      child: RouteProgressIndicator(
+        progress: progress,
+        color: _getProgressColorForContext(_currentSearchContext),
+        height: 6.0,
+      ),
+    );
+  }
+
+  double _getProgressIndicatorTopOffset() {
+    switch (controller.searchInterfaceState) {
+      case SearchInterfaceState.navigationMode:
+        return 80; // Unter CompactRouteWidget
+      case SearchInterfaceState.expanded:
+        return 200; // Unter vollem Search Interface
+      case SearchInterfaceState.collapsed:
+        return 120; // Unter kollabiertem Interface
+      case SearchInterfaceState.hidden:
+        return 20; // Ganz oben
+    }
+  }
+
+  Color _getProgressColorForContext(SearchContext context) {
+    switch (context) {
+      case SearchContext.emergency:
+        return Colors.red;
+      case SearchContext.arrival:
+        return Colors.green;
+      case SearchContext.departure:
+        return Colors.orange;
+      case SearchContext.guest:
+      default:
+        return Colors.blue;
+    }
   }
 
   Widget _buildMap(
@@ -313,14 +421,14 @@ class MapScreenState extends State<MapScreen>
     if (controller.isMapSelectionActive) {
       controller.handleMapTapForSelection(point);
     }
-    // Potentially other tap interactions if needed
+    // Weitere Map-Interactions können hier hinzugefügt werden
   }
 
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
     final bool vectorConditionsMet = isUiReady &&
         controller.maptilerUrlTemplate.isNotEmpty &&
         controller.maptilerUrlTemplate.contains('key=') &&
-        mapTheme != null; // Ensure mapTheme is loaded
+        mapTheme != null;
 
     if (vectorConditionsMet) {
       return vector_map_tiles.VectorTileLayer(
@@ -329,13 +437,12 @@ class MapScreenState extends State<MapScreen>
         tileProviders: vector_map_tiles.TileProviders({
           'openmaptiles': vector_map_tiles.NetworkVectorTileProvider(
             urlTemplate: controller.maptilerUrlTemplate,
-            maximumZoom: 14, // Max zoom for vector tiles
+            maximumZoom: 14,
           ),
         }),
-        maximumZoom: 20, // Max zoom for map display
+        maximumZoom: 20,
       );
     } else {
-      // Fallback to raster tiles
       return TileLayer(
         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         userAgentPackageName: 'com.example.camping_osm_navi',
@@ -348,11 +455,17 @@ class MapScreenState extends State<MapScreen>
     if (controller.currentLocationMarker != null) {
       activeMarkers.add(controller.currentLocationMarker!);
     }
-    // Add other markers if necessary (e.g., start/end points, POIs)
+    // Weitere Marker hinzufügen (Start/End/POIs)
+    if (controller.startMarker != null) {
+      activeMarkers.add(controller.startMarker!);
+    }
+    if (controller.destinationMarker != null) {
+      activeMarkers.add(controller.destinationMarker!);
+    }
     return MarkerLayer(markers: activeMarkers);
   }
 
-  // ENHANCED: Instruction card positioning
+  // ✅ MODERNISIERTE INSTRUCTION CARD mit intelligenter Positionierung
   Widget _buildInstructionCard(bool isUiReady) {
     final bool instructionCardVisible = controller.currentDisplayedManeuver != null &&
         controller.currentDisplayedManeuver!.turnType != TurnType.depart &&
@@ -363,10 +476,8 @@ class MapScreenState extends State<MapScreen>
       return const SizedBox.shrink();
     }
 
-    // Position based on whether compact route info is shown
-    final double instructionCardTop = controller.showRouteInfoAndFadeFields
-        ? 90.0  // Below compact route info
-        : 220.0; // Below full search inputs
+    // ✅ INTELLIGENTE POSITIONIERUNG basierend auf Interface State
+    final double instructionCardTop = _getInstructionCardTopOffset();
 
     return Positioned(
       top: instructionCardTop,
@@ -378,6 +489,20 @@ class MapScreenState extends State<MapScreen>
         distanceToManeuver: routeHandler.currentDistanceToManeuver,
       ),
     );
+  }
+
+  // ✅ NEUE METHODE: Intelligente Instruction Card Positionierung
+  double _getInstructionCardTopOffset() {
+    switch (controller.searchInterfaceState) {
+      case SearchInterfaceState.navigationMode:
+        return 95.0;  // Unter CompactRouteWidget
+      case SearchInterfaceState.expanded:
+        return 240.0; // Unter vollem Search Interface  
+      case SearchInterfaceState.collapsed:
+        return 140.0; // Unter kollabiertem Interface
+      case SearchInterfaceState.hidden:
+        return 80.0;  // Minimaler Abstand von oben
+    }
   }
 
   Widget _buildLoadingOverlays(
@@ -395,7 +520,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildCalculatingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withAlpha((0.3 * 255).round()), // Standardized opacity
+        color: Colors.black.withAlpha((0.3 * 255).round()),
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
         ),
@@ -406,7 +531,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildReroutingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withAlpha((0.2 * 255).round()), // Standardized opacity
+        color: Colors.black.withAlpha((0.2 * 255).round()),
         child: const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -425,7 +550,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildLoadingOverlay(LocationInfo? selectedLocation) {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withAlpha((0.7 * 255).round()), // Standardized opacity
+        color: Colors.black.withAlpha((0.7 * 255).round()),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -444,7 +569,7 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ENHANCED: Floating action buttons
+  // ✅ MODERNISIERTE FLOATING ACTION BUTTONS
   Widget _buildFloatingActionButtons(bool isUiReady) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -468,7 +593,7 @@ class MapScreenState extends State<MapScreen>
                   : Colors.blue,
               child: Icon(
                 controller.isInRouteOverviewMode
-                    ? Icons.my_location // Or Icons.navigation if preferred
+                    ? Icons.my_location
                     : Icons.zoom_out_map,
               ),
             ),
@@ -483,7 +608,7 @@ class MapScreenState extends State<MapScreen>
                 ? 'GPS tracking active'
                 : 'Center on GPS',
             backgroundColor: controller.followGps
-                ? Colors.blue
+                ? _getProgressColorForContext(_currentSearchContext)
                 : Colors.white,
             foregroundColor: controller.followGps
                 ? Colors.white
@@ -493,10 +618,10 @@ class MapScreenState extends State<MapScreen>
             ),
           ),
 
-        // NEW: Route share button
+        // Route Share Button
         if (isUiReady && controller.routePolyline != null)
           Padding(
-            padding: const EdgeInsets.only(top: 8.0), // Spacing from GPS button
+            padding: const EdgeInsets.only(top: 8.0),
             child: FloatingActionButton.small(
               heroTag: "shareRouteBtn",
               onPressed: _shareRoute,
@@ -506,8 +631,35 @@ class MapScreenState extends State<MapScreen>
               child: const Icon(Icons.share),
             ),
           ),
+
+        // ✅ NEU: Context Switch Button (nur in Debug Mode)
+        if (kDebugMode && isUiReady)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: FloatingActionButton.small(
+              heroTag: "contextSwitchBtn",
+              onPressed: _cycleSearchContext,
+              tooltip: "Switch context: ${_currentSearchContext.value}",
+              backgroundColor: _getProgressColorForContext(_currentSearchContext),
+              foregroundColor: Colors.white,
+              child: Icon(_getContextIcon(_currentSearchContext)),
+            ),
+          ),
       ],
     );
+  }
+
+  // ✅ NEUE METHODE: Context Cycling für Development
+  void _cycleSearchContext() {
+    final contexts = SearchContext.values;
+    final currentIndex = contexts.indexOf(_currentSearchContext);
+    final nextIndex = (currentIndex + 1) % contexts.length;
+    
+    setState(() {
+      _currentSearchContext = contexts[nextIndex];
+    });
+    
+    showSnackbar("Context: ${_currentSearchContext.value}", durationSeconds: 2);
   }
 
   // Event Handlers
@@ -550,8 +702,8 @@ class MapScreenState extends State<MapScreen>
       showSnackbar("No location selected, cannot switch mode.");
       return;
     }
-    controller.toggleMockLocation(); // Toggles useMockLocation in controller
-    gpsHandler.activateGps(selectedLocation); // Re-activates GPS with new mode
+    controller.toggleMockLocation();
+    gpsHandler.activateGps(selectedLocation);
     showSnackbar(
         controller.useMockLocation
             ? "Mock-GPS activated and map centered."
@@ -564,7 +716,7 @@ class MapScreenState extends State<MapScreen>
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
 
     if (gpsHandler.canCenterOnGps(selectedLocation?.initialCenter)) {
-      gpsHandler.centerOnGps(); // This also sets controller.followGps = true
+      gpsHandler.centerOnGps();
       showSnackbar("Follow-GPS mode activated.", durationSeconds: 2);
     } else {
       if (controller.currentGpsPosition == null && selectedLocation != null) {
@@ -573,7 +725,7 @@ class MapScreenState extends State<MapScreen>
                 ? "Mock GPS will be activated and map centered..."
                 : "Real GPS will be activated, please wait...",
             durationSeconds: 3);
-        gpsHandler.activateGps(selectedLocation); // Will attempt to center
+        gpsHandler.activateGps(selectedLocation);
       } else {
         showSnackbar(controller.currentGpsPosition == null
             ? "Current GPS position is unknown."
@@ -582,7 +734,6 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  // NEW: Route sharing functionality
   void _shareRoute() {
     if (controller.routePolyline == null ||
         controller.endSearchController.text.isEmpty) {
@@ -596,11 +747,10 @@ class MapScreenState extends State<MapScreen>
 
     String shareText = "Route to: $destination";
     if (distance != null && time != null) {
-      shareText += "\nDistance: ${controller.formatDistance(distance)}"; // Uses new helper
+      shareText += "\nDistance: ${controller.formatDistance(distance)}";
       shareText += "\nWalking time: about $time minutes";
     }
 
-    // Placeholder for actual sharing logic (e.g., using share_plus)
     if (kDebugMode) {
       print("SHARE_ROUTE_TEXT: $shareText");
     }
@@ -617,6 +767,7 @@ class MapScreenState extends State<MapScreen>
               SnackBar(
                 content: Text(message),
                 duration: Duration(seconds: durationSeconds),
+                backgroundColor: _getProgressColorForContext(_currentSearchContext),
               ),
             );
           } catch (e) {
