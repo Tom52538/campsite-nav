@@ -1,10 +1,9 @@
-// lib/widgets/campsite_search_input.dart - PREMIUM SMARTPHONE-OPTIMIERT
+// lib/widgets/campsite_search_input.dart - PREMIUM SMARTPHONE-OPTIMIERT COMPLETE
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/camping_search_categories.dart';
-import 'package:camping_osm_navi/widgets/stable_search_input.dart';
 
 /// Premium Campsite Search Input - Smartphone-First Design
 /// 
@@ -295,18 +294,12 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   SearchResultType _getSearchResultType(String type) {
     if (type.toLowerCase().contains('parking')) return SearchResultType.parking;
     if (type.toLowerCase().contains('accommodation') || 
-        type.toLowerCase().contains('building')) {
-      return SearchResultType.accommodation;
-    }
+        type.toLowerCase().contains('building')) return SearchResultType.accommodation;
     if (type.toLowerCase().contains('restaurant') || 
-        type.toLowerCase().contains('cafe')) {
-      return SearchResultType.dining;
-    }
+        type.toLowerCase().contains('cafe')) return SearchResultType.dining;
     if (type.toLowerCase().contains('playground')) return SearchResultType.family;
     if (type.toLowerCase().contains('beach') || 
-        type.toLowerCase().contains('pool')) {
-      return SearchResultType.beach;
-    }
+        type.toLowerCase().contains('pool')) return SearchResultType.beach;
     
     return SearchResultType.amenity;
   }
@@ -555,18 +548,33 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          action.$1,
-                          style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                        // Icon
+                        Container(
+                          width: isSmallScreen ? 28 : 32,
+                          height: isSmallScreen ? 28 : 32,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withAlpha(25),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              action.$1,
+                              style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 2),
+                        
+                        SizedBox(height: isSmallScreen ? 4 : 6),
+                        
+                        // Label
                         Text(
                           action.$3,
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 9 : 10,
+                            fontSize: isSmallScreen ? 10 : 12,
                             fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
+                            color: Colors.blue.shade700,
                           ),
+                          textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -677,4 +685,57 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
                         Text(
                           feature.type,
                           style: TextStyle(
-                            fontSize: isSmallScreen ?
+                            fontSize: isSmallScreen ? 12 : 13,
+                            color: Colors.grey.shade600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Priority Indicator
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${resultType.priority}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  IconData _getIconForResultType(SearchResultType type) {
+    switch (type) {
+      case SearchResultType.parking:
+        return Icons.local_parking;
+      case SearchResultType.accommodation:
+        return Icons.business;
+      case SearchResultType.dining:
+        return Icons.restaurant;
+      case SearchResultType.family:
+        return Icons.child_friendly;
+      case SearchResultType.beach:
+        return Icons.beach_access;
+      case SearchResultType.amenity:
+        return Icons.place;
+      case SearchResultType.emergency:
+        return Icons.emergency;
+    }
+  }
+}
