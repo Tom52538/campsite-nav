@@ -1,8 +1,8 @@
 // lib/models/search_types.dart - ZENTRALE TYPE DEFINITIONEN
+import 'package:flutter/material.dart'; // ✅ FIX: Flutter Import für Curves
+
 /// Zentrale Type-Definitionen für das Premium Search System
 /// Smartphone-optimiert für Resort-Navigation
-library;
-
 
 /// Such-Feld Typen für Start/Ziel Unterscheidung
 enum SearchFieldType {
