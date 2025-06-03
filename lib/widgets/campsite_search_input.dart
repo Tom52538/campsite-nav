@@ -1,372 +1,375 @@
-// lib/widgets/campsite_search_input.dart - COMPLETE FILE
-import 'package:flutter/material.dart';
-import 'package:camping_osm_navi/models/searchable_feature.dart';
-
-enum SearchFieldType { start, destination }
-
-class CampsiteSearchInput extends StatefulWidget {
-  final SearchFieldType fieldType;
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final Function(SearchableFeature) onFeatureSelected;
-  final VoidCallback? onCurrentLocationTap;
-  final VoidCallback? onMapSelectionTap;
-  final List<SearchableFeature> allFeatures;
-
-  const CampsiteSearchInput({
-    super.key,
-    required this.fieldType,
-    required this.controller,
-    required this.focusNode,
-    required this.onFeatureSelected,
-    this.onCurrentLocationTap,
-    this.onMapSelectionTap,
-    required this.allFeatures,
-  });
-
-  @override
-  State<CampsiteSearchInput> createState() => _CampsiteSearchInputState();
+// lib/models/camping_search_categories.dart - ROOMPOT RESORT OPTIMIERT
+enum CampingPOICategory {
+  accommodation, // Unterkünfte (Parzellen, Häuser, etc.)
+  amenity, // Services (Rezeption, Information)
+  sanitary, // Sanitär (WC, Dusche, etc.)
+  food, // Gastronomie (Restaurant, Café, Bar)
+  shopping, // Einkaufen (Shop, Supermarkt)
+  recreation, // Freizeit (Spielplatz, Pool, Sport)
+  parking, // Parkplätze - ROOMPOT FOKUS!
+  utility, // Versorgung (Müll, Wasser, Strom)
+  medical, // Medizinisch (Erste Hilfe)
+  transport, // Transport (Bus, etc.)
+  waterSports, // ✅ FIXED: Wassersport (für Beach Resort)
+  family, // Familien-Aktivitäten
 }
 
-class _CampsiteSearchInputState extends State<CampsiteSearchInput> {
-  bool _showResults = false;
-  List<SearchableFeature> _filteredFeatures = [];
+class CampingSearchCategory {
+  final CampingPOICategory category;
+  final String displayName;
+  final String icon;
+  final List<String> keywords;
+  final List<String> osmTypes;
+  final int priority; // Höher = wichtiger bei Suchergebnissen
+  final bool isRoompotPriority; // Markiert Resort-spezifische Kategorien
 
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onTextChanged);
-    widget.focusNode.addListener(_onFocusChanged);
-  }
+  const CampingSearchCategory({
+    required this.category,
+    required this.displayName,
+    required this.icon,
+    required this.keywords,
+    required this.osmTypes,
+    required this.priority,
+    this.isRoompotPriority = false,
+  });
+}
 
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onTextChanged);
-    widget.focusNode.removeListener(_onFocusChanged);
-    super.dispose();
-  }
-
-  void _onTextChanged() {
-    if (mounted) {
-      setState(() {
-        _filteredFeatures = _filterFeatures(widget.controller.text);
-        _showResults = widget.controller.text.isNotEmpty && widget.focusNode.hasFocus;
-      });
-    }
-  }
-
-  void _onFocusChanged() {
-    if (mounted) {
-      setState(() {
-        if (widget.focusNode.hasFocus) {
-          _showResults = widget.controller.text.isNotEmpty;
-          if (widget.controller.text.isNotEmpty) {
-             _filteredFeatures = _filterFeatures(widget.controller.text);
-          }
-        } else {
-          // Delay hiding results to allow tap event on list to register
-          Future.delayed(const Duration(milliseconds: 200), () {
-            if (mounted && !widget.focusNode.hasFocus) {
-              setState(() {
-                _showResults = false;
-              });
-            }
-          });
-        }
-      });
-    }
-  }
-
-  List<SearchableFeature> _filterFeatures(String query) {
-    if (query.length < 2) return [];
-
-    // Smart Result Limiting
-    final results = widget.allFeatures.where((feature) {
-      final name = feature.name.toLowerCase();
-      final type = feature.type.toLowerCase();
-      final q = query.toLowerCase();
-      return name.contains(q) || type.contains(q);
-    }).toList();
-
-    // Prioritization: Exact matches first
-    results.sort((a, b) {
-      final aExact = a.name.toLowerCase().startsWith(query.toLowerCase());
-      final bExact = b.name.toLowerCase().startsWith(query.toLowerCase());
-
-      if (aExact && !bExact) return -1;
-      if (!aExact && bExact) return 1;
-      return a.name.compareTo(b.name);
-    });
-
-    return results.take(8).toList(); // Max 8 for mobile
-  }
-
-  IconData _getIconForType(String type) {
-    switch (type.toLowerCase()) {
-      case 'parking':
-        return Icons.local_parking;
-      case 'building':
-      case 'accommodation':
-        return Icons.business;
-      case 'shop':
-        return Icons.store;
-      case 'amenity':
-        return Icons.place;
-      case 'tourism':
-        return Icons.attractions;
-      case 'reception':
-      case 'information':
-        return Icons.info;
-      case 'sanitary':
-      case 'toilets':
-        return Icons.wc;
-      case 'restaurant':
-      case 'cafe':
-      case 'bar':
-        return Icons.restaurant;
-      case 'playground':
-        return Icons.child_friendly;
-      case 'pitch':
-      case 'camp_pitch':
-        return Icons.holiday_village;
-      case 'water_point':
-        return Icons.water_drop;
-      case 'waste_disposal':
-        return Icons.recycling;
-      default:
-        return Icons.location_pin;
-    }
-  }
-
-  Color _getColorForType(String type) {
-    switch (type.toLowerCase()) {
-      case 'building':
-      case 'accommodation':
-        return Colors.brown.shade600;
-      case 'shop':
-        return Colors.purple.shade600;
-      case 'amenity':
-        return Colors.green.shade600;
-      case 'tourism':
-        return Colors.orange.shade600;
-      case 'restaurant':
-      case 'cafe':
-      case 'bar':
-        return Colors.red.shade600;
-      case 'reception':
-      case 'information':
-        return Colors.teal.shade600;
-      case 'toilets':
-      case 'sanitary':
-        return Colors.cyan.shade600;
-      case 'playground':
-        return Colors.pink.shade600;
-      case 'parking':
-        return Colors.indigo.shade600;
-      default:
-        return Colors.grey.shade600;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12.0),
-            border: Border.all(
-              color: widget.focusNode.hasFocus
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.grey.shade300,
-              width: widget.focusNode.hasFocus ? 2.0 : 1.0,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withAlpha((0.1 * 255).round()),
-                spreadRadius: 1,
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Icon(
-                  widget.fieldType == SearchFieldType.start
-                      ? Icons.trip_origin
-                      : Icons.flag_outlined,
-                  color: widget.focusNode.hasFocus
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey.shade600,
-                  size: 20,
-                ),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: widget.focusNode,
-                  decoration: InputDecoration(
-                    hintText: widget.fieldType == SearchFieldType.start
-                        ? 'Enter starting point'
-                        : 'Enter destination',
-                    border: InputBorder.none,
-                    isDense: true,
-                    hintStyle: TextStyle(color: Colors.grey.shade500),
-                  ),
-                  style: const TextStyle(fontSize: 16),
-                  // Keyboard-friendly configuration
-                  textInputAction: TextInputAction.search,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  keyboardType: TextInputType.text,
-                  onChanged: (text) { /* Handled by listener */ },
-                ),
-              ),
-              // Action buttons row
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Current location button (only for start field)
-                  if (widget.onCurrentLocationTap != null && widget.fieldType == SearchFieldType.start)
-                    IconButton(
-                      icon: Icon(
-                        Icons.my_location,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 20,
-                      ),
-                      tooltip: 'Use current location',
-                      onPressed: widget.onCurrentLocationTap,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                    ),
-
-                  // Map selection button
-                  if (widget.onMapSelectionTap != null)
-                    IconButton(
-                      icon: Icon(
-                        Icons.map_outlined,
-                        color: Theme.of(context).colorScheme.secondary,
-                        size: 20,
-                      ),
-                      tooltip: 'Select on map',
-                      onPressed: widget.onMapSelectionTap,
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                    ),
-
-                  // Clear button
-                  if (widget.controller.text.isNotEmpty)
-                    IconButton(
-                      icon: Icon(
-                        Icons.clear,
-                        size: 18,
-                        color: Colors.grey.shade600,
-                      ),
-                      onPressed: () {
-                        widget.controller.clear();
-                        // _onTextChanged will be called by listener
-                      },
-                      constraints: const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 40,
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        if (_showResults && _filteredFeatures.isNotEmpty)
-          _buildResultsList(),
+// ✅ ROOMPOT-OPTIMIERTE Camping-Kategorien
+class CampingSearchCategories {
+  static const List<CampingSearchCategory> categories = [
+    
+    // 🅿️ PARKPLÄTZE - HÖCHSTE PRIORITÄT FÜR ROOMPOT (81 POIs!)
+    CampingSearchCategory(
+      category: CampingPOICategory.parking,
+      displayName: "Parkplätze",
+      icon: "🅿️",
+      keywords: [
+        'parking', 'parkplatz', 'parkplätze', 'parken',
+        'stellplatz', 'auto', 'car', 'fahrzeug', 'garage',
+        'tiefgarage', 'parkhaus', 'parkzone', 'p1', 'p2', 'p3',
+        // ROOMPOT-SPEZIFISCH:
+        'guest parking', 'visitor parking', 'holiday parking',
+        'resort parking', 'beach parking', 'villa parking'
       ],
-    );
+      osmTypes: [
+        'parking', 'parking_space', 'garage', 'parking_entrance',
+        'amenity=parking', 'leisure=parking'
+      ],
+      priority: 10, // HÖCHSTE PRIORITÄT
+      isRoompotPriority: true,
+    ),
+
+    // 🎠 FAMILIEN & SPIELPLÄTZE - ROOMPOT FOKUS
+    CampingSearchCategory(
+      category: CampingPOICategory.family,
+      displayName: "Familie & Kinder",
+      icon: "👨‍👩‍👧‍👦",
+      keywords: [
+        'spielplatz', 'playground', 'kinder', 'children', 'kids',
+        'spiel', 'spielbereich', 'spielwiese', 'kinderspielplatz',
+        'familie', 'family', 'kinderbetreuung', 'animation',
+        // ROOMPOT-SPEZIFISCH:
+        'kids club', 'kinderclub', 'miniclub', 'playground area',
+        'family area', 'kinderbereich', 'spielzone'
+      ],
+      osmTypes: [
+        'playground', 'leisure=playground', 'amenity=playground',
+        'tourism=attraction', 'leisure=recreation_ground'
+      ],
+      priority: 9,
+      isRoompotPriority: true,
+    ),
+
+    // 🏊 WASSERSPORT & STRAND - BEACH RESORT SPEZIFISCH
+    CampingSearchCategory(
+      category: CampingPOICategory.waterSports,
+      displayName: "Wassersport & Strand",
+      icon: "🏄‍♂️",
+      keywords: [
+        'pool', 'schwimmbad', 'schwimmen', 'swimming', 'beach', 'strand',
+        'wassersport', 'water sport', 'surfing', 'surfen', 'sailing',
+        'segeln', 'diving', 'tauchen', 'water', 'wasser',
+        // ROOMPOT BEACH RESORT SPEZIFISCH:
+        'beach access', 'strandzugang', 'water village', 'aqua park',
+        'swimming pool', 'outdoor pool', 'indoor pool', 'spa'
+      ],
+      osmTypes: [
+        'swimming_pool', 'leisure=swimming_pool', 'natural=beach',
+        'leisure=beach_resort', 'sport=swimming', 'sport=diving',
+        'sport=sailing', 'amenity=spa'
+      ],
+      priority: 8,
+      isRoompotPriority: true,
+    ),
+
+    // 🏠 UNTERKÜNFTE - Erweitert für Resort
+    CampingSearchCategory(
+      category: CampingPOICategory.accommodation,
+      displayName: "Unterkünfte",
+      icon: "🏠",
+      keywords: [
+        // Standard Keywords
+        'nr', 'nummer', 'no', 'house', 'haus', 'platz', 'pitch', 'stelle',
+        'parzelle', 'unterkunft', 'accommodation',
+        // ROOMPOT RESORT SPEZIFISCH:
+        'villa', 'chalet', 'bungalow', 'lodge', 'cabin', 'ferienhaus',
+        'holiday home', 'vacation rental', 'comfort', 'wellness', 
+        'luxury', 'premium', 'standard', 'basic', 'beach house',
+        'mobilheim', 'caravan', 'wohnwagen', 'wohnmobil'
+      ],
+      osmTypes: [
+        'accommodation', 'building', 'house', 'pitch', 'camp_pitch',
+        'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin',
+        'tourism=chalet', 'tourism=holiday_home'
+      ],
+      priority: 7,
+      isRoompotPriority: true,
+    ),
+
+    // 🍽️ GASTRONOMIE - Resort-Restaurants
+    CampingSearchCategory(
+      category: CampingPOICategory.food,
+      displayName: "Restaurants & Bars",
+      icon: "🍽️",
+      keywords: [
+        'restaurant', 'restaurants', 'gastronomie', 'cafe', 'café',
+        'kaffee', 'coffee', 'bar', 'bars', 'kneipe', 'pub',
+        'snack', 'snackbar', 'imbiss', 'bistro', 'essen', 'food',
+        // ROOMPOT SPEZIFISCH:
+        'beach bar', 'poolbar', 'resort restaurant', 'main restaurant',
+        'buffet', 'à la carte', 'takeaway', 'pizza', 'grill'
+      ],
+      osmTypes: [
+        'restaurant', 'cafe', 'bar', 'pub', 'fast_food',
+        'food_court', 'snack_bar', 'bistro', 'amenity=restaurant',
+        'amenity=cafe', 'amenity=bar'
+      ],
+      priority: 6,
+      isRoompotPriority: true,
+    ),
+
+    // 🚿 SANITÄR - Wichtig für Resort-Gäste
+    CampingSearchCategory(
+      category: CampingPOICategory.sanitary,
+      displayName: "Sanitär & WC",
+      icon: "🚿",
+      keywords: [
+        'wc', 'toilet', 'toilette', 'toiletten', 'klo', 'sanitär',
+        'sanitary', 'bad', 'bäder', 'waschraum', 'dusche', 'duschen',
+        'shower', 'showers', 'waschhaus', 'sanitärhaus', 'sanitärgebäude',
+        // ROOMPOT SPEZIFISCH:
+        'restroom', 'bathroom', 'wash facility', 'shower block'
+      ],
+      osmTypes: [
+        'toilets', 'sanitary', 'shower', 'bathroom', 'restroom',
+        'amenity=toilets', 'amenity=shower', 'sanitary_dump_station'
+      ],
+      priority: 5,
+    ),
+
+    // ℹ️ SERVICES - Rezeption & Info
+    CampingSearchCategory(
+      category: CampingPOICategory.amenity,
+      displayName: "Service & Info",
+      icon: "ℹ️",
+      keywords: [
+        'rezeption', 'reception', 'empfang', 'anmeldung', 'check-in',
+        'büro', 'office', 'verwaltung', 'administration', 'info',
+        'information', 'tourist-info', 'auskunft', 'service',
+        // ROOMPOT SPEZIFISCH:
+        'guest services', 'concierge', 'resort office', 'help desk'
+      ],
+      osmTypes: [
+        'reception', 'information', 'office', 'tourist_information',
+        'amenity=information', 'tourism=information'
+      ],
+      priority: 4,
+    ),
+
+    // 🛒 EINKAUFEN - Resort Shops
+    CampingSearchCategory(
+      category: CampingPOICategory.shopping,
+      displayName: "Shopping",
+      icon: "🛒",
+      keywords: [
+        'shop', 'laden', 'geschäft', 'store', 'supermarkt', 'market',
+        'markt', 'minimarkt', 'kiosk', 'convenience', 'lebensmittel',
+        'einkaufen', 'shopping', 'verkauf',
+        // ROOMPOT SPEZIFISCH:
+        'resort shop', 'holiday shop', 'beach shop', 'souvenir'
+      ],
+      osmTypes: [
+        'shop', 'supermarket', 'convenience', 'kiosk', 'marketplace',
+        'shop=convenience', 'shop=supermarket'
+      ],
+      priority: 3,
+    ),
+
+    // ⚽ FREIZEIT & SPORT
+    CampingSearchCategory(
+      category: CampingPOICategory.recreation,
+      displayName: "Sport & Freizeit",
+      icon: "⚽",
+      keywords: [
+        'sport', 'sportplatz', 'tennis', 'fußball', 'volleyball',
+        'basketball', 'animation', 'unterhaltung', 'entertainment',
+        'fitness', 'gym', 'wellness', 'spa',
+        // ROOMPOT SPEZIFISCH:
+        'sports center', 'activity center', 'recreation', 'leisure'
+      ],
+      osmTypes: [
+        'sports_centre', 'pitch', 'tennis', 'football', 'volleyball',
+        'basketball', 'fitness_centre', 'leisure=sports_centre'
+      ],
+      priority: 2,
+    ),
+
+    // ⚡ VERSORGUNG
+    CampingSearchCategory(
+      category: CampingPOICategory.utility,
+      displayName: "Versorgung",
+      icon: "⚡",
+      keywords: [
+        'müll', 'mülltonne', 'abfall', 'waste', 'disposal',
+        'wasser', 'water', 'trinkwasser', 'drinking_water',
+        'strom', 'electricity', 'stromanschluss', 'power'
+      ],
+      osmTypes: [
+        'waste_disposal', 'waste_basket', 'drinking_water',
+        'water_point', 'power', 'amenity=waste_disposal'
+      ],
+      priority: 1,
+    ),
+  ];
+
+  // ✅ KATEGORIE-MATCHING für intelligente Suche
+  static CampingSearchCategory? matchCategory(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+
+    // Durchsuche alle Kategorien nach Keywords
+    for (final category in categories) {
+      for (final keyword in category.keywords) {
+        if (cleanQuery.contains(keyword.toLowerCase()) ||
+            keyword.toLowerCase().contains(cleanQuery)) {
+          return category;
+        }
+      }
+    }
+    return null;
   }
 
-  Widget _buildResultsList() {
-    return Container(
-      margin: const EdgeInsets.only(top: 4.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Colors.grey.shade300),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha((0.15 * 255).round()),
-            spreadRadius: 1,
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      constraints: const BoxConstraints(maxHeight: 240), // Max height for the list
-      child: ListView.separated(
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        itemCount: _filteredFeatures.length,
-        separatorBuilder: (context, index) => Divider(
-          height: 1,
-          color: Colors.grey.shade200,
-          indent: 52,
-        ),
-        itemBuilder: (context, index) {
-          final feature = _filteredFeatures[index];
-          return ListTile(
-            leading: Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: _getColorForType(feature.type).withAlpha(20),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                _getIconForType(feature.type),
-                color: _getColorForType(feature.type),
-                size: 20,
-              ),
-            ),
-            title: Text(
-              feature.name,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              feature.type,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            dense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            onTap: () {
-              widget.onFeatureSelected(feature);
-              // Hide results after selection
-              if (mounted) {
-                setState(() {
-                  _showResults = false;
-                });
-              }
-            },
-          );
-        },
-      ),
-    );
+  // ✅ OSM-Type zu Kategorie Mapping
+  static CampingSearchCategory? getCategoryByOsmType(String osmType) {
+    final cleanType = osmType.trim().toLowerCase();
+
+    for (final category in categories) {
+      for (final type in category.osmTypes) {
+        if (cleanType == type.toLowerCase() ||
+            cleanType.contains(type.toLowerCase()) ||
+            type.toLowerCase().contains(cleanType)) {
+          return category;
+        }
+      }
+    }
+    return null;
   }
+
+  // ✅ Prioritäts-basierte Sortierung
+  static List<CampingSearchCategory> getSortedCategories() {
+    final sorted = List<CampingSearchCategory>.from(categories);
+    sorted.sort((a, b) => b.priority.compareTo(a.priority));
+    return sorted;
+  }
+
+  // ✅ Numerische Unterkunft-Erkennung (erweitert)
+  static bool isAccommodationNumberSearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+
+    // Reine Zahlen
+    if (RegExp(r'^\d+$').hasMatch(cleanQuery)) {
+      return true;
+    }
+
+    // Zahlen mit Buchstaben (247a, 15b)
+    if (RegExp(r'^\d+[a-z]$').hasMatch(cleanQuery)) {
+      return true;
+    }
+
+    // Deutsche Muster
+    if (RegExp(r'^(nr|no|nummer|haus|platz|stelle|parzelle)\.?\s*\d+[a-z]?$')
+        .hasMatch(cleanQuery)) {
+      return true;
+    }
+
+    // Englische Muster
+    if (RegExp(r'^(house|pitch|site|lot)\.?\s*\d+[a-z]?$')
+        .hasMatch(cleanQuery)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // ✅ ROOMPOT PRIORITY SEARCH - Zeigt wichtigste Kategorien zuerst
+  static List<CampingSearchCategory> getRoompotPriorityCategories() {
+    return categories.where((cat) => cat.isRoompotPriority).toList();
+  }
+
+  // ✅ Erweiterte Parkplatz-Suche (wichtig bei 81 Parkplätzen!)
+  static List<String> getParkingSpecificKeywords() {
+    return [
+      // Parkplatz-Nummern
+      'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10',
+      // Bereiche
+      'hauptparkplatz', 'main parking', 'central parking',
+      'beach parking', 'villa parking', 'restaurant parking',
+      // Typen
+      'guest parking', 'visitor parking', 'disabled parking',
+      'family parking', 'oversized parking'
+    ];
+  }
+
+  // ✅ NEUE ROOMPOT-SPEZIFISCHE METHODEN
+  static bool isParkingSearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+    final parkingKeywords = getParkingSpecificKeywords();
+    
+    return parkingKeywords.any((keyword) => 
+        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  }
+
+  static bool isFamilySearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+    final familyKeywords = ['family', 'familie', 'kinder', 'kids', 'children', 
+                           'playground', 'spielplatz', 'animation'];
+    
+    return familyKeywords.any((keyword) => 
+        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  }
+
+  static bool isWaterSportsSearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+    final waterKeywords = ['pool', 'beach', 'strand', 'swimming', 'water', 
+                          'wassersport', 'surf', 'sail'];
+    
+    return waterKeywords.any((keyword) => 
+        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  }
+
+  // ✅ BEREINIGTE QUICK-SEARCH SHORTCUTS (keine Duplikate)
+  static const Map<String, String> quickSearchShortcuts = {
+    // ROOMPOT-SPEZIFISCHE SHORTCUTS (Priorität)
+    '🏖️': 'beach', // Strand-Zugang
+    '🏊': 'pool', // Schwimmbäder
+    '👨‍👩‍👧‍👦': 'family', // Familien-Bereiche
+    '🏠': 'villa', // Unterkünfte
+    '🛒': 'shop', // Resort Shopping
+    
+    // STANDARD SHORTCUTS (keine Duplikate)
+    '🚿': 'wc', // Sanitär
+    '🍽️': 'restaurant', // Gastronomie
+    '🅿️': 'parkplatz', // Parkplätze
+    'ℹ️': 'rezeption', // Information
+    '⚽': 'spielplatz', // Sport/Freizeit
+  };
 }
