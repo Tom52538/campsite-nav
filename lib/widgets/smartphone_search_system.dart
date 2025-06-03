@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
-import 'package:camping_osm_navi/models/camping_search_categories.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
@@ -71,22 +70,15 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   
   // State Management
   SearchInterfaceState _currentState = SearchInterfaceState.expanded;
-  SearchInterfaceState _previousState = SearchInterfaceState.expanded;
   bool _hasActiveRoute = false;
   bool _isKeyboardVisible = false;
   bool _userInteractionDetected = false;
   bool _autoTransitionsEnabled = true;
   
-  // Performance & UX Tracking
-  DateTime? _lastStateChange;
-  DateTime? _lastUserInteraction;
-  int _transitionCount = 0;
-  
   // Responsive Design
   double _screenWidth = 0;
   double _screenHeight = 0;
   bool _isSmallScreen = false;
-  bool _isLandscape = false;
   EdgeInsets _safeArea = EdgeInsets.zero;
 
   @override
@@ -256,11 +248,10 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       switch (widget.context) {
         case SearchContext.emergency:
           delay = const Duration(milliseconds: 500); // Fast for emergency
-          break;
         case SearchContext.arrival:
           delay = const Duration(milliseconds: 2000); // More time for newcomers
-          break;
-        default:
+        case SearchContext.departure:
+        case SearchContext.guest:
           delay = widget.autoHideDelay;
       }
       
@@ -283,10 +274,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     _logStateTransition(_currentState, newState);
     
     final oldState = _currentState;
-    _previousState = _currentState;
     _currentState = newState;
-    _lastStateChange = DateTime.now();
-    _transitionCount++;
     
     // Execute animation sequence
     _executeStateTransition(oldState, newState);
@@ -296,16 +284,12 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     switch (to) {
       case SearchInterfaceState.expanded:
         _transitionToExpanded();
-        break;
       case SearchInterfaceState.collapsed:
         _transitionToCollapsed();
-        break;
       case SearchInterfaceState.hidden:
         _transitionToHidden();
-        break;
       case SearchInterfaceState.navigationMode:
         _transitionToNavigationMode();
-        break;
     }
     
     setState(() {}); // Trigger rebuild with new state
@@ -370,7 +354,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       _screenWidth = size.width;
       _screenHeight = size.height;
       _isSmallScreen = _screenWidth < SmartphoneBreakpoints.small;
-      _isLandscape = _screenWidth > _screenHeight;
       _safeArea = mediaQuery.padding;
     });
   }
@@ -391,7 +374,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   // Event Handlers
   void _onUserInteraction() {
     _userInteractionDetected = true;
-    _lastUserInteraction = DateTime.now();
     
     // Disable auto-transitions temporarily
     _autoTransitionsEnabled = false;
@@ -409,16 +391,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     if (widget.enableHapticFeedback) {
       HapticFeedback.selectionClick();
     }
-  }
-
-  void _onCollapseRequest() {
-    _onUserInteraction();
-    _scheduleStateTransition(SearchInterfaceState.collapsed);
-  }
-
-  void _onHideRequest() {
-    _onUserInteraction();
-    _scheduleStateTransition(SearchInterfaceState.hidden);
   }
 
   // Feature Selection Handlers
@@ -698,22 +670,17 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
         contextMessage = 'Willkommen im Roompot Beach Resort!';
         contextIcon = Icons.celebration;
         contextColor = Colors.green;
-        break;
       case SearchContext.departure:
         contextMessage = 'Gute Reise! Bis zum nächsten Mal.';
         contextIcon = Icons.flight_takeoff;
         contextColor = Colors.orange;
-        break;
       case SearchContext.emergency:
         contextMessage = 'Notfall-Navigation';
         contextIcon = Icons.emergency;
         contextColor = Colors.red;
-        break;
       case SearchContext.guest:
-      default:
         contextMessage = 'Wohin möchten Sie im Resort?';
         contextIcon = Icons.explore;
-        break;
     }
     
     return Row(
@@ -1013,11 +980,11 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   }
 
   Widget _buildQuickAccessButtons() {
-    final quickActions = [
-      ('🅿️', 'parkplatz', 'Parkplatz', Colors.indigo),
-      ('👨‍👩‍👧‍👦', 'spielplatz', 'Familie', Colors.pink),
-      ('🏖️', 'beach pool', 'Beach', Colors.cyan),
-      ('🍽️', 'restaurant', 'Essen', Colors.orange),
+    const quickActions = [
+      ('🅿️', 'parkplatz', 'Parkplatz', Color(0xFF3F51B5)), // Indigo
+      ('👨‍👩‍👧‍👦', 'spielplatz', 'Familie', Color(0xFFE91E63)), // Pink
+      ('🏖️', 'beach pool', 'Beach', Color(0xFF00BCD4)), // Cyan
+      ('🍽️', 'restaurant', 'Essen', Color(0xFFFF9800)), // Orange
     ];
 
     if (_isSmallScreen) {
@@ -1100,13 +1067,18 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                 
                 SizedBox(height: _isSmallScreen ? 6 : 8),
                 
-                // Label
+                // Label - ✅ FIX: Verwende definierte Color-Eigenschaften
                 Text(
                   action.$3,
                   style: TextStyle(
                     fontSize: _isSmallScreen ? 11 : 12,
                     fontWeight: FontWeight.w700,
-                    color: action.$4.shade700,
+                    color: Color.fromRGBO(
+                      action.$4.red,
+                      action.$4.green, 
+                      action.$4.blue,
+                      0.8
+                    ),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
