@@ -1,4 +1,4 @@
-// lib/screens/map_screen/map_screen_controller.dart - COMPLETE FILE
+// lib/screens/map_screen/map_screen_controller.dart - MODERNE MARKER INTEGRATION
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -8,6 +8,7 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
+import 'package:camping_osm_navi/widgets/modern_map_markers.dart'; // ✅ NEU
 import 'package:camping_osm_navi/services/tts_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
 
@@ -18,7 +19,10 @@ class MapScreenController with ChangeNotifier {
 
   // State Variables
   Polyline? routePolyline;
+  List<Polyline> _routePolylines = []; // ✅ NEU: Mehrere Polylines für Gradient
   Marker? currentLocationMarker;
+  Marker? _startMarker; // ✅ NEU: Start Marker
+  Marker? _destinationMarker; // ✅ NEU: Destination Marker
   LatLng? currentGpsPosition;
 
   SearchableFeature? _selectedStart;
@@ -61,11 +65,15 @@ class MapScreenController with ChangeNotifier {
   bool _compactSearchMode = false;
   bool showRouteInfoAndFadeFields = false;
 
-  // TTS state for route updates
   double? lastSpokenDistance;
   int? lastSpokenTime;
 
-  // Getters
+  // ✅ NEU: Moderne Marker Getters
+  Marker? get startMarker => _startMarker;
+  Marker? get destinationMarker => _destinationMarker;
+  List<Polyline> get routePolylines => _routePolylines;
+
+  // Existing getters
   SearchableFeature? get selectedStart => _selectedStart;
   SearchableFeature? get selectedDestination => _selectedDestination;
   bool get isStartLocked => _isStartLocked;
@@ -88,7 +96,6 @@ class MapScreenController with ChangeNotifier {
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
 
-  // NEW: Enhanced getters for UI control
   bool get hasActiveRoute => routePolyline != null &&
                             _selectedStart != null &&
                             _selectedDestination != null;
@@ -148,20 +155,36 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ MODERNISIERTE START LOCATION METHODE
   void setStartLocation(SearchableFeature feature) {
     _selectedStart = feature;
     _isStartLocked = false;
     startSearchController.text = feature.name;
     showRouteInfoAndFadeFields = false;
+    
+    // ✅ NEU: Erstelle modernen Start Marker
+    _startMarker = ModernMapMarkers.createStartMarker(
+      feature.center,
+      label: feature.name,
+    );
+    
     _tryCalculateRoute();
     notifyListeners();
   }
 
+  // ✅ MODERNISIERTE DESTINATION METHODE
   void setDestination(SearchableFeature feature) {
     _selectedDestination = feature;
     _isDestinationLocked = false;
     endSearchController.text = feature.name;
     showRouteInfoAndFadeFields = false;
+    
+    // ✅ NEU: Erstelle modernen Destination Marker
+    _destinationMarker = ModernMapMarkers.createDestinationMarker(
+      feature.center,
+      label: feature.name,
+    );
+    
     _tryCalculateRoute();
     notifyListeners();
   }
@@ -178,7 +201,6 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ENHANCED: Route calculation with automatic UI switching
   Future<void> attemptRouteCalculationOrClearRoute() async {
     if (isStartLocked &&
         isDestinationLocked &&
@@ -205,8 +227,10 @@ class MapScreenController with ChangeNotifier {
 
         if (path != null && path.isNotEmpty) {
           final maneuvers = RoutingService.analyzeRouteForTurns(path);
-          setRoutePolyline(
-              Polyline(points: path, strokeWidth: 4.0, color: Colors.blue));
+          
+          // ✅ NEU: Erstelle moderne Route mit Gradient
+          _setModernRoutePolylines(path);
+          
           setCurrentManeuvers(maneuvers);
           updateRouteMetrics(path);
 
@@ -214,10 +238,7 @@ class MapScreenController with ChangeNotifier {
             updateCurrentDisplayedManeuver(maneuvers.first);
           }
 
-          // NEW: Automatically switch to compact view
           showRouteInfoAndFadeFields = true;
-
-          // NEW: TTS for route start
           ttsService.speakImmediate("Route calculated. ${formatDistance(routeDistance)} in about $routeTimeMinutes minutes.");
 
         } else {
@@ -237,6 +258,19 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ NEU: Moderne Route Polylines erstellen
+  void _setModernRoutePolylines(List<LatLng> path) {
+    if (followGps && currentGpsPosition != null) {
+      // Während Navigation: Gradient Route
+      _routePolylines = ModernRoutePolyline.createGradientRoute(path);
+      routePolyline = ModernRoutePolyline.createNavigationRoute(path);
+    } else {
+      // Normal: Einfache moderne Route
+      _routePolylines = [ModernRoutePolyline.createModernRoute(path)];
+      routePolyline = ModernRoutePolyline.createModernRoute(path);
+    }
+  }
+
   void setCurrentLocationAsStart() {
     if (currentGpsPosition != null) {
       final currentLocationFeature = SearchableFeature(
@@ -253,12 +287,23 @@ class MapScreenController with ChangeNotifier {
   void swapStartAndDestination() {
     final tempFeature = _selectedStart;
     final tempText = startSearchController.text;
+    final tempMarker = _startMarker;
 
     _selectedStart = _selectedDestination;
     startSearchController.text = endSearchController.text;
+    _startMarker = _destinationMarker;
 
     _selectedDestination = tempFeature;
     endSearchController.text = tempText;
+    _destinationMarker = tempMarker;
+
+    // ✅ NEU: Marker Types nach Swap anpassen
+    if (_selectedStart != null) {
+      _startMarker = ModernMapMarkers.createStartMarker(_selectedStart!.center);
+    }
+    if (_selectedDestination != null) {
+      _destinationMarker = ModernMapMarkers.createDestinationMarker(_selectedDestination!.center);
+    }
 
     showRouteInfoAndFadeFields = false;
     _tryCalculateRoute();
@@ -321,16 +366,11 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ENHANCED: Smart route update for better UX
   void updateRemainingRouteInfo(double? distance, int? timeMinutes) {
     remainingRouteDistance = distance;
     remainingRouteTimeMinutes = timeMinutes;
 
-    // Automatic TTS for significant changes
     if (distance != null && timeMinutes != null) {
-      // TTS only for large changes (> 1 minute or > 100m)
-      // lastSpokenDistance and lastSpokenTime are now instance variables
-
       if (this.lastSpokenDistance == null || this.lastSpokenTime == null ||
           (distance - this.lastSpokenDistance!).abs() > 100 ||
           (timeMinutes - this.lastSpokenTime!).abs() >= 1) {
@@ -356,6 +396,10 @@ class MapScreenController with ChangeNotifier {
 
   void setFollowGps(bool follow) {
     followGps = follow;
+    // ✅ NEU: Route Style ändern bei GPS Follow
+    if (routePolyline != null && _routePolylines.isNotEmpty) {
+      _setModernRoutePolylines(routePolyline!.points);
+    }
     notifyListeners();
   }
 
@@ -364,26 +408,10 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
+  // ✅ MODERNISIERTE GPS MARKER METHODE
   void updateCurrentLocationMarker() {
     if (currentGpsPosition != null) {
-      currentLocationMarker = Marker(
-        width: 80.0,
-        height: 80.0,
-        point: currentGpsPosition!,
-        alignment: Alignment.center,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.blue.withAlpha((0.2 * 255).round()),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.blue, width: 3.0),
-          ),
-          child: const Icon(
-            Icons.my_location,
-            color: Colors.blue,
-            size: 28.0,
-          ),
-        ),
-      );
+      currentLocationMarker = ModernMapMarkers.createGpsMarker(currentGpsPosition!);
       notifyListeners();
     }
   }
@@ -412,12 +440,18 @@ class MapScreenController with ChangeNotifier {
 
   void setRoutePolyline(Polyline? polyline) {
     routePolyline = polyline;
+    if (polyline != null) {
+      _setModernRoutePolylines(polyline.points);
+    }
     notifyListeners();
   }
 
-  // ENHANCED: Reset method
+  // ✅ ERWEITERTE RESET METHODE
   void resetRouteAndNavigation() {
     routePolyline = null;
+    _routePolylines.clear(); // ✅ NEU: Moderne Polylines löschen
+    _startMarker = null; // ✅ NEU: Start Marker löschen
+    _destinationMarker = null; // ✅ NEU: Destination Marker löschen
     isCalculatingRoute = false;
     currentManeuvers.clear();
     currentDisplayedManeuver = null;
@@ -429,26 +463,26 @@ class MapScreenController with ChangeNotifier {
     isRouteActiveForCardSwitch = false;
     _isRerouting = false;
     _lastRerouteTime = null;
-    showRouteInfoAndFadeFields = false; // Back to normal view
+    showRouteInfoAndFadeFields = false;
     notifyListeners();
   }
 
-  // ENHANCED: Search reset method
   void resetSearchFields() {
     startSearchController.clear();
     endSearchController.clear();
     _selectedStart = null;
     _selectedDestination = null;
+    _startMarker = null; // ✅ NEU: Marker zurücksetzen
+    _destinationMarker = null; // ✅ NEU: Marker zurücksetzen
     _isMapSelectionMode = false;
     _mapSelectionFor = null;
     _isStartLocked = false;
     _isDestinationLocked = false;
 
-    // Unfocus only if actually focused
     if (startFocusNode.hasFocus) startFocusNode.unfocus();
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
 
-    showRouteInfoAndFadeFields = false; // Back to normal view
+    showRouteInfoAndFadeFields = false;
     attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
@@ -469,13 +503,11 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // NEW: Explicit method for UI mode switching
   void toggleSearchInterfaceMode() {
     showRouteInfoAndFadeFields = !showRouteInfoAndFadeFields;
     notifyListeners();
   }
 
-  // Method to control showRouteInfoAndFadeFields and notify listeners
   void setRouteInfoAndFadeFields(bool value) {
     if (showRouteInfoAndFadeFields != value) {
       showRouteInfoAndFadeFields = value;
@@ -483,7 +515,6 @@ class MapScreenController with ChangeNotifier {
     }
   }
 
-  // NEW: Helper method for distance formatting
   String formatDistance(double? distanceMeters) {
     if (distanceMeters == null) return "unknown";
 
