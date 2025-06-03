@@ -1,6 +1,5 @@
 // lib/services/tts_service.dart
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 
@@ -34,19 +33,19 @@ class TtsService {
 
     _flutterTts.setStartHandler(() {
       if (kDebugMode) {
-        print("[TtsService] TTS started");
+        debugPrint("[TtsService] TTS started");
       }
     });
 
     _flutterTts.setCompletionHandler(() {
       if (kDebugMode) {
-        print("[TtsService] TTS completed");
+        debugPrint("[TtsService] TTS completed");
       }
     });
 
     _flutterTts.setErrorHandler((msg) {
       if (kDebugMode) {
-        print("[TtsService] TTS Error: $msg");
+        debugPrint("[TtsService] TTS Error: $msg");
       }
       _isInitialized = false;
     });
@@ -58,11 +57,11 @@ class TtsService {
       await _flutterTts.awaitSpeakCompletion(true);
       _isInitialized = true;
       if (kDebugMode) {
-        print("[TtsService] TTS successfully initialized with language '$_currentLanguage'");
+        debugPrint("[TtsService] TTS successfully initialized with language '$_currentLanguage'");
       }
     } catch (e) {
       if (kDebugMode) {
-        print("[TtsService] Error during TTS initialization: $e");
+        debugPrint("[TtsService] Error during TTS initialization: $e");
       }
       _isInitialized = false;
     }
@@ -75,11 +74,11 @@ class TtsService {
       _deviceLanguage = deviceLocale.languageCode;
       
       if (kDebugMode) {
-        print("[TtsService] Device language detected: $_deviceLanguage (${deviceLocale.toString()})");
+        debugPrint("[TtsService] Device language detected: $_deviceLanguage (${deviceLocale.toString()})");
       }
     } catch (e) {
       if (kDebugMode) {
-        print("[TtsService] Could not detect device language, using English fallback: $e");
+        debugPrint("[TtsService] Could not detect device language, using English fallback: $e");
       }
       _deviceLanguage = 'en';
     }
@@ -113,7 +112,7 @@ class TtsService {
         await _flutterTts.setLanguage(languageCode);
         _currentLanguage = languageCode;
         if (kDebugMode) {
-          print("[TtsService] Language set to '$languageCode'");
+          debugPrint("[TtsService] Language set to '$languageCode'");
         }
       } else {
         // Try base language (e.g., 'de' instead of 'de-DE')
@@ -124,7 +123,7 @@ class TtsService {
             await _flutterTts.setLanguage(baseLanguage);
             _currentLanguage = baseLanguage;
             if (kDebugMode) {
-              print("[TtsService] Fallback language set to '$baseLanguage'");
+              debugPrint("[TtsService] Fallback language set to '$baseLanguage'");
             }
             return;
           }
@@ -134,12 +133,12 @@ class TtsService {
         await _flutterTts.setLanguage('en-US');
         _currentLanguage = 'en-US';
         if (kDebugMode) {
-          print("[TtsService] Language '$languageCode' not available, using English fallback");
+          debugPrint("[TtsService] Language '$languageCode' not available, using English fallback");
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print("[TtsService] Error setting language: $e");
+        debugPrint("[TtsService] Error setting language: $e");
       }
     }
   }
@@ -147,12 +146,12 @@ class TtsService {
   Future<void> speakNavigationInstruction(Maneuver maneuver, double distanceToManeuver) async {
     if (!_isInitialized) {
       if (kDebugMode) {
-        print("[TtsService] TTS not initialized. Attempting re-initialization.");
+        debugPrint("[TtsService] TTS not initialized. Attempting re-initialization.");
       }
       await _initializeTts();
       if (!_isInitialized) {
         if (kDebugMode) {
-          print("[TtsService] TTS could not be initialized. Announcement cancelled.");
+          debugPrint("[TtsService] TTS could not be initialized. Announcement cancelled.");
         }
         return;
       }
@@ -363,7 +362,7 @@ class TtsService {
 
   Future<void> _speakWithLogging(String instruction) async {
     if (kDebugMode) {
-      print("[TtsService] Speaking: '$instruction'");
+      debugPrint("[TtsService] Speaking: '$instruction'");
     }
 
     if (_currentLanguage != null) {
@@ -372,7 +371,7 @@ class TtsService {
 
     var result = await _flutterTts.speak(instruction);
     if (result != 1 && kDebugMode) {
-      print("[TtsService] Error starting announcement for: $instruction");
+      debugPrint("[TtsService] Error starting announcement for: $instruction");
     }
   }
 
@@ -381,7 +380,7 @@ class TtsService {
       await _initializeTts();
       if (!_isInitialized) {
         if (kDebugMode) {
-          print("[TtsService] TTS could not be initialized. Announcement cancelled: $text");
+          debugPrint("[TtsService] TTS could not be initialized. Announcement cancelled: $text");
         }
         return;
       }
@@ -401,7 +400,7 @@ class TtsService {
     if (!_isInitialized) return;
     var result = await _flutterTts.stop();
     if (result == 1 && kDebugMode) {
-      print("[TtsService] TTS stopped");
+      debugPrint("[TtsService] TTS stopped");
     }
   }
 
@@ -414,7 +413,7 @@ class TtsService {
     _lastSpokenInstruction = null;
     _lastInstructionTime = null;
     if (kDebugMode) {
-      print("[TtsService] TTS reset for new route");
+      debugPrint("[TtsService] TTS reset for new route");
     }
   }
 }
