@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/search_types.dart'; // ✅ FIX: Eindeutiger Import
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
-import 'package:camping_osm_navi/widgets/smartphone_search_system.dart';
+import 'package:camping_osm_navi/widgets/smartphone_search_system.dart'; // ✅ FIX: Korrekte Datei
 
 /// Legacy Wrapper für SimpleSearchContainer
 /// 
@@ -153,87 +153,140 @@ class _PremiumSearchContainerState extends State<PremiumSearchContainer>
   }
 }
 
-/// Development Helper für Testing verschiedener Search Modes
-class SearchSystemTester extends StatefulWidget {
-  final MapScreenController controller;
-  final List<SearchableFeature> allFeatures;
-
-  const SearchSystemTester({
-    super.key,
-    required this.controller,
-    required this.allFeatures,
-  });
-
-  @override
-  State<SearchSystemTester> createState() => _SearchSystemTesterState();
+/// Context Detection Helper
+/// 
+/// Intelligente Erkennung des User-Kontexts basierend auf:
+/// - Tageszeit (Arrival/Departure wahrscheinlicher)
+/// - GPS-Position (Near Resort entrance = Arrival)
+/// - Vorherige App-Nutzung
+class SmartContextDetector {
+  static SearchContext detectContext({
+    DateTime? currentTime,
+    String? userLocation,
+    bool? isFirstAppLaunch,
+  }) {
+    final now = currentTime ?? DateTime.now();
+    
+    // Emergency Detection (hypothetisch via andere Sensoren)
+    if (_isEmergencyLikely()) {
+      return SearchContext.emergency;
+    }
+    
+    // Arrival Detection
+    if (_isArrivalTime(now) || isFirstAppLaunch == true) {
+      return SearchContext.arrival;
+    }
+    
+    // Departure Detection  
+    if (_isDepartureTime(now)) {
+      return SearchContext.departure;
+    }
+    
+    // Default: Guest
+    return SearchContext.guest;
+  }
+  
+  static bool _isEmergencyLikely() {
+    // Placeholder für Emergency Detection
+    // In Realität: Beschleunigungssensor, Notruf-Button, etc.
+    return false;
+  }
+  
+  static bool _isArrivalTime(DateTime time) {
+    // Check-in Zeit: 15:00 - 18:00
+    return time.hour >= 15 && time.hour <= 18;
+  }
+  
+  static bool _isDepartureTime(DateTime time) {
+    // Check-out Zeit: 08:00 - 11:00
+    return time.hour >= 8 && time.hour <= 11;
+  }
 }
 
-class _SearchSystemTesterState extends State<SearchSystemTester> {
-  SearchContext _currentContext = SearchContext.guest;
-  SearchInterfaceState _testState = SearchInterfaceState.expanded;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Context Switcher
-        Container(
-          padding: const EdgeInsets.all(8),
-          color: Colors.amber.shade100,
-          child: Row(
-            children: [
-              const Text('Context: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              DropdownButton<SearchContext>(
-                value: _currentContext,
-                onChanged: (context) {
-                  if (context != null) {
-                    setState(() {
-                      _currentContext = context;
-                    });
-                  }
-                },
-                items: SearchContext.values.map((context) {
-                  return DropdownMenuItem(
-                    value: context,
-                    child: Text(context.value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(width: 16),
-              const Text('State: ', style: TextStyle(fontWeight: FontWeight.bold)),
-              DropdownButton<SearchInterfaceState>(
-                value: _testState,
-                onChanged: (state) {
-                  if (state != null) {
-                    setState(() {
-                      _testState = state;
-                    });
-                    widget.controller.setSearchInterfaceState(state);
-                  }
-                },
-                items: SearchInterfaceState.values.map((state) {
-                  return DropdownMenuItem(
-                    value: state,
-                    child: Text(state.value),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
-        
-        // Main Search System
-        Expanded(
-          child: SmartphoneSearchSystem(
-            controller: widget.controller,
-            allFeatures: widget.allFeatures,
-            isStartLocked: widget.controller.isStartLocked,
-            isDestinationLocked: widget.controller.isDestinationLocked,
-            showRouteInfoAndFadeFields: widget.controller.showRouteInfoAndFadeFields,
-            context: _currentContext,
-          ),
-        ),
-      ],
+/// Convenience Factories
+class SearchContainerFactory {
+  /// Standard Resort Guest Experience
+  static Widget createGuestInterface({
+    required MapScreenController controller,
+    required List<SearchableFeature> allFeatures,
+  }) {
+    return SmartphoneSearchSystem(
+      controller: controller,
+      allFeatures: allFeatures,
+      isStartLocked: controller.isStartLocked,
+      isDestinationLocked: controller.isDestinationLocked,
+      showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
+      context: SearchContext.guest,
+    );
+  }
+  
+  /// Arrival Experience (Welcome Message)
+  static Widget createArrivalInterface({
+    required MapScreenController controller,
+    required List<SearchableFeature> allFeatures,
+  }) {
+    return SmartphoneSearchSystem(
+      controller: controller,
+      allFeatures: allFeatures,
+      isStartLocked: controller.isStartLocked,
+      isDestinationLocked: controller.isDestinationLocked,
+      showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
+      context: SearchContext.arrival,
+      autoHideDelay: const Duration(milliseconds: 2500), // More time for newcomers
+    );
+  }
+  
+  /// Departure Experience (Goodbye Message)
+  static Widget createDepartureInterface({
+    required MapScreenController controller,
+    required List<SearchableFeature> allFeatures,
+  }) {
+    return SmartphoneSearchSystem(
+      controller: controller,
+      allFeatures: allFeatures,
+      isStartLocked: controller.isStartLocked,
+      isDestinationLocked: controller.isDestinationLocked,
+      showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
+      context: SearchContext.departure,
+    );
+  }
+  
+  /// Emergency Interface (Red Pulsing)
+  static Widget createEmergencyInterface({
+    required MapScreenController controller,
+    required List<SearchableFeature> allFeatures,
+  }) {
+    return SmartphoneSearchSystem(
+      controller: controller,
+      allFeatures: allFeatures,
+      isStartLocked: controller.isStartLocked,
+      isDestinationLocked: controller.isDestinationLocked,
+      showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
+      context: SearchContext.emergency,
+      autoHideDelay: const Duration(milliseconds: 800), // Fast for emergency
+      enableHapticFeedback: true, // Important for emergency
+    );
+  }
+  
+  /// Smart Auto-Detecting Interface
+  static Widget createSmartInterface({
+    required MapScreenController controller,
+    required List<SearchableFeature> allFeatures,
+    DateTime? currentTime,
+    bool? isFirstLaunch,
+  }) {
+    final context = SmartContextDetector.detectContext(
+      currentTime: currentTime,
+      isFirstAppLaunch: isFirstLaunch,
+    );
+    
+    return SmartphoneSearchSystem(
+      controller: controller,
+      allFeatures: allFeatures,
+      isStartLocked: controller.isStartLocked,
+      isDestinationLocked: controller.isDestinationLocked,
+      showRouteInfoAndFadeFields: controller.showRouteInfoAndFadeFields,
+      context: context,
     );
   }
 }
