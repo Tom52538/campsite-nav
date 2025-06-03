@@ -1,4 +1,4 @@
-// lib/widgets/simple_search_container.dart - SMARTPHONE OPTIMIERT
+// lib/widgets/simple_search_container.dart - SMARTPHONE OPTIMIERT & COLOR FIXED
 import 'package:flutter/material.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/camping_search_categories.dart';
@@ -512,25 +512,25 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
                   
                   SizedBox(height: isCompact ? 4 : 6),
                   
-                  // ✅ RESPONSIVE TEXT SIZE
+                  // ✅ RESPONSIVE TEXT SIZE - FIXED: MaterialColor verwendet
                   Text(
                     label,
                     style: TextStyle(
                       fontSize: isCompact ? 10 : 12,
                       fontWeight: FontWeight.w600,
-                      color: color.shade700,
+                      color: _getMaterialColorShade(color, 700), // FIXED
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   
-                  // Subtitle
+                  // Subtitle - FIXED: MaterialColor verwendet
                   Text(
                     subtitle,
                     style: TextStyle(
                       fontSize: isCompact ? 8 : 10,
-                      color: color.shade600,
+                      color: _getMaterialColorShade(color, 600), // FIXED
                     ),
                     textAlign: TextAlign.center,
                     maxLines: 1,
@@ -545,9 +545,23 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
     );
   }
 
-  // ✅ MOBILE-OPTIMIERTER SWAP BUTTON
+  // ✅ HELPER METHODE: MaterialColor shade Ersatz
+  Color _getMaterialColorShade(Color baseColor, int shade) {
+    // Approximiere MaterialColor shades basierend auf Base Color
+    final hsl = HSLColor.fromColor(baseColor);
+    switch (shade) {
+      case 600:
+        return hsl.withLightness((hsl.lightness * 0.8).clamp(0.0, 1.0)).toColor();
+      case 700:
+        return hsl.withLightness((hsl.lightness * 0.7).clamp(0.0, 1.0)).toColor();
+      default:
+        return baseColor;
+    }
+  }
+
+  // ✅ MOBILE-OPTIMIERTER SWAP BUTTON - FIXED: SizedBox statt Container für Whitespace
   Widget _buildMobileSwapButton() {
-    return Container(
+    return SizedBox( // FIXED: Container durch SizedBox ersetzt
       height: 44, // Standard Touch-Target
       child: Row(
         children: [
