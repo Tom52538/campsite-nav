@@ -1,4 +1,4 @@
-// lib/models/camping_search_categories.dart (KORRIGIERT)
+// lib/models/camping_search_categories.dart - ROOMPOT RESORT OPTIMIERT
 enum CampingPOICategory {
   accommodation, // Unterkünfte (Parzellen, Häuser, etc.)
   amenity, // Services (Rezeption, Information)
@@ -6,10 +6,12 @@ enum CampingPOICategory {
   food, // Gastronomie (Restaurant, Café, Bar)
   shopping, // Einkaufen (Shop, Supermarkt)
   recreation, // Freizeit (Spielplatz, Pool, Sport)
-  parking, // Parkplätze
+  parking, // Parkplätze - ROOMPOT FOKUS!
   utility, // Versorgung (Müll, Wasser, Strom)
   medical, // Medizinisch (Erste Hilfe)
   transport, // Transport (Bus, etc.)
+  water_sports, // NEU: Wassersport (für Beach Resort)
+  family, // NEU: Familien-Aktivitäten
 }
 
 class CampingSearchCategory {
@@ -19,6 +21,7 @@ class CampingSearchCategory {
   final List<String> keywords;
   final List<String> osmTypes;
   final int priority; // Höher = wichtiger bei Suchergebnissen
+  final bool isRoompotPriority; // NEU: Markiert Resort-spezifische Kategorien
 
   const CampingSearchCategory({
     required this.category,
@@ -27,345 +30,258 @@ class CampingSearchCategory {
     required this.keywords,
     required this.osmTypes,
     required this.priority,
+    this.isRoompotPriority = false, // NEU
   });
 }
 
-// ✅ Definierte Camping-Kategorien mit deutschen Keywords
+// ✅ ROOMPOT-OPTIMIERTE Camping-Kategorien
 class CampingSearchCategories {
   static const List<CampingSearchCategory> categories = [
-    // 1. UNTERKÜNFTE - Höchste Priorität für Nummern-Suche
-    CampingSearchCategory(
-      category: CampingPOICategory.accommodation,
-      displayName: "Unterkünfte",
-      icon: "🏠",
-      keywords: [
-        // Nummern
-        'nr', 'nummer', 'no', 'house', 'haus', 'platz', 'pitch', 'stelle',
-        'parzelle',
-        // Unterkunftstypen
-        'unterkunft', 'accommodation', 'chalet', 'bungalow', 'lodge', 'cabin',
-        'ferienhaus',
-        'comfort', 'wellness', 'luxury', 'premium', 'standard', 'basic',
-        // Deutsche Camping-Begriffe
-        'stellplatz', 'wohnwagen', 'wohnmobil', 'zelt', 'caravan', 'mobilheim'
-      ],
-      osmTypes: [
-        'accommodation',
-        'building',
-        'house',
-        'pitch',
-        'camp_pitch',
-        'holiday_home',
-        'chalet',
-        'bungalow',
-        'lodge',
-        'cabin',
-        'comfort',
-        'wellness',
-        'luxury',
-        'premium'
-      ],
-      priority: 10,
-    ),
-
-    // 2. SANITÄR - Sehr wichtig auf Campingplätzen
-    CampingSearchCategory(
-      category: CampingPOICategory.sanitary,
-      displayName: "Sanitär",
-      icon: "🚿",
-      keywords: [
-        'wc',
-        'toilet',
-        'toilette',
-        'toiletten',
-        'klo',
-        'sanitär',
-        'sanitary',
-        'bad',
-        'bäder',
-        'waschraum',
-        'dusche',
-        'duschen',
-        'shower',
-        'showers',
-        'waschhaus',
-        'sanitärhaus',
-        'sanitärgebäude'
-      ],
-      osmTypes: [
-        'toilets',
-        'sanitary',
-        'shower',
-        'bathroom',
-        'restroom',
-        'sanitary_dump_station',
-        'washing'
-      ],
-      priority: 9,
-    ),
-
-    // 3. SERVICES - Rezeption, Information
-    CampingSearchCategory(
-      category: CampingPOICategory.amenity,
-      displayName: "Service",
-      icon: "ℹ️",
-      keywords: [
-        'rezeption',
-        'reception',
-        'empfang',
-        'anmeldung',
-        'check-in',
-        'büro',
-        'office',
-        'verwaltung',
-        'administration',
-        'info',
-        'information',
-        'tourist-info',
-        'auskunft',
-        'service',
-        'servicepoint',
-        'servicestelle'
-      ],
-      osmTypes: [
-        'reception',
-        'information',
-        'office',
-        'tourist_information',
-        'amenity',
-        'service_point',
-        'admin'
-      ],
-      priority: 8,
-    ),
-
-    // 4. GASTRONOMIE
-    CampingSearchCategory(
-      category: CampingPOICategory.food,
-      displayName: "Gastronomie",
-      icon: "🍽️",
-      keywords: [
-        'restaurant',
-        'restaurants',
-        'gastronomie',
-        'cafe',
-        'café',
-        'kaffee',
-        'coffee',
-        'bar',
-        'bars',
-        'kneipe',
-        'pub',
-        'snack',
-        'snackbar',
-        'imbiss',
-        'bistro',
-        'essen',
-        'food',
-        'dining',
-        'küche'
-      ],
-      osmTypes: [
-        'restaurant',
-        'cafe',
-        'bar',
-        'pub',
-        'fast_food',
-        'food_court',
-        'snack_bar',
-        'bistro'
-      ],
-      priority: 7,
-    ),
-
-    // 5. EINKAUFEN
-    CampingSearchCategory(
-      category: CampingPOICategory.shopping,
-      displayName: "Einkaufen",
-      icon: "🛒",
-      keywords: [
-        'shop',
-        'laden',
-        'geschäft',
-        'store',
-        'supermarkt',
-        'market',
-        'markt',
-        'minimarkt',
-        'kiosk',
-        'convenience',
-        'lebensmittel',
-        'einkaufen',
-        'shopping',
-        'verkauf'
-      ],
-      osmTypes: [
-        'shop',
-        'supermarket',
-        'convenience',
-        'kiosk',
-        'marketplace',
-        'retail'
-      ],
-      priority: 6,
-    ),
-
-    // 6. FREIZEIT
-    CampingSearchCategory(
-      category: CampingPOICategory.recreation,
-      displayName: "Freizeit",
-      icon: "⚽",
-      keywords: [
-        'spielplatz',
-        'playground',
-        'kinder',
-        'children',
-        'kids',
-        'spiel',
-        'spielbereich',
-        'spielwiese',
-        'pool',
-        'schwimmbad',
-        'schwimmen',
-        'swimming',
-        'sport',
-        'sportplatz',
-        'tennis',
-        'fußball',
-        'volleyball',
-        'animation',
-        'unterhaltung',
-        'entertainment',
-        'sauna',
-        'wellness',
-        'fitness'
-      ],
-      osmTypes: [
-        'playground',
-        'swimming_pool',
-        'sports_centre',
-        'pitch',
-        'tennis',
-        'football',
-        'volleyball',
-        'basketball',
-        'fitness_centre',
-        'sauna'
-      ],
-      priority: 5,
-    ),
-
-    // 7. PARKPLÄTZE
+    
+    // 🅿️ PARKPLÄTZE - HÖCHSTE PRIORITÄT FÜR ROOMPOT (81 POIs!)
     CampingSearchCategory(
       category: CampingPOICategory.parking,
       displayName: "Parkplätze",
       icon: "🅿️",
       keywords: [
-        'parking',
-        'parkplatz',
-        'parkplätze',
-        'parken',
-        'stellplatz',
-        'auto',
-        'car',
-        'fahrzeug',
-        'garage',
-        'tiefgarage'
+        'parking', 'parkplatz', 'parkplätze', 'parken',
+        'stellplatz', 'auto', 'car', 'fahrzeug', 'garage',
+        'tiefgarage', 'parkhaus', 'parkzone', 'p1', 'p2', 'p3',
+        // ROOMPOT-SPEZIFISCH:
+        'guest parking', 'visitor parking', 'holiday parking',
+        'resort parking', 'beach parking', 'villa parking'
       ],
-      osmTypes: ['parking', 'parking_space', 'garage'],
+      osmTypes: [
+        'parking', 'parking_space', 'garage', 'parking_entrance',
+        'amenity=parking', 'leisure=parking'
+      ],
+      priority: 10, // HÖCHSTE PRIORITÄT
+      isRoompotPriority: true,
+    ),
+
+    // 🎠 FAMILIEN & SPIELPLÄTZE - ROOMPOT FOKUS
+    CampingSearchCategory(
+      category: CampingPOICategory.family,
+      displayName: "Familie & Kinder",
+      icon: "👨‍👩‍👧‍👦",
+      keywords: [
+        'spielplatz', 'playground', 'kinder', 'children', 'kids',
+        'spiel', 'spielbereich', 'spielwiese', 'kinderspielplatz',
+        'familie', 'family', 'kinderbetreuung', 'animation',
+        // ROOMPOT-SPEZIFISCH:
+        'kids club', 'kinderclub', 'miniclub', 'playground area',
+        'family area', 'kinderbereich', 'spielzone'
+      ],
+      osmTypes: [
+        'playground', 'leisure=playground', 'amenity=playground',
+        'tourism=attraction', 'leisure=recreation_ground'
+      ],
+      priority: 9,
+      isRoompotPriority: true,
+    ),
+
+    // 🏊 WASSERSPORT & STRAND - BEACH RESORT SPEZIFISCH
+    CampingSearchCategory(
+      category: CampingPOICategory.water_sports,
+      displayName: "Wassersport & Strand",
+      icon: "🏄‍♂️",
+      keywords: [
+        'pool', 'schwimmbad', 'schwimmen', 'swimming', 'beach', 'strand',
+        'wassersport', 'water sport', 'surfing', 'surfen', 'sailing',
+        'segeln', 'diving', 'tauchen', 'water', 'wasser',
+        // ROOMPOT BEACH RESORT SPEZIFISCH:
+        'beach access', 'strandzugang', 'water village', 'aqua park',
+        'swimming pool', 'outdoor pool', 'indoor pool', 'spa'
+      ],
+      osmTypes: [
+        'swimming_pool', 'leisure=swimming_pool', 'natural=beach',
+        'leisure=beach_resort', 'sport=swimming', 'sport=diving',
+        'sport=sailing', 'amenity=spa'
+      ],
+      priority: 8,
+      isRoompotPriority: true,
+    ),
+
+    // 🏠 UNTERKÜNFTE - Erweitert für Resort
+    CampingSearchCategory(
+      category: CampingPOICategory.accommodation,
+      displayName: "Unterkünfte",
+      icon: "🏠",
+      keywords: [
+        // Standard Keywords
+        'nr', 'nummer', 'no', 'house', 'haus', 'platz', 'pitch', 'stelle',
+        'parzelle', 'unterkunft', 'accommodation',
+        // ROOMPOT RESORT SPEZIFISCH:
+        'villa', 'chalet', 'bungalow', 'lodge', 'cabin', 'ferienhaus',
+        'holiday home', 'vacation rental', 'comfort', 'wellness', 
+        'luxury', 'premium', 'standard', 'basic', 'beach house',
+        'mobilheim', 'caravan', 'wohnwagen', 'wohnmobil'
+      ],
+      osmTypes: [
+        'accommodation', 'building', 'house', 'pitch', 'camp_pitch',
+        'holiday_home', 'chalet', 'bungalow', 'lodge', 'cabin',
+        'tourism=chalet', 'tourism=holiday_home'
+      ],
+      priority: 7,
+      isRoompotPriority: true,
+    ),
+
+    // 🍽️ GASTRONOMIE - Resort-Restaurants
+    CampingSearchCategory(
+      category: CampingPOICategory.food,
+      displayName: "Restaurants & Bars",
+      icon: "🍽️",
+      keywords: [
+        'restaurant', 'restaurants', 'gastronomie', 'cafe', 'café',
+        'kaffee', 'coffee', 'bar', 'bars', 'kneipe', 'pub',
+        'snack', 'snackbar', 'imbiss', 'bistro', 'essen', 'food',
+        // ROOMPOT SPEZIFISCH:
+        'beach bar', 'poolbar', 'resort restaurant', 'main restaurant',
+        'buffet', 'à la carte', 'takeaway', 'pizza', 'grill'
+      ],
+      osmTypes: [
+        'restaurant', 'cafe', 'bar', 'pub', 'fast_food',
+        'food_court', 'snack_bar', 'bistro', 'amenity=restaurant',
+        'amenity=cafe', 'amenity=bar'
+      ],
+      priority: 6,
+      isRoompotPriority: true,
+    ),
+
+    // 🚿 SANITÄR - Wichtig für Resort-Gäste
+    CampingSearchCategory(
+      category: CampingPOICategory.sanitary,
+      displayName: "Sanitär & WC",
+      icon: "🚿",
+      keywords: [
+        'wc', 'toilet', 'toilette', 'toiletten', 'klo', 'sanitär',
+        'sanitary', 'bad', 'bäder', 'waschraum', 'dusche', 'duschen',
+        'shower', 'showers', 'waschhaus', 'sanitärhaus', 'sanitärgebäude',
+        // ROOMPOT SPEZIFISCH:
+        'restroom', 'bathroom', 'wash facility', 'shower block'
+      ],
+      osmTypes: [
+        'toilets', 'sanitary', 'shower', 'bathroom', 'restroom',
+        'amenity=toilets', 'amenity=shower', 'sanitary_dump_station'
+      ],
+      priority: 5,
+    ),
+
+    // ℹ️ SERVICES - Rezeption & Info
+    CampingSearchCategory(
+      category: CampingPOICategory.amenity,
+      displayName: "Service & Info",
+      icon: "ℹ️",
+      keywords: [
+        'rezeption', 'reception', 'empfang', 'anmeldung', 'check-in',
+        'büro', 'office', 'verwaltung', 'administration', 'info',
+        'information', 'tourist-info', 'auskunft', 'service',
+        // ROOMPOT SPEZIFISCH:
+        'guest services', 'concierge', 'resort office', 'help desk'
+      ],
+      osmTypes: [
+        'reception', 'information', 'office', 'tourist_information',
+        'amenity=information', 'tourism=information'
+      ],
       priority: 4,
     ),
 
-    // 8. VERSORGUNG
+    // 🛒 EINKAUFEN - Resort Shops
+    CampingSearchCategory(
+      category: CampingPOICategory.shopping,
+      displayName: "Shopping",
+      icon: "🛒",
+      keywords: [
+        'shop', 'laden', 'geschäft', 'store', 'supermarkt', 'market',
+        'markt', 'minimarkt', 'kiosk', 'convenience', 'lebensmittel',
+        'einkaufen', 'shopping', 'verkauf',
+        // ROOMPOT SPEZIFISCH:
+        'resort shop', 'holiday shop', 'beach shop', 'souvenir'
+      ],
+      osmTypes: [
+        'shop', 'supermarket', 'convenience', 'kiosk', 'marketplace',
+        'shop=convenience', 'shop=supermarket'
+      ],
+      priority: 3,
+    ),
+
+    // ⚽ FREIZEIT & SPORT
+    CampingSearchCategory(
+      category: CampingPOICategory.recreation,
+      displayName: "Sport & Freizeit",
+      icon: "⚽",
+      keywords: [
+        'sport', 'sportplatz', 'tennis', 'fußball', 'volleyball',
+        'basketball', 'animation', 'unterhaltung', 'entertainment',
+        'fitness', 'gym', 'wellness', 'spa',
+        // ROOMPOT SPEZIFISCH:
+        'sports center', 'activity center', 'recreation', 'leisure'
+      ],
+      osmTypes: [
+        'sports_centre', 'pitch', 'tennis', 'football', 'volleyball',
+        'basketball', 'fitness_centre', 'leisure=sports_centre'
+      ],
+      priority: 2,
+    ),
+
+    // ⚡ VERSORGUNG
     CampingSearchCategory(
       category: CampingPOICategory.utility,
       displayName: "Versorgung",
       icon: "⚡",
       keywords: [
-        'müll',
-        'mülltonne',
-        'abfall',
-        'waste',
-        'disposal',
-        'wasser',
-        'water',
-        'trinkwasser',
-        'drinking_water',
-        'strom',
-        'electricity',
-        'stromanschluss',
-        'power',
-        'entsorgung',
-        'waste_disposal',
-        'recycling'
+        'müll', 'mülltonne', 'abfall', 'waste', 'disposal',
+        'wasser', 'water', 'trinkwasser', 'drinking_water',
+        'strom', 'electricity', 'stromanschluss', 'power'
       ],
       osmTypes: [
-        'waste_disposal',
-        'waste_basket',
-        'recycling',
-        'drinking_water',
-        'water_point',
-        'power'
+        'waste_disposal', 'waste_basket', 'drinking_water',
+        'water_point', 'power', 'amenity=waste_disposal'
       ],
-      priority: 3,
-    ),
-
-    // 9. MEDIZINISCH
-    CampingSearchCategory(
-      category: CampingPOICategory.medical,
-      displayName: "Medizin",
-      icon: "🏥",
-      keywords: [
-        'erste hilfe',
-        'first aid',
-        'medical',
-        'medizin',
-        'krankenhaus',
-        'hospital',
-        'arzt',
-        'doctor',
-        'apotheke',
-        'pharmacy',
-        'notfall',
-        'emergency'
-      ],
-      osmTypes: [
-        'hospital',
-        'clinic',
-        'pharmacy',
-        'first_aid',
-        'emergency',
-        'medical'
-      ],
-      priority: 2,
-    ),
-
-    // 10. TRANSPORT
-    CampingSearchCategory(
-      category: CampingPOICategory.transport,
-      displayName: "Transport",
-      icon: "🚌",
-      keywords: [
-        'bus',
-        'bushaltestelle',
-        'bus_stop',
-        'haltestelle',
-        'transport',
-        'öpnv',
-        'public_transport',
-        'taxi',
-        'shuttle'
-      ],
-      osmTypes: ['bus_stop', 'bus_station', 'taxi', 'public_transport'],
       priority: 1,
     ),
   ];
 
-  // ✅ Kategorie-Matching für intelligente Suche
+  // ✅ ROOMPOT-SPEZIFISCHE QUICK-SEARCH SHORTCUTS
+  static const Map<String, String> roompotQuickSearchShortcuts = {
+    // Standard Shortcuts
+    '🚿': 'wc',
+    '🍽️': 'restaurant', 
+    '🅿️': 'parkplatz',
+    'ℹ️': 'rezeption',
+    '⚽': 'spielplatz',
+    
+    // ROOMPOT-SPEZIFISCHE SHORTCUTS
+    '🏖️': 'beach', // Strand-Zugang
+    '🏊': 'pool', // Schwimmbäder
+    '👨‍👩‍👧‍👦': 'family', // Familien-Bereiche
+    '🏠': 'villa', // Unterkünfte
+    '🛒': 'shop', // Resort Shopping
+  };
+
+  // ✅ ROOMPOT PRIORITY SEARCH - Zeigt wichtigste Kategorien zuerst
+  static List<CampingSearchCategory> getRoompotPriorityCategories() {
+    return categories.where((cat) => cat.isRoompotPriority).toList();
+  }
+
+  // ✅ Erweiterte Parkplatz-Suche (wichtig bei 81 Parkplätzen!)
+  static List<String> getParkingSpecificKeywords() {
+    return [
+      // Parkplatz-Nummern
+      'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p9', 'p10',
+      // Bereiche
+      'hauptparkplatz', 'main parking', 'central parking',
+      'beach parking', 'villa parking', 'restaurant parking',
+      // Typen
+      'guest parking', 'visitor parking', 'disabled parking',
+      'family parking', 'oversized parking'
+    ];
+  }
+
+  // ✅ Bestehende Methoden bleiben unverändert
   static CampingSearchCategory? matchCategory(String query) {
     final cleanQuery = query.trim().toLowerCase();
 
-    // Durchsuche alle Kategorien nach Keywords
     for (final category in categories) {
       for (final keyword in category.keywords) {
         if (cleanQuery.contains(keyword.toLowerCase()) ||
@@ -377,7 +293,6 @@ class CampingSearchCategories {
     return null;
   }
 
-  // ✅ OSM-Type zu Kategorie Mapping
   static CampingSearchCategory? getCategoryByOsmType(String osmType) {
     final cleanType = osmType.trim().toLowerCase();
 
@@ -393,48 +308,60 @@ class CampingSearchCategories {
     return null;
   }
 
-  // ✅ Prioritäts-basierte Sortierung
   static List<CampingSearchCategory> getSortedCategories() {
     final sorted = List<CampingSearchCategory>.from(categories);
     sorted.sort((a, b) => b.priority.compareTo(a.priority));
     return sorted;
   }
 
-  // ✅ Numerische Unterkunft-Erkennung (erweitert)
   static bool isAccommodationNumberSearch(String query) {
     final cleanQuery = query.trim().toLowerCase();
 
-    // Reine Zahlen
-    if (RegExp(r'^\d+$').hasMatch(cleanQuery)) {
-      return true;
-    }
-
-    // Zahlen mit Buchstaben (247a, 15b)
-    if (RegExp(r'^\d+[a-z]$').hasMatch(cleanQuery)) {
-      return true;
-    }
-
-    // Deutsche Muster
-    if (RegExp(r'^(nr|no|nummer|haus|platz|stelle|parzelle)\.?\s*\d+[a-z]?$')
-        .hasMatch(cleanQuery)) {
-      return true;
-    }
-
-    // Englische Muster
-    if (RegExp(r'^(house|pitch|site|lot)\.?\s*\d+[a-z]?$')
-        .hasMatch(cleanQuery)) {
-      return true;
-    }
+    if (RegExp(r'^\d+$').hasMatch(cleanQuery)) return true;
+    if (RegExp(r'^\d+[a-z]$').hasMatch(cleanQuery)) return true;
+    if (RegExp(r'^(nr|no|nummer|haus|platz|stelle|parzelle|villa)\.?\s*\d+[a-z]?$')
+        .hasMatch(cleanQuery)) return true;
+    if (RegExp(r'^(house|pitch|site|lot|villa|chalet)\.?\s*\d+[a-z]?$')
+        .hasMatch(cleanQuery)) return true;
 
     return false;
   }
 
-  // ✅ Quick-Search Shortcuts für häufige Anfragen
+  // ✅ NEUE ROOMPOT-SPEZIFISCHE METHODEN
+  static bool isParkingSearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+    final parkingKeywords = getParkingSpecificKeywords();
+    
+    return parkingKeywords.any((keyword) => 
+        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  }
+
+  static bool isFamilySearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+    final familyKeywords = ['family', 'familie', 'kinder', 'kids', 'children', 
+                           'playground', 'spielplatz', 'animation'];
+    
+    return familyKeywords.any((keyword) => 
+        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  }
+
+  static bool isWaterSportsSearch(String query) {
+    final cleanQuery = query.trim().toLowerCase();
+    final waterKeywords = ['pool', 'beach', 'strand', 'swimming', 'water', 
+                          'wassersport', 'surf', 'sail'];
+    
+    return waterKeywords.any((keyword) => 
+        cleanQuery.contains(keyword) || keyword.contains(cleanQuery));
+  }
+
+  // ✅ Erweiterte Quick-Search mit Roompot Shortcuts
   static const Map<String, String> quickSearchShortcuts = {
-    '🚿': 'wc', // Sanitär-Emoji → WC Suche
-    '🍽️': 'restaurant', // Essen-Emoji → Restaurant Suche
-    '🅿️': 'parkplatz', // Parking-Emoji → Parkplatz Suche
-    'ℹ️': 'rezeption', // Info-Emoji → Rezeption Suche
-    '⚽': 'spielplatz', // Sport-Emoji → Spielplatz Suche
+    ...roompotQuickSearchShortcuts, // Roompot-spezifische zuerst
+    // Standard Shortcuts als Fallback
+    '🚿': 'wc',
+    '🍽️': 'restaurant',
+    '🅿️': 'parkplatz',
+    'ℹ️': 'rezeption',
+    '⚽': 'spielplatz',
   };
 }
