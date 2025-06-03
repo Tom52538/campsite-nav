@@ -1,4 +1,4 @@
-// lib/widgets/simple_search_container.dart - ROOMPOT RESORT OPTIMIERT
+// lib/widgets/simple_search_container.dart - SMARTPHONE OPTIMIERT
 import 'package:flutter/material.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/camping_search_categories.dart';
@@ -32,10 +32,10 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
     with TickerProviderStateMixin {
   late AnimationController _collapseController;
   late AnimationController _routeInfoController;
-  late AnimationController _quickAccessController; // NEU: Quick-Access Animation
+  late AnimationController _quickAccessController;
   late Animation<double> _collapseAnimation;
   late Animation<double> _routeInfoAnimation;
-  late Animation<double> _quickAccessAnimation; // NEU
+  late Animation<double> _quickAccessAnimation;
 
   @override
   void initState() {
@@ -51,7 +51,6 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
       vsync: this,
     );
 
-    // NEU: Quick-Access Animation Controller
     _quickAccessController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -72,7 +71,6 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
       curve: Curves.elasticOut,
     );
 
-    // Starte Quick-Access Animation beim Load
     _quickAccessController.forward();
   }
 
@@ -135,26 +133,21 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
     widget.controller.setRouteInfoAndFadeFields(false);
   }
 
-  // ✅ NEU: Quick-Access Funktionen für Roompot Resort
   void _performQuickSearch(String searchTerm, String categoryName) {
-    // Suche Features basierend auf dem Search Term
     final results = _filterFeaturesBySearchTerm(searchTerm);
     
     if (results.isNotEmpty) {
-      // Zeige Snackbar mit Anzahl der Ergebnisse
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('$categoryName: ${results.length} Optionen gefunden'),
+          content: Text('$categoryName: ${results.length} gefunden'),
           duration: const Duration(seconds: 2),
           backgroundColor: Colors.green.shade600,
         ),
       );
 
-      // Wenn nur ein Ergebnis: Automatisch als Ziel setzen
       if (results.length == 1) {
         _setDestination(results.first);
       } else {
-        // Mehrere Ergebnisse: Fülle Suchfeld und zeige Optionen
         widget.controller.endSearchController.text = searchTerm;
         widget.controller.endFocusNode.requestFocus();
       }
@@ -196,7 +189,6 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
       builder: (context, child) {
         return Stack(
           children: [
-            // Full search fields (hidden when route is active)
             AnimatedOpacity(
               opacity: widget.showRouteInfoAndFadeFields ? 0.0 : 1.0,
               duration: const Duration(milliseconds: 400),
@@ -210,7 +202,6 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
               ),
             ),
 
-            // Compact route info (shown when route is active)
             if (widget.showRouteInfoAndFadeFields)
               AnimatedOpacity(
                 opacity: _routeInfoAnimation.value,
@@ -227,8 +218,12 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
   }
 
   Widget _buildFullSearchInterface() {
+    // ✅ SMARTPHONE-OPTIMIERTE MARGINS
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalMargin = screenWidth < 360 ? 12.0 : 16.0; // Kleiner margin für kleine Screens
+    
     return Container(
-      margin: const EdgeInsets.all(16.0),
+      margin: EdgeInsets.symmetric(horizontal: horizontalMargin, vertical: 16.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.0),
@@ -242,11 +237,11 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(screenWidth < 360 ? 12.0 : 16.0), // Responsive padding
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ✅ NEU: ROOMPOT QUICK-ACCESS BUTTONS
+            // ✅ RESPONSIVE QUICK-ACCESS BUTTONS
             AnimatedBuilder(
               animation: _quickAccessAnimation,
               child: _buildRoompotQuickAccess(),
@@ -285,21 +280,8 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
 
             const SizedBox(height: 12),
 
-            // Swap Button and Dividers
-            Row(
-              children: [
-                const Expanded(child: Divider(height: 1, thickness: 1)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: IconButton(
-                    icon: const Icon(Icons.swap_vert, color: Colors.grey),
-                    tooltip: 'Swap start and destination',
-                    onPressed: _swapStartAndDestination,
-                  ),
-                ),
-                const Expanded(child: Divider(height: 1, thickness: 1)),
-              ],
-            ),
+            // ✅ MOBILE-OPTIMIERTER SWAP BUTTON
+            _buildMobileSwapButton(),
 
             const SizedBox(height: 12),
 
@@ -327,26 +309,30 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
     );
   }
 
-  // ✅ NEU: ROOMPOT RESORT QUICK-ACCESS BUTTONS
+  // ✅ SMARTPHONE-OPTIMIERTE QUICK-ACCESS BUTTONS
   Widget _buildRoompotQuickAccess() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 375; // iPhone SE und ähnliche
+    
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         children: [
-          // Header
+          // ✅ KOMPAKTER HEADER
           Row(
             children: [
-              Icon(Icons.flash_on, color: Colors.blue.shade600, size: 18),
-              const SizedBox(width: 6),
-              Text(
-                'Resort Quick-Access',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey.shade700,
+              Icon(Icons.flash_on, color: Colors.blue.shade600, size: 16),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  isSmallScreen ? 'Quick-Access' : 'Resort Quick-Access',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
                 ),
               ),
-              const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -356,7 +342,7 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
                 child: Text(
                   '214 POIs',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                     color: Colors.blue.shade700,
                   ),
@@ -365,44 +351,110 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
             ],
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           
-          // Quick-Access Button Grid
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildQuickAccessButton(
-                icon: '🅿️',
-                label: 'Parkplatz',
-                subtitle: '81 Plätze',
-                onTap: () => _performQuickSearch('parkplatz', 'Parkplätze'),
-                color: Colors.indigo,
-              ),
-              _buildQuickAccessButton(
-                icon: '👨‍👩‍👧‍👦',
-                label: 'Familie',
-                subtitle: '8 Spielplätze',
-                onTap: () => _performQuickSearch('spielplatz', 'Familien-Bereiche'),
-                color: Colors.pink,
-              ),
-              _buildQuickAccessButton(
-                icon: '🏖️',
-                label: 'Beach',
-                subtitle: 'Wassersport',
-                onTap: () => _performQuickSearch('beach pool', 'Strand & Pool'),
-                color: Colors.cyan,
-              ),
-              _buildQuickAccessButton(
-                icon: '🍽️',
-                label: 'Essen',
-                subtitle: 'Restaurants',
-                onTap: () => _performQuickSearch('restaurant', 'Restaurants'),
-                color: Colors.orange,
-              ),
-            ],
-          ),
+          // ✅ RESPONSIVE BUTTON LAYOUT
+          isSmallScreen ? _buildSmallScreenButtons() : _buildNormalScreenButtons(),
         ],
       ),
+    );
+  }
+
+  // ✅ LAYOUT FÜR KLEINE SCREENS (2x2 Grid)
+  Widget _buildSmallScreenButtons() {
+    return Column(
+      children: [
+        // Erste Reihe
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuickAccessButton(
+                icon: '🅿️',
+                label: 'Parkplatz',
+                subtitle: '81x',
+                onTap: () => _performQuickSearch('parkplatz', 'Parkplätze'),
+                color: Colors.indigo,
+                isCompact: true,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildQuickAccessButton(
+                icon: '👨‍👩‍👧‍👦',
+                label: 'Familie',
+                subtitle: '8x',
+                onTap: () => _performQuickSearch('spielplatz', 'Familien-Bereiche'),
+                color: Colors.pink,
+                isCompact: true,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Zweite Reihe
+        Row(
+          children: [
+            Expanded(
+              child: _buildQuickAccessButton(
+                icon: '🏖️',
+                label: 'Beach',
+                subtitle: 'Pool',
+                onTap: () => _performQuickSearch('beach pool', 'Strand & Pool'),
+                color: Colors.cyan,
+                isCompact: true,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildQuickAccessButton(
+                icon: '🍽️',
+                label: 'Essen',
+                subtitle: 'Food',
+                onTap: () => _performQuickSearch('restaurant', 'Restaurants'),
+                color: Colors.orange,
+                isCompact: true,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ✅ LAYOUT FÜR NORMALE SCREENS (1x4 Row)
+  Widget _buildNormalScreenButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildQuickAccessButton(
+          icon: '🅿️',
+          label: 'Parkplatz',
+          subtitle: '81 Plätze',
+          onTap: () => _performQuickSearch('parkplatz', 'Parkplätze'),
+          color: Colors.indigo,
+        ),
+        _buildQuickAccessButton(
+          icon: '👨‍👩‍👧‍👦',
+          label: 'Familie',
+          subtitle: '8 Spielplätze',
+          onTap: () => _performQuickSearch('spielplatz', 'Familien-Bereiche'),
+          color: Colors.pink,
+        ),
+        _buildQuickAccessButton(
+          icon: '🏖️',
+          label: 'Beach',
+          subtitle: 'Wassersport',
+          onTap: () => _performQuickSearch('beach pool', 'Strand & Pool'),
+          color: Colors.cyan,
+        ),
+        _buildQuickAccessButton(
+          icon: '🍽️',
+          label: 'Essen',
+          subtitle: 'Restaurants',
+          onTap: () => _performQuickSearch('restaurant', 'Restaurants'),
+          color: Colors.orange,
+        ),
+      ],
     );
   }
 
@@ -412,17 +464,25 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
     required String subtitle,
     required VoidCallback onTap,
     required Color color,
+    bool isCompact = false,
   }) {
+    // ✅ ENHANCED TOUCH TARGETS - Min 48px für Android, 44px für iOS
+    final minSize = isCompact ? 44.0 : 48.0;
+    
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        padding: EdgeInsets.symmetric(horizontal: isCompact ? 2.0 : 4.0),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              constraints: BoxConstraints(minHeight: minSize),
+              padding: EdgeInsets.symmetric(
+                vertical: isCompact ? 8 : 12, 
+                horizontal: isCompact ? 4 : 8
+              ),
               decoration: BoxDecoration(
                 color: color.withAlpha(15),
                 borderRadius: BorderRadius.circular(12),
@@ -434,10 +494,10 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Icon
+                  // ✅ RESPONSIVE ICON SIZE
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: isCompact ? 28 : 32,
+                    height: isCompact ? 28 : 32,
                     decoration: BoxDecoration(
                       color: color.withAlpha(25),
                       borderRadius: BorderRadius.circular(8),
@@ -445,38 +505,80 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
                     child: Center(
                       child: Text(
                         icon,
-                        style: const TextStyle(fontSize: 18),
+                        style: TextStyle(fontSize: isCompact ? 16 : 18),
                       ),
                     ),
                   ),
                   
-                  const SizedBox(height: 6),
+                  SizedBox(height: isCompact ? 4 : 6),
                   
-                  // Label
+                  // ✅ RESPONSIVE TEXT SIZE
                   Text(
                     label,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: isCompact ? 10 : 12,
                       fontWeight: FontWeight.w600,
                       color: color.shade700,
                     ),
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   
                   // Subtitle
                   Text(
                     subtitle,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: isCompact ? 8 : 10,
                       color: color.shade600,
                     ),
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ✅ MOBILE-OPTIMIERTER SWAP BUTTON
+  Widget _buildMobileSwapButton() {
+    return Container(
+      height: 44, // Standard Touch-Target
+      child: Row(
+        children: [
+          const Expanded(child: Divider(height: 1, thickness: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(22),
+              child: InkWell(
+                onTap: _swapStartAndDestination,
+                borderRadius: BorderRadius.circular(22),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: const Icon(
+                    Icons.swap_vert, 
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(height: 1, thickness: 1)),
+        ],
       ),
     );
   }
@@ -488,6 +590,8 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
         : widget.controller.toggleDestinationLock;
 
     return Container(
+      width: 48, // ✅ ENHANCED TOUCH TARGET
+      height: 48,
       decoration: BoxDecoration(
         color: isLocked ? Colors.green.withAlpha(30) : Colors.grey.withAlpha(20),
         borderRadius: BorderRadius.circular(8),
@@ -500,6 +604,7 @@ class _SimpleSearchContainerState extends State<SimpleSearchContainer>
         icon: Icon(
           isLocked ? Icons.lock : Icons.lock_open_outlined,
           color: isLocked ? Colors.green : Colors.grey,
+          size: 20, // ✅ OPTIMIERTE ICON-GRÖSSE
         ),
         tooltip: isLocked
             ? "${isStart ? 'Start' : 'Destination'} locked"
