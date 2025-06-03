@@ -77,7 +77,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   
   // Responsive Design
   double _screenWidth = 0;
-  double _screenHeight = 0;
   bool _isSmallScreen = false;
   EdgeInsets _safeArea = EdgeInsets.zero;
 
@@ -352,7 +351,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     
     setState(() {
       _screenWidth = size.width;
-      _screenHeight = size.height;
       _isSmallScreen = _screenWidth < SmartphoneBreakpoints.small;
       _safeArea = mediaQuery.padding;
     });
@@ -1067,17 +1065,17 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                 
                 SizedBox(height: _isSmallScreen ? 6 : 8),
                 
-                // Label - ✅ FIX: Verwende definierte Color-Eigenschaften
+                // Label - ✅ FIX: Verwende moderne Color-Konstruktion
                 Text(
                   action.$3,
                   style: TextStyle(
                     fontSize: _isSmallScreen ? 11 : 12,
                     fontWeight: FontWeight.w700,
-                    color: Color.fromRGBO(
-                      action.$4.red,
-                      action.$4.green, 
-                      action.$4.blue,
-                      0.8
+                    color: Color.fromARGB(
+                      204, // 80% opacity (0.8 * 255)
+                      (action.$4.value >> 16) & 0xFF, // red
+                      (action.$4.value >> 8) & 0xFF,  // green
+                      action.$4.value & 0xFF,          // blue
                     ),
                   ),
                   textAlign: TextAlign.center,
