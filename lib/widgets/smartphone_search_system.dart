@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart
+// lib/widgets/smartphone_search_system.dart - CONST CONSTRUCTOR FIX
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
@@ -6,14 +6,21 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
-// Assuming ColorValues extension and SmartphoneBreakpoints are defined/imported elsewhere
-// For instance, ColorValues is now defined in map_screen.dart. If this file needs it,
-// an import like: import '../screens/map_screen.dart'; // (adjust path) might be necessary
-// or the ColorValues extension could be moved to a shared utility file.
+// ✅ ColorValues Extension für smartphone_search_system.dart
+extension ColorValues on Color {
+  Color withValues({double? alpha, int? r, int? g, int? b}) {
+    return Color.fromARGB(alpha != null ? (alpha * 255).round().toInt() : a,
+        (r ?? this.r).toInt(), (g ?? this.g).toInt(), (b ?? this.b).toInt());
+  }
+}
 
 // Placeholder for SmartphoneBreakpoints if not defined/imported
 class SmartphoneBreakpoints {
   static const double small = 360; // Example value
+
+  static bool isSmallScreen(BuildContext context) {
+    return MediaQuery.of(context).size.width < small;
+  }
 }
 
 class SmartphoneSearchSystem extends StatefulWidget {
@@ -109,8 +116,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
     final screenHeight = MediaQuery.of(context).size.height;
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = keyboardHeight > 50;
-    final isSmallScreen =
-        MediaQuery.of(context).size.width < SmartphoneBreakpoints.small;
+    final isSmallScreen = SmartphoneBreakpoints.isSmallScreen(context);
 
     final maxHeight = _calculateMaxHeight(
         screenHeight, keyboardHeight, isKeyboardVisible, isSmallScreen);
@@ -147,8 +153,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   }
 
   Widget _buildSearchMode(bool isSmallScreen) {
-    // Assuming ColorValues extension is accessible here
-    // e.g. by importing the file where it's defined like map_screen.dart
     return SingleChildScrollView(
       child: Container(
         margin: const EdgeInsets.all(8),
@@ -494,7 +498,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   }
 
   Widget _buildRouteInfoMode() {
-    // Assuming ColorValues extension is accessible here
     return Container(
       margin: const EdgeInsets.all(8),
       child: Column(
@@ -524,6 +527,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
                 color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
               ),
+              // ✅ FIX: CONST CONSTRUCTOR hinzugefügt
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
