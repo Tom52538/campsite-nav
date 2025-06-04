@@ -5,31 +5,14 @@ import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
-// Removed unused import: 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 
-// Assuming PremiumCurves and SmartphoneBreakpoints are defined elsewhere or
-// should be part of this file or imported.
-// If they are from map_screen.dart, this file should import map_screen.dart or the file where they are defined.
-// For now, adding placeholders if they are not imported via other means.
+// Assuming ColorValues extension and SmartphoneBreakpoints are defined/imported elsewhere
+// (e.g. from map_screen.dart or their own utility files)
+// If map_screen.dart (which now contains ColorValues) is not otherwise imported,
+// you might need to add: import '../screens/map_screen.dart'; (adjust path as needed)
+// or duplicate/move the ColorValues extension.
 
-// If Color.withValues is used here, ensure the extension is available (e.g., by importing map_screen.dart or defining it here)
-// For example, if map_screen.dart now defines it, and this file uses it, an import might be needed,
-// or define it here if it's self-contained.
-// It's used like: Colors.blue.withValues(alpha: 0.1)
-
-// Placeholder for ColorValues extension if not implicitly imported
-// extension ColorValues on Color {
-//   Color withValues({double? alpha, int? r, int? g, int? b}) {
-//     return Color.fromARGB(
-//       alpha != null ? (alpha * 255).round() : this.alpha,
-//       r ?? red,
-//       g ?? green,
-//       b ?? blue,
-//     );
-//   }
-// }
-
-// Placeholder for SmartphoneBreakpoints
+// Placeholder for SmartphoneBreakpoints if not defined/imported
 class SmartphoneBreakpoints {
   static const double small = 360; // Example value
 }
@@ -93,7 +76,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
         HapticFeedback.mediumImpact();
       }
     }
-    // To prevent setState calls after dispose or during build, ensure mounted
     if (mounted) {
       setState(() {});
     }
@@ -171,13 +153,11 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
         margin: const EdgeInsets.all(8),
         padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
         decoration: BoxDecoration(
-          color: Colors.white
-              .withValues(alpha: 0.95), // Assuming ColorValues extension
+          color: Colors.white.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black
-                  .withValues(alpha: 0.1), // Assuming ColorValues extension
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -204,8 +184,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withValues(
-                        alpha: 0.1), // Assuming ColorValues extension
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -252,8 +231,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
         ),
         borderRadius: BorderRadius.circular(8),
         color: widget.controller.startFocusNode.hasFocus
-            ? Colors.blue
-                .withValues(alpha: 0.05) // Assuming ColorValues extension
+            ? Colors.blue.withValues(alpha: 0.05)
             : Colors.white,
       ),
       child: Row(
@@ -314,8 +292,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
           height: 40,
           decoration: BoxDecoration(
             color: _isStartUsingGPS
-                ? Colors.blue
-                    .withValues(alpha: 0.1) // Assuming ColorValues extension
+                ? Colors.blue.withValues(alpha: 0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
           ),
@@ -345,7 +322,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
             widget.controller.endSearchController.clear();
           }
           if (mounted) {
-            // Ensure widget is still in the tree
             setState(() {});
           }
         },
@@ -410,8 +386,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
         ),
         borderRadius: BorderRadius.circular(8),
         color: widget.controller.endFocusNode.hasFocus
-            ? Colors.blue
-                .withValues(alpha: 0.05) // Assuming ColorValues extension
+            ? Colors.blue.withValues(alpha: 0.05)
             : Colors.white,
       ),
       child: Row(
@@ -454,7 +429,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
       widget.controller.setCurrentLocationAsStart();
       _isStartUsingGPS = true;
       if (mounted) {
-        // Ensure widget is still in the tree
         setState(() {});
       }
       _showSnackbar("GPS-Position als Startpunkt gesetzt");
@@ -478,7 +452,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
       _isStartUsingGPS = false;
       widget.controller.startSearchController.clear();
       if (mounted) {
-        // Ensure widget is still in the tree
         setState(() {});
       }
     }
@@ -497,7 +470,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
     widget.controller.swapStartAndDestination();
     _isStartUsingGPS = false;
     if (mounted) {
-      // Ensure widget is still in the tree
       setState(() {});
     }
   }
@@ -505,18 +477,19 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   void _showSnackbar(String message, {bool isError = false}) {
     if (mounted) {
       try {
-        // The SnackBar cannot be 'const' because 'message' and 'isError' (affecting backgroundColor) are dynamic.
+        // This SnackBar cannot be 'const' because 'message' and 'backgroundColor' (due to 'isError') are dynamic.
+        // The 'prefer_const_constructors' lint is a suggestion for when all arguments *could* be constant.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            duration: const Duration(seconds: 2),
+            duration: const Duration(seconds: 2), // This part can be const
             backgroundColor: isError ? Colors.red : Colors.green,
             behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+            margin: const EdgeInsets.only(
+                bottom: 80, left: 16, right: 16), // This part can be const
           ),
         );
       } catch (e) {
-        // The avoid_print lint is minor and this is a debug fallback.
         print("SnackBar Error: $message"); // ignore: avoid_print
       }
     }
@@ -549,8 +522,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black
-                    .withValues(alpha: 0.7), // Assuming ColorValues extension
+                color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Row(
