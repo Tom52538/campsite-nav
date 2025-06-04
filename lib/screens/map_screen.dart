@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart - FINALER ZERO-WARNINGS FIX
+// lib/screens/map_screen.dart - VOLLSTÄNDIG MIT APPBAR FIX
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -32,7 +32,7 @@ class MapScreenState extends State<MapScreen>
   late MapScreenController controller;
   late MapScreenGpsHandler gpsHandler;
   late MapScreenRouteHandler routeHandler;
-  
+
   // Smart Context Detection
   SearchContext _currentSearchContext = SearchContext.guest;
 
@@ -61,7 +61,7 @@ class MapScreenState extends State<MapScreen>
   // Intelligente Context-Erkennung
   void _detectInitialContext() {
     final now = DateTime.now();
-    
+
     // Arrival Detection (Check-in Zeit)
     if (now.hour >= 15 && now.hour <= 18) {
       _currentSearchContext = SearchContext.arrival;
@@ -74,7 +74,7 @@ class MapScreenState extends State<MapScreen>
     else {
       _currentSearchContext = SearchContext.guest;
     }
-    
+
     // Nach 5 Sekunden auf Guest Context wechseln
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted && _currentSearchContext != SearchContext.guest) {
@@ -158,15 +158,16 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
+  // ✅ VOLLSTÄNDIG KORRIGIERTE APPBAR MIT OVERFLOW FIX
   AppBar _buildAppBar(List<LocationInfo> availableLocations,
       LocationInfo? selectedLocation, bool isLoading, bool isUiReady) {
     return AppBar(
       title: const Text("Campground Navigator"),
       actions: [
-        // Context Switcher für Development
+        // Context Switcher für Development (nur im Debug Mode)
         if (kDebugMode)
           PopupMenuButton<SearchContext>(
-            icon: Icon(_getContextIcon(_currentSearchContext)),
+            icon: Icon(_getContextIcon(_currentSearchContext), size: 18),
             onSelected: (context) {
               setState(() {
                 _currentSearchContext = context;
@@ -177,28 +178,31 @@ class MapScreenState extends State<MapScreen>
                 value: context,
                 child: Row(
                   children: [
-                    Icon(_getContextIcon(context)),
-                    const SizedBox(width: 8),
-                    Text(context.value),
+                    Icon(_getContextIcon(context), size: 16),
+                    const SizedBox(width: 6),
+                    Text(context.value, style: const TextStyle(fontSize: 12)),
                   ],
                 ),
               );
             }).toList(),
           ),
-        
+
+        // ✅ TTS Button (kompakter)
         IconButton(
-          icon: const Icon(Icons.volume_up),
+          icon: const Icon(Icons.volume_up, size: 20),
           tooltip: 'Test TTS',
           onPressed: isUiReady ? controller.ttsService.testSpeak : null,
         ),
+
+        // ✅ POI Toggle (kompakter)
         IconButton(
           icon: Icon(
             controller.showPOILabels ? Icons.search : Icons.search_off,
             color: controller.showPOILabels ? Colors.white : Colors.white70,
+            size: 20,
           ),
-          tooltip: controller.showPOILabels
-              ? 'Search-Navigation active'
-              : 'Search-Navigation inactive',
+          tooltip:
+              controller.showPOILabels ? 'Search active' : 'Search inactive',
           onPressed: isUiReady
               ? () {
                   setState(() {
@@ -207,12 +211,87 @@ class MapScreenState extends State<MapScreen>
                 }
               : null,
         ),
+
+        // ✅ Location Dropdown (kompakter & scrollbar)
         if (availableLocations.isNotEmpty && selectedLocation != null)
-          _buildLocationDropdown(
+          _buildCompactLocationDropdown(
               availableLocations, selectedLocation, isLoading),
-        _buildMockLocationToggle(isLoading),
+
+        // ✅ Mock GPS Toggle (kompakter)
+        _buildCompactMockLocationToggle(isLoading),
       ],
     );
+  }
+
+  // ✅ KOMPAKTER LOCATION DROPDOWN - Behebt Overflow
+  Widget _buildCompactLocationDropdown(
+      List<LocationInfo> locations, LocationInfo selected, bool isLoading) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 100), // ✅ Maximale Breite
+      margin: const EdgeInsets.only(right: 4.0),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<LocationInfo>(
+          value: selected,
+          icon: const Icon(Icons.public, color: Colors.white, size: 18),
+          dropdownColor: Colors.deepOrange[700],
+          style: const TextStyle(
+              color: Colors.white, fontSize: 12), // ✅ Kleinere Schrift
+          items: locations
+              .map<DropdownMenuItem<LocationInfo>>(
+                (LocationInfo location) => DropdownMenuItem<LocationInfo>(
+                  value: location,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                        maxWidth: 90), // ✅ Begrenzte Breite
+                    child: Text(
+                      _shortenLocationName(location.name), // ✅ Verkürzen
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: !isLoading ? _onLocationSelectedFromDropdown : null,
+          hint: const Text("Select location",
+              style: TextStyle(color: Colors.white70, fontSize: 12)),
+        ),
+      ),
+    );
+  }
+
+  // ✅ KOMPAKTER MOCK GPS TOGGLE
+  Widget _buildCompactMockLocationToggle(bool isLoading) {
+    return Tooltip(
+      message: controller.useMockLocation ? "Real GPS" : "Mock GPS",
+      child: IconButton(
+        icon: Icon(
+          controller.useMockLocation ? Icons.location_on : Icons.location_off,
+          size: 20, // ✅ Kleineres Icon
+        ),
+        color: controller.useMockLocation ? Colors.orangeAccent : Colors.white,
+        onPressed: !isLoading ? _toggleMockLocation : null,
+      ),
+    );
+  }
+
+  // ✅ HILFSMETHODE: Verkürze Location Namen
+  String _shortenLocationName(String name) {
+    // Bekannte Abkürzungen
+    final abbreviations = {
+      'Roompot Beach Resort Kamperland': 'Kamperland',
+      'Testgelände Sittard': 'Sittard',
+      'Umgebung Zuhause (Gangelt)': 'Gangelt',
+      'Kamperland (Basic POIs)': 'Kamperland B',
+    };
+
+    if (abbreviations.containsKey(name)) {
+      return abbreviations[name]!;
+    }
+
+    // Fallback: Erste 10 Zeichen
+    return name.length > 10 ? '${name.substring(0, 10)}...' : name;
   }
 
   // ✅ FIX: Context Icon Helper
@@ -227,51 +306,6 @@ class MapScreenState extends State<MapScreen>
       case SearchContext.guest:
         return Icons.explore;
     }
-  }
-
-  Widget _buildLocationDropdown(
-      List<LocationInfo> locations, LocationInfo selected, bool isLoading) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<LocationInfo>(
-          value: selected,
-          icon: const Icon(Icons.public, color: Colors.white),
-          dropdownColor: Colors.deepOrange[700],
-          style: const TextStyle(color: Colors.white),
-          items: locations
-              .map<DropdownMenuItem<LocationInfo>>(
-                (LocationInfo location) => DropdownMenuItem<LocationInfo>(
-                  value: location,
-                  child: Text(
-                    location.name,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: !isLoading ? _onLocationSelectedFromDropdown : null,
-          hint: const Text("Select location",
-              style: TextStyle(color: Colors.white70)),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMockLocationToggle(bool isLoading) {
-    return Tooltip(
-      message: controller.useMockLocation
-          ? "Activate real GPS"
-          : "Activate mock position",
-      child: IconButton(
-        icon: Icon(controller.useMockLocation
-            ? Icons.location_on
-            : Icons.location_off),
-        color: controller.useMockLocation ? Colors.orangeAccent : Colors.white,
-        onPressed: !isLoading ? _toggleMockLocation : null,
-      ),
-    );
   }
 
   // MODERNISIERTER BODY mit intelligenter UI-Positionierung
@@ -308,7 +342,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildModernSearchInterface(LocationProvider locationProvider) {
     // Bestimme Interface State für intelligente Positionierung
     final interfaceState = controller.searchInterfaceState;
-    
+
     return AnimatedContainer(
       duration: interfaceState.transitionDuration,
       curve: PremiumCurves.smooth,
@@ -343,7 +377,9 @@ class MapScreenState extends State<MapScreen>
   // NEUE METHODE: Route Progress Indicator
   Widget _buildRouteProgressIndicator() {
     final progress = controller.routeDistance! > 0
-        ? (1.0 - (controller.remainingRouteDistance! / controller.routeDistance!))
+        ? (1.0 -
+                (controller.remainingRouteDistance! /
+                    controller.routeDistance!))
             .clamp(0.0, 1.0)
         : 0.0;
 
@@ -461,12 +497,15 @@ class MapScreenState extends State<MapScreen>
 
   // MODERNISIERTE INSTRUCTION CARD mit intelligenter Positionierung
   Widget _buildInstructionCard(bool isUiReady) {
-    final bool instructionCardVisible = controller.currentDisplayedManeuver != null &&
+    final bool instructionCardVisible = controller.currentDisplayedManeuver !=
+            null &&
         controller.currentDisplayedManeuver!.turnType != TurnType.depart &&
         !(controller.currentManeuvers.length <= 2 &&
             controller.currentDisplayedManeuver!.turnType == TurnType.arrive);
 
-    if (!instructionCardVisible || !isUiReady || controller.isInRouteOverviewMode) {
+    if (!instructionCardVisible ||
+        !isUiReady ||
+        controller.isInRouteOverviewMode) {
       return const SizedBox.shrink();
     }
 
@@ -489,13 +528,13 @@ class MapScreenState extends State<MapScreen>
   double _getInstructionCardTopOffset() {
     switch (controller.searchInterfaceState) {
       case SearchInterfaceState.navigationMode:
-        return 95.0;  // Unter CompactRouteWidget
+        return 95.0; // Unter CompactRouteWidget
       case SearchInterfaceState.expanded:
-        return 240.0; // Unter vollem Search Interface  
+        return 240.0; // Unter vollem Search Interface
       case SearchInterfaceState.collapsed:
         return 140.0; // Unter kollabiertem Interface
       case SearchInterfaceState.hidden:
-        return 80.0;  // Minimaler Abstand von oben
+        return 80.0; // Minimaler Abstand von oben
     }
   }
 
@@ -579,12 +618,10 @@ class MapScreenState extends State<MapScreen>
               tooltip: controller.isInRouteOverviewMode
                   ? "Back to navigation"
                   : "Show full route",
-              backgroundColor: controller.isInRouteOverviewMode
-                  ? Colors.blue
-                  : Colors.white,
-              foregroundColor: controller.isInRouteOverviewMode
-                  ? Colors.white
-                  : Colors.blue,
+              backgroundColor:
+                  controller.isInRouteOverviewMode ? Colors.blue : Colors.white,
+              foregroundColor:
+                  controller.isInRouteOverviewMode ? Colors.white : Colors.blue,
               child: Icon(
                 controller.isInRouteOverviewMode
                     ? Icons.my_location
@@ -598,15 +635,13 @@ class MapScreenState extends State<MapScreen>
           FloatingActionButton(
             heroTag: "centerGpsBtn",
             onPressed: _centerOnGps,
-            tooltip: controller.followGps
-                ? 'GPS tracking active'
-                : 'Center on GPS',
+            tooltip:
+                controller.followGps ? 'GPS tracking active' : 'Center on GPS',
             backgroundColor: controller.followGps
                 ? _getProgressColorForContext(_currentSearchContext)
                 : Colors.white,
-            foregroundColor: controller.followGps
-                ? Colors.white
-                : Colors.grey.shade700,
+            foregroundColor:
+                controller.followGps ? Colors.white : Colors.grey.shade700,
             child: Icon(
               controller.followGps ? Icons.navigation : Icons.near_me,
             ),
@@ -634,7 +669,8 @@ class MapScreenState extends State<MapScreen>
               heroTag: "contextSwitchBtn",
               onPressed: _cycleSearchContext,
               tooltip: "Switch context: ${_currentSearchContext.value}",
-              backgroundColor: _getProgressColorForContext(_currentSearchContext),
+              backgroundColor:
+                  _getProgressColorForContext(_currentSearchContext),
               foregroundColor: Colors.white,
               child: Icon(_getContextIcon(_currentSearchContext)),
             ),
@@ -648,11 +684,11 @@ class MapScreenState extends State<MapScreen>
     const contexts = SearchContext.values;
     final currentIndex = contexts.indexOf(_currentSearchContext);
     final nextIndex = (currentIndex + 1) % contexts.length;
-    
+
     setState(() {
       _currentSearchContext = contexts[nextIndex];
     });
-    
+
     showSnackbar("Context: ${_currentSearchContext.value}", durationSeconds: 2);
   }
 
@@ -749,7 +785,8 @@ class MapScreenState extends State<MapScreen>
     if (kDebugMode) {
       print("SHARE_ROUTE_TEXT: $shareText");
     }
-    showSnackbar("Route info prepared for sharing (see console for debug).", durationSeconds: 5);
+    showSnackbar("Route info prepared for sharing (see console for debug).",
+        durationSeconds: 5);
   }
 
   void showSnackbar(String message, {int durationSeconds = 3}) {
@@ -762,7 +799,8 @@ class MapScreenState extends State<MapScreen>
               SnackBar(
                 content: Text(message),
                 duration: Duration(seconds: durationSeconds),
-                backgroundColor: _getProgressColorForContext(_currentSearchContext),
+                backgroundColor:
+                    _getProgressColorForContext(_currentSearchContext),
               ),
             );
           } catch (e) {
