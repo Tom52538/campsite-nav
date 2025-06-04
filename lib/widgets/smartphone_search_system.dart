@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - OVERFLOW KOMPLETT BEHOBEN
+// lib/widgets/smartphone_search_system.dart - SCHRITT 1: GOOGLE MAPS START-FELD
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
@@ -7,7 +7,7 @@ import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 
-/// OVERFLOW-FREIES Search System - Dynamische Höhenberechnung
+/// SCHRITT 1: Google Maps Standard Start-Feld Implementation
 class SmartphoneSearchSystem extends StatefulWidget {
   final MapScreenController controller;
   final List<SearchableFeature> allFeatures;
@@ -38,12 +38,14 @@ class SmartphoneSearchSystem extends StatefulWidget {
 
 class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   bool _hasActiveRoute = false;
+  bool _isStartUsingGPS = false; // Track GPS vs Manual start
 
   @override
   void initState() {
     super.initState();
     _setupControllerListeners();
     _evaluateInitialState();
+    _initializeStartField();
   }
 
   @override
@@ -71,31 +73,38 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
     _hasActiveRoute = widget.controller.routePolyline != null;
   }
 
+  // ✅ SCHRITT 1: Initialisiere Start-Feld mit GPS (Google Standard)
+  void _initializeStartField() {
+    // Auto-set GPS location if available
+    if (widget.controller.currentGpsPosition != null) {
+      _setGPSAsStart();
+    }
+  }
+
   void _clearRouteAndReset() {
     if (widget.enableHapticFeedback) {
       HapticFeedback.lightImpact();
     }
     widget.controller.resetRouteAndNavigation();
     widget.controller.resetSearchFields();
+    _isStartUsingGPS = false;
   }
 
   @override
   Widget build(BuildContext context) {
-    // ✅ LÖSUNG: Responsive Container statt feste Höhe
     final screenHeight = MediaQuery.of(context).size.height;
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     final isKeyboardVisible = keyboardHeight > 50;
     final isSmallScreen =
         MediaQuery.of(context).size.width < SmartphoneBreakpoints.small;
 
-    // Dynamische Höhenberechnung
     final maxHeight = _calculateMaxHeight(
         screenHeight, keyboardHeight, isKeyboardVisible, isSmallScreen);
 
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: maxHeight,
-        minHeight: 60, // Minimum für CompactRouteWidget
+        minHeight: 60,
       ),
       child: IntrinsicHeight(
         child: widget.showRouteInfoAndFadeFields && _hasActiveRoute
@@ -105,22 +114,17 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
     );
   }
 
-  // ✅ INTELLIGENTE HÖHENBERECHNUNG
   double _calculateMaxHeight(double screenHeight, double keyboardHeight,
       bool isKeyboardVisible, bool isSmallScreen) {
     if (widget.showRouteInfoAndFadeFields && _hasActiveRoute) {
-      // Route Info Mode: Minimal
       return isSmallScreen ? 100 : 120;
     }
 
     if (isKeyboardVisible) {
-      // Keyboard sichtbar: Kompakter
-      final availableHeight =
-          screenHeight - keyboardHeight - 100; // 100px für andere UI Elemente
+      final availableHeight = screenHeight - keyboardHeight - 100;
       return (availableHeight * 0.6).clamp(120, 200);
     }
 
-    // Normal Mode: Responsive basierend auf Bildschirmgröße
     if (isSmallScreen) {
       return (screenHeight * 0.25).clamp(140, 180);
     } else {
@@ -145,9 +149,9 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // ✅ KRITISCH: Minimale Größe
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header - Kompakter
+            // Header
             Row(
               children: [
                 Icon(
@@ -179,97 +183,244 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
 
             SizedBox(height: isSmallScreen ? 8 : 12),
 
-            // Search Fields - Noch kompakter
-            _buildUltraCompactSearchFields(isSmallScreen),
+            // Search Fields
+            _buildGoogleStandardSearchFields(isSmallScreen),
           ],
         ),
       ),
     );
   }
 
-  // ✅ ULTRA-KOMPAKTE SEARCH FIELDS
-  Widget _buildUltraCompactSearchFields(bool isSmallScreen) {
-    final fieldHeight = isSmallScreen ? 36.0 : 40.0;
-    final iconSize = isSmallScreen ? 14.0 : 16.0;
-    final fontSize = isSmallScreen ? 13.0 : 14.0;
-
+  // ✅ SCHRITT 1: Google Maps Standard Search Fields
+  Widget _buildGoogleStandardSearchFields(bool isSmallScreen) {
     return Column(
-      mainAxisSize: MainAxisSize.min, // ✅ KRITISCH
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Start Field
-        _buildUltraCompactField(
-            SearchFieldType.start, fieldHeight, iconSize, fontSize),
+        // ✅ START FIELD - Google Maps Style
+        _buildGoogleStartField(isSmallScreen),
 
-        // Swap Button - Minimaler
-        SizedBox(
-          height: isSmallScreen ? 24 : 28,
-          child: Row(
-            children: [
-              const Expanded(child: Divider()),
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: IconButton(
-                  icon: Icon(Icons.swap_vert, size: iconSize),
-                  onPressed: () {
-                    if (widget.enableHapticFeedback) {
-                      HapticFeedback.mediumImpact();
-                    }
-                    widget.controller.swapStartAndDestination();
-                  },
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-              const Expanded(child: Divider()),
-            ],
-          ),
-        ),
+        SizedBox(height: isSmallScreen ? 6 : 8),
 
-        // Destination Field
-        _buildUltraCompactField(
-            SearchFieldType.destination, fieldHeight, iconSize, fontSize),
+        // Swap Button
+        _buildSwapButton(isSmallScreen),
+
+        SizedBox(height: isSmallScreen ? 6 : 8),
+
+        // ✅ DESTINATION FIELD - Simple for now (will be enhanced in Step 2)
+        _buildSimpleDestinationField(isSmallScreen),
       ],
     );
   }
 
-  // ✅ ULTRA-KOMPAKTES EINZELFELD
-  Widget _buildUltraCompactField(SearchFieldType fieldType, double height,
-      double iconSize, double fontSize) {
-    final controller = fieldType == SearchFieldType.start
-        ? widget.controller.startSearchController
-        : widget.controller.endSearchController;
-    final focusNode = fieldType == SearchFieldType.start
-        ? widget.controller.startFocusNode
-        : widget.controller.endFocusNode;
+  // ✅ SCHRITT 1: Google Maps Standard Start Field
+  Widget _buildGoogleStartField(bool isSmallScreen) {
+    final fieldHeight = isSmallScreen ? 40.0 : 44.0;
+    final iconSize = isSmallScreen ? 16.0 : 18.0;
+    final fontSize = isSmallScreen ? 13.0 : 14.0;
 
     return Container(
-      height: height,
+      height: fieldHeight,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+          color: widget.controller.startFocusNode.hasFocus
+              ? Colors.blue.shade400
+              : Colors.grey.shade300,
+          width: widget.controller.startFocusNode.hasFocus ? 2.0 : 1.0,
+        ),
         borderRadius: BorderRadius.circular(8),
+        color: widget.controller.startFocusNode.hasFocus
+            ? Colors.blue.withValues(alpha: 0.05)
+            : Colors.white,
       ),
       child: Row(
         children: [
-          // Icon - Kompakter
+          // ✅ GPS Button (Google Maps Standard)
+          _buildGPSButton(iconSize),
+
+          // ✅ Divider
+          Container(
+            width: 1,
+            height: fieldHeight * 0.6,
+            color: Colors.grey.shade300,
+          ),
+
+          // ✅ Start Icon
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Icon(
-              fieldType == SearchFieldType.start
-                  ? Icons.trip_origin
-                  : Icons.flag_outlined,
+              Icons.trip_origin,
+              size: iconSize,
+              color: _isStartUsingGPS
+                  ? Colors.blue.shade600
+                  : Colors.grey.shade600,
+            ),
+          ),
+
+          // ✅ TextField
+          Expanded(
+            child: TextField(
+              controller: widget.controller.startSearchController,
+              focusNode: widget.controller.startFocusNode,
+              style: TextStyle(
+                fontSize: fontSize,
+                color: _isStartUsingGPS ? Colors.blue.shade700 : Colors.black,
+                fontWeight:
+                    _isStartUsingGPS ? FontWeight.w500 : FontWeight.normal,
+              ),
+              decoration: InputDecoration(
+                hintText: _isStartUsingGPS ? null : 'Startpunkt eingeben...',
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+              readOnly: _isStartUsingGPS, // ✅ Readonly when using GPS
+              onTap: _isStartUsingGPS ? _switchToManualStart : null,
+            ),
+          ),
+
+          // ✅ Clear Button (when manual input)
+          if (!_isStartUsingGPS &&
+              widget.controller.startSearchController.text.isNotEmpty)
+            _buildClearButton(iconSize, true),
+
+          // ✅ Map Selection Button
+          _buildMapSelectionButton(iconSize, SearchFieldType.start),
+        ],
+      ),
+    );
+  }
+
+  // ✅ GPS Button (Blue when active)
+  Widget _buildGPSButton(double iconSize) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _setGPSAsStart,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: _isStartUsingGPS
+                ? Colors.blue.withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            Icons.my_location,
+            size: iconSize,
+            color:
+                _isStartUsingGPS ? Colors.blue.shade600 : Colors.grey.shade600,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ Clear Button
+  Widget _buildClearButton(double iconSize, bool isStart) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: IconButton(
+        icon: Icon(Icons.clear, size: iconSize - 2),
+        color: Colors.grey.shade600,
+        onPressed: () {
+          if (isStart) {
+            widget.controller.startSearchController.clear();
+            _isStartUsingGPS = false;
+            setState(() {});
+          } else {
+            widget.controller.endSearchController.clear();
+          }
+        },
+        padding: EdgeInsets.zero,
+      ),
+    );
+  }
+
+  // ✅ Map Selection Button
+  Widget _buildMapSelectionButton(double iconSize, SearchFieldType fieldType) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: IconButton(
+        icon: Icon(Icons.location_searching, size: iconSize - 2),
+        color: Colors.grey.shade600,
+        onPressed: () => _activateMapSelection(fieldType),
+        padding: EdgeInsets.zero,
+        tooltip: 'Auf Karte auswählen',
+      ),
+    );
+  }
+
+  // ✅ Swap Button
+  Widget _buildSwapButton(bool isSmallScreen) {
+    return SizedBox(
+      height: isSmallScreen ? 24 : 28,
+      child: Row(
+        children: [
+          const Expanded(child: Divider()),
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: IconButton(
+              icon: Icon(Icons.swap_vert, size: isSmallScreen ? 16 : 18),
+              onPressed: () {
+                if (widget.enableHapticFeedback) {
+                  HapticFeedback.mediumImpact();
+                }
+                _swapStartAndDestination();
+              },
+              padding: EdgeInsets.zero,
+            ),
+          ),
+          const Expanded(child: Divider()),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Simple Destination Field (will be enhanced in Step 2)
+  Widget _buildSimpleDestinationField(bool isSmallScreen) {
+    final fieldHeight = isSmallScreen ? 40.0 : 44.0;
+    final iconSize = isSmallScreen ? 16.0 : 18.0;
+    final fontSize = isSmallScreen ? 13.0 : 14.0;
+
+    return Container(
+      height: fieldHeight,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: widget.controller.endFocusNode.hasFocus
+              ? Colors.blue.shade400
+              : Colors.grey.shade300,
+          width: widget.controller.endFocusNode.hasFocus ? 2.0 : 1.0,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: widget.controller.endFocusNode.hasFocus
+            ? Colors.blue.withValues(alpha: 0.05)
+            : Colors.white,
+      ),
+      child: Row(
+        children: [
+          // Destination Icon
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Icon(
+              Icons.flag_outlined,
               size: iconSize,
               color: Colors.grey.shade600,
             ),
           ),
 
-          // TextField - Kompakter
+          // TextField
           Expanded(
             child: TextField(
-              controller: controller,
-              focusNode: focusNode,
+              controller: widget.controller.endSearchController,
+              focusNode: widget.controller.endFocusNode,
               style: TextStyle(fontSize: fontSize),
               decoration: InputDecoration(
-                hintText: '${fieldType.displayName}...',
+                hintText: 'Ziel eingeben...',
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -277,38 +428,91 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
             ),
           ),
 
-          // Actions - Kompakter
-          if (controller.text.isNotEmpty)
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: IconButton(
-                icon: Icon(Icons.clear, size: iconSize),
-                onPressed: () => controller.clear(),
-                padding: EdgeInsets.zero,
-              ),
-            ),
+          // Clear Button
+          if (widget.controller.endSearchController.text.isNotEmpty)
+            _buildClearButton(iconSize, false),
 
-          if (fieldType == SearchFieldType.start)
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: IconButton(
-                icon: Icon(Icons.my_location, size: iconSize),
-                onPressed: () => widget.controller.setCurrentLocationAsStart(),
-                padding: EdgeInsets.zero,
-              ),
-            ),
+          // Map Selection Button
+          _buildMapSelectionButton(iconSize, SearchFieldType.destination),
         ],
       ),
     );
   }
 
+  // ✅ SCHRITT 1: Core Functions
+
+  void _setGPSAsStart() {
+    if (widget.enableHapticFeedback) {
+      HapticFeedback.lightImpact();
+    }
+
+    if (widget.controller.currentGpsPosition != null) {
+      // Set GPS as start location
+      widget.controller.startSearchController.text = "Mein Standort";
+      _isStartUsingGPS = true;
+
+      // Create GPS feature
+      final gpsFeature = SearchableFeature(
+        id: "gps_location",
+        name: "Mein Standort",
+        type: "GPS Position",
+        center: widget.controller.currentGpsPosition!,
+      );
+
+      widget.controller.setStartLocation(gpsFeature);
+      setState(() {});
+
+      // Show feedback
+      _showSnackbar("GPS-Position als Startpunkt gesetzt");
+    } else {
+      _showSnackbar("GPS-Position nicht verfügbar", isError: true);
+    }
+  }
+
+  void _switchToManualStart() {
+    if (_isStartUsingGPS) {
+      _isStartUsingGPS = false;
+      widget.controller.startSearchController.clear();
+      setState(() {});
+    }
+  }
+
+  void _activateMapSelection(SearchFieldType fieldType) {
+    if (widget.enableHapticFeedback) {
+      HapticFeedback.mediumImpact();
+    }
+
+    widget.controller.activateMapSelection(fieldType);
+    _showSnackbar(
+        "Tippen Sie auf die Karte um ${fieldType.displayName} zu wählen");
+  }
+
+  void _swapStartAndDestination() {
+    // Reset GPS state when swapping
+    _isStartUsingGPS = false;
+    widget.controller.swapStartAndDestination();
+    setState(() {});
+  }
+
+  void _showSnackbar(String message, {bool isError = false}) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
+          backgroundColor: isError ? Colors.red : Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  // ✅ Route Info Mode (unchanged)
   Widget _buildRouteInfoMode() {
     return Container(
       margin: const EdgeInsets.all(8),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // ✅ KRITISCH
+        mainAxisSize: MainAxisSize.min,
         children: [
           CompactRouteWidget(
             destinationName: widget.controller.endSearchController.text,
@@ -323,10 +527,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
             },
             onClosePressed: _clearRouteAndReset,
           ),
-
-          const SizedBox(height: 6), // Reduziert
-
-          // Edit Button - Kompakter
+          const SizedBox(height: 6),
           GestureDetector(
             onTap: () {
               widget.controller.setRouteInfoAndFadeFields(false);
