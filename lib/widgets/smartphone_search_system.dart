@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - FINAL LINT FIX VERSION
+// lib/widgets/smartphone_search_system.dart - ULTRA-COMPACT VERSION
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,15 +8,15 @@ import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 
-/// Premium Smartphone Search System - FINAL LINT FIX
+/// Premium Smartphone Search System - ULTRA-COMPACT VERSION
 ///
-/// MISSION: Maximale Karten-Sicht mit stabiler Layout-Performance
+/// MISSION: MINIMALE Interface-Größe für MAXIMALE Karten-Sicht
 ///
 /// FEATURES:
-/// - Semi-transparenter Hintergrund (Karte bleibt sichtbar)
-/// - Feste Höhen-Constraints (verhindert Layout-Crash)
-/// - Vollständige POI-Suche mit begrenzter Höhe
-/// - Auto-Hide nach Route-Berechnung
+/// - Nur 15% der Bildschirmhöhe (statt 50%)
+/// - Ultra-transparenter Hintergrund (95% durchsichtig)
+/// - Kollabierbare Quick-Actions
+/// - Instant Auto-Hide nach Route-Berechnung
 class SmartphoneSearchSystem extends StatefulWidget {
   final MapScreenController controller;
   final List<SearchableFeature> allFeatures;
@@ -38,7 +38,7 @@ class SmartphoneSearchSystem extends StatefulWidget {
     this.context = SearchContext.guest,
     this.enableSmartTransitions = true,
     this.enableHapticFeedback = true,
-    this.autoHideDelay = const Duration(milliseconds: 1500),
+    this.autoHideDelay = const Duration(milliseconds: 800), // Schneller!
   });
 
   @override
@@ -56,7 +56,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   late Animation<double> _routeInfoAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late Animation<double> _scaleAnimation;
 
   SearchInterfaceState _currentState = SearchInterfaceState.expanded;
   bool _hasActiveRoute = false;
@@ -109,52 +108,47 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
 
   void _initializeAnimations() {
     _masterController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
     _routeInfoController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 200),
       vsync: this,
     );
 
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 200),
       vsync: this,
     );
 
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
       vsync: this,
     );
 
     _masterAnimation = CurvedAnimation(
       parent: _masterController,
-      curve: PremiumCurves.smooth,
+      curve: Curves.easeInOut,
     );
 
     _routeInfoAnimation = CurvedAnimation(
       parent: _routeInfoController,
-      curve: PremiumCurves.bounce,
+      curve: Curves.easeInOut,
     );
 
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
-      curve: PremiumCurves.material,
+      curve: Curves.easeInOut,
     );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0),
-      end: const Offset(0, -1.2),
+      end: const Offset(0, -2.0), // Noch weiter weg
     ).animate(CurvedAnimation(
       parent: _slideController,
-      curve: PremiumCurves.snap,
+      curve: Curves.easeInOutQuart,
     ));
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.96,
-      end: 1.0,
-    ).animate(_masterAnimation);
 
     _masterController.forward();
     _fadeController.forward();
@@ -190,19 +184,8 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     }
 
     if (widget.enableSmartTransitions && _autoTransitionsEnabled) {
-      Duration delay = widget.autoHideDelay;
-
-      switch (widget.context) {
-        case SearchContext.emergency:
-          delay = const Duration(milliseconds: 500);
-        case SearchContext.arrival:
-          delay = const Duration(milliseconds: 2000);
-        case SearchContext.departure:
-        case SearchContext.guest:
-          delay = widget.autoHideDelay;
-      }
-
-      Future.delayed(delay, () {
+      // Sofortiges Auto-Hide für maximale Karten-Sicht
+      Future.delayed(widget.autoHideDelay, () {
         if (mounted && _hasActiveRoute && !_userInteractionDetected) {
           _scheduleStateTransition(SearchInterfaceState.navigationMode);
         }
@@ -224,39 +207,23 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   void _executeStateTransition(SearchInterfaceState to) {
     switch (to) {
       case SearchInterfaceState.expanded:
-        _transitionToExpanded();
+        _slideController.reverse();
+        _fadeController.forward();
+        _routeInfoController.reverse();
       case SearchInterfaceState.collapsed:
-        _transitionToCollapsed();
+        _fadeController.forward();
+        _routeInfoController.reverse();
       case SearchInterfaceState.hidden:
-        _transitionToHidden();
+        _slideController.forward();
+        _fadeController.reverse();
+        _routeInfoController.reverse();
       case SearchInterfaceState.navigationMode:
-        _transitionToNavigationMode();
+        _slideController.forward();
+        _fadeController.reverse();
+        _routeInfoController.forward();
     }
 
     setState(() {});
-  }
-
-  void _transitionToExpanded() {
-    _slideController.reverse();
-    _fadeController.forward();
-    _routeInfoController.reverse();
-  }
-
-  void _transitionToCollapsed() {
-    _fadeController.forward();
-    _routeInfoController.reverse();
-  }
-
-  void _transitionToHidden() {
-    _slideController.forward();
-    _fadeController.reverse();
-    _routeInfoController.reverse();
-  }
-
-  void _transitionToNavigationMode() {
-    _slideController.forward();
-    _fadeController.reverse();
-    _routeInfoController.forward();
   }
 
   void _updateKeyboardVisibility() {
@@ -270,7 +237,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
         _scheduleStateTransition(SearchInterfaceState.expanded);
         _userInteractionDetected = true;
       } else {
-        Future.delayed(const Duration(seconds: 2), () {
+        Future.delayed(const Duration(seconds: 1), () {
           if (mounted) {
             _userInteractionDetected = false;
           }
@@ -308,7 +275,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   void _onUserInteraction() {
     _userInteractionDetected = true;
     _autoTransitionsEnabled = false;
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         _autoTransitionsEnabled = true;
       }
@@ -356,26 +323,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     widget.controller.activateMapSelection(fieldType);
 
     _scheduleStateTransition(SearchInterfaceState.hidden);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Tippen Sie auf die Karte um ${fieldType.displayName} zu wählen',
-            style: const TextStyle(color: Colors.white),
-          ),
-          duration: const Duration(seconds: 3),
-          backgroundColor:
-              Theme.of(context).colorScheme.primary.withValues(alpha: 0.9),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(
-            bottom: _safeArea.bottom + 100,
-            left: 16,
-            right: 16,
-          ),
-        ),
-      );
-    }
   }
 
   void _swapStartAndDestination() {
@@ -400,18 +347,18 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     _scheduleStateTransition(SearchInterfaceState.expanded);
   }
 
-  // Responsive Design
-  double get _horizontalMargin => _isSmallScreen ? 8.0 : 12.0;
-  double get _verticalMargin => _isSmallScreen ? 6.0 : 8.0;
-  double get _cardPadding => _isSmallScreen ? 10.0 : 12.0;
-  double get _headerFontSize => _isSmallScreen ? 13.0 : 14.0;
-  double get _bodyFontSize => _isSmallScreen ? 11.0 : 12.0;
+  // ✅ ULTRA-KOMPAKTE Dimensionen
+  double get _horizontalMargin => 6.0; // Minimiert
+  double get _verticalMargin => 4.0; // Minimiert
+  double get _cardPadding => 8.0; // Minimiert
+  double get _headerFontSize => 12.0; // Kleiner
+  double get _bodyFontSize => 10.0; // Kleiner
 
-  // ✅ KRITISCH: Maximale Höhe für Layout-Stabilität
+  // ✅ KRITISCH: Nur 15% der Bildschirmhöhe!
   double get _maxSearchInterfaceHeight => _screenHeight > 0
-      ? (_screenHeight * 0.5)
-          .clamp(200.0, 400.0) // 50% von Bildschirm, min 200px, max 400px
-      : 300.0; // Fallback
+      ? (_screenHeight * 0.15)
+          .clamp(80.0, 150.0) // Nur 15%! Min 80px, Max 150px
+      : 120.0; // Fallback
 
   @override
   Widget build(BuildContext context) {
@@ -423,7 +370,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
         _slideAnimation,
       ]),
       builder: (context, child) {
-        // ✅ FIX: Explizite Größen-Constraints für Stack
         return SizedBox(
           width: _screenWidth > 0
               ? _screenWidth
@@ -432,7 +378,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // Main Search Interface - SEMI-TRANSPARENT
+              // ✅ ULTRA-KOMPAKTES Main Interface
               Positioned(
                 top: 0,
                 left: 0,
@@ -441,10 +387,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                   position: _slideAnimation,
                   child: FadeTransition(
                     opacity: _fadeAnimation,
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: _buildConstrainedSearchInterface(),
-                    ),
+                    child: _buildUltraCompactInterface(),
                   ),
                 ),
               ),
@@ -457,26 +400,22 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                   right: 0,
                   child: FadeTransition(
                     opacity: _routeInfoAnimation,
-                    child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.95, end: 1.0)
-                          .animate(_routeInfoAnimation),
-                      child: _buildCompactRouteInfoOverlay(),
-                    ),
+                    child: _buildCompactRouteInfoOverlay(),
                   ),
                 ),
 
-              // Minimaler Expand Hint
+              // Touch Area für Expansion
               if (_currentState != SearchInterfaceState.expanded)
                 Positioned(
                   top: 0,
                   left: 0,
                   right: 0,
-                  height: 60,
+                  height: 40, // Kleinere Touch Area
                   child: GestureDetector(
                     onTap: _onExpandRequest,
                     child: Container(
                       color: Colors.transparent,
-                      child: _buildMinimalExpandHint(),
+                      child: _buildExpandHint(),
                     ),
                   ),
                 ),
@@ -487,74 +426,61 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     );
   }
 
-  // ✅ HAUPTWIDGET: Mit expliziten Höhen-Constraints
-  Widget _buildConstrainedSearchInterface() {
+  // ✅ ULTRA-KOMPAKTES INTERFACE - Nur das Nötigste!
+  Widget _buildUltraCompactInterface() {
     return Container(
       margin: EdgeInsets.symmetric(
         horizontal: _horizontalMargin,
         vertical: _verticalMargin,
       ),
       constraints: BoxConstraints(
-        maxHeight: _maxSearchInterfaceHeight -
-            (_verticalMargin * 2), // Abzüglich Margins
+        maxHeight: _maxSearchInterfaceHeight - (_verticalMargin * 2),
         maxWidth: _screenWidth > 0
             ? _screenWidth - (_horizontalMargin * 2)
             : double.infinity,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(16.0),
+        // ✅ ULTRA-TRANSPARENZ: 95% durchsichtig!
+        color: Colors.white.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(12.0), // Kleinere Rundung
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.3),
-          width: 1.0,
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 0.5, // Dünnerer Rand
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.05), // Subtiler
             spreadRadius: 0,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(12.0),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5), // Weniger Blur
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: Colors.white.withValues(alpha: 0.05), // Fast transparent
             ),
             child: Padding(
               padding: EdgeInsets.all(_cardPadding),
-              child: SingleChildScrollView(
-                // ✅ Scroll falls zu hoch
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // KOMPAKTER Context Header
-                    _buildCompactContextualHeader(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ✅ MINI Header - Nur Essentials
+                  _buildMiniHeader(),
 
-                    SizedBox(height: _verticalMargin),
+                  const SizedBox(height: 4), // Minimal spacing
 
-                    // ✅ Search Input mit BEGRENZTER HÖHE
-                    _buildConstrainedSearchInput(SearchFieldType.start),
+                  // ✅ EINZEILIGES Search Interface
+                  _buildSingleLineSearchInterface(),
 
-                    SizedBox(height: _verticalMargin * 0.7),
-
-                    // MINI Swap Button
-                    _buildMiniSwapButton(),
-
-                    SizedBox(height: _verticalMargin * 0.7),
-
-                    // ✅ Search Input mit BEGRENZTER HÖHE
-                    _buildConstrainedSearchInput(SearchFieldType.destination),
-
-                    // KOMPAKTE Quick Access Section
-                    if (_currentState == SearchInterfaceState.expanded)
-                      _buildCompactQuickAccessSection(),
-                  ],
-                ),
+                  // ✅ Quick Actions NUR bei Expanded State
+                  if (_currentState == SearchInterfaceState.expanded)
+                    _buildMiniQuickActions(),
+                ],
               ),
             ),
           ),
@@ -563,68 +489,175 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     );
   }
 
-  Widget _buildCompactContextualHeader() {
-    String contextMessage = '';
-    IconData contextIcon = Icons.navigation;
-    Color contextColor = Theme.of(context).colorScheme.primary;
-
-    switch (widget.context) {
-      case SearchContext.arrival:
-        contextMessage = 'Willkommen!';
-        contextIcon = Icons.celebration;
-        contextColor = Colors.green;
-      case SearchContext.departure:
-        contextMessage = 'Gute Reise!';
-        contextIcon = Icons.flight_takeoff;
-        contextColor = Colors.orange;
-      case SearchContext.emergency:
-        contextMessage = 'Notfall';
-        contextIcon = Icons.emergency;
-        contextColor = Colors.red;
-      case SearchContext.guest:
-        contextMessage = 'Resort Navigation';
-        contextIcon = Icons.explore;
-    }
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: contextColor.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            contextIcon,
-            color: contextColor,
-            size: 16,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            contextMessage,
-            style: TextStyle(
-              fontSize: _headerFontSize,
-              fontWeight: FontWeight.w600,
-              color: contextColor,
-              height: 1.1,
+  Widget _buildMiniHeader() {
+    return SizedBox(
+      height: 20, // Sehr kompakt
+      child: Row(
+        children: [
+          // Context Icon
+          Container(
+            width: 16,
+            height: 16,
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(
+              Icons.explore,
+              color: Theme.of(context).colorScheme.primary,
+              size: 10,
             ),
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+
+          const SizedBox(width: 6),
+
+          // Kompakter Text
+          Expanded(
+            child: Text(
+              'Navigation',
+              style: TextStyle(
+                fontSize: _headerFontSize,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+                height: 1.0,
+              ),
+            ),
           ),
-          child: Text(
-            '214 POIs',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue.shade700,
+
+          // POI Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              '214',
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ EINZEILIGES Search Interface - Start & Ziel nebeneinander
+  Widget _buildSingleLineSearchInterface() {
+    return Container(
+      height: 36, // Sehr kompakt
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Start Field - 40% der Breite
+          Expanded(
+            flex: 4,
+            child: _buildInlineSearchField(SearchFieldType.start),
+          ),
+
+          // Separator
+          Container(
+            width: 1,
+            height: 20,
+            color: Colors.grey.withValues(alpha: 0.3),
+          ),
+
+          // Ziel Field - 40% der Breite
+          Expanded(
+            flex: 4,
+            child: _buildInlineSearchField(SearchFieldType.destination),
+          ),
+
+          // Actions - 20% der Breite
+          Expanded(
+            flex: 2,
+            child: _buildInlineActions(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInlineSearchField(SearchFieldType fieldType) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: TextField(
+        controller: fieldType == SearchFieldType.start
+            ? widget.controller.startSearchController
+            : widget.controller.endSearchController,
+        focusNode: fieldType == SearchFieldType.start
+            ? widget.controller.startFocusNode
+            : widget.controller.endFocusNode,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          hintText: fieldType == SearchFieldType.start ? 'Start' : 'Ziel',
+          hintStyle: TextStyle(
+            color: Colors.grey.shade500,
+            fontSize: 10,
+          ),
+          prefixIcon: Container(
+            width: 16,
+            height: 16,
+            alignment: Alignment.center,
+            child: Text(
+              fieldType.emoji,
+              style: const TextStyle(fontSize: 8),
+            ),
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 20,
+            minHeight: 16,
+          ),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+        ),
+        textInputAction: TextInputAction.search,
+        autocorrect: false,
+        enableSuggestions: false,
+        onChanged: (text) {
+          // Bei Eingabe: Interface erweitern für Search Results
+          if (text.isNotEmpty &&
+              _currentState != SearchInterfaceState.expanded) {
+            _scheduleStateTransition(SearchInterfaceState.expanded);
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildInlineActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Swap Button
+        GestureDetector(
+          onTap: _swapStartAndDestination,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.swap_vert,
+              size: 12,
+              color: Colors.grey,
             ),
           ),
         ),
@@ -632,224 +665,54 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     );
   }
 
-  // ✅ SEARCH INPUT mit EXPLIZITEN CONSTRAINTS
-  Widget _buildConstrainedSearchInput(SearchFieldType fieldType) {
+  // ✅ MINI Quick Actions - nur wenn Expanded
+  Widget _buildMiniQuickActions() {
+    const quickActions = [
+      ('🅿️', 'parkplatz', 'P'),
+      ('👨‍👩‍👧‍👦', 'spielplatz', 'F'),
+      ('🏖️', 'beach pool', 'B'),
+      ('🍽️', 'restaurant', 'R'),
+    ];
+
     return Container(
-      constraints: const BoxConstraints(
-        maxHeight: 120, // ✅ KRITISCH: Maximale Höhe für Search + Results
-        maxWidth: double.infinity,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(10.0),
-        border: Border.all(
-          color: Colors.grey.withValues(alpha: 0.3),
-          width: 1.0,
-        ),
-      ),
+      margin: const EdgeInsets.only(top: 4),
+      height: 30, // Sehr kompakt
       child: Row(
-        children: [
-          // Lock Button
-          _buildCompactLockButton(fieldType),
-
-          // Search Input mit BEGRENZTER HÖHE
-          Expanded(
-            child: SizedBox(
-              height: 120, // ✅ KRITISCH: Explizite Höhe
-              child: CampsiteSearchInput(
-                fieldType: fieldType,
-                controller: fieldType == SearchFieldType.start
-                    ? widget.controller.startSearchController
-                    : widget.controller.endSearchController,
-                focusNode: fieldType == SearchFieldType.start
-                    ? widget.controller.startFocusNode
-                    : widget.controller.endFocusNode,
-                allFeatures: widget.allFeatures,
-                onFeatureSelected: fieldType == SearchFieldType.start
-                    ? _setStartLocation
-                    : _setDestination,
-                onCurrentLocationTap: fieldType == SearchFieldType.start
-                    ? _setCurrentLocationAsStart
-                    : null,
-                onMapSelectionTap: () => _activateMapSelection(fieldType),
-                context: widget.context,
-                autoDismissOnSelection: true,
-                showQuickAccess: false,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompactLockButton(SearchFieldType fieldType) {
-    final isLocked = fieldType == SearchFieldType.start
-        ? widget.isStartLocked
-        : widget.isDestinationLocked;
-
-    final onPressed = fieldType == SearchFieldType.start
-        ? widget.controller.toggleStartLock
-        : widget.controller.toggleDestinationLock;
-
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: () {
-          _onUserInteraction();
-          if (widget.enableHapticFeedback) {
-            HapticFeedback.selectionClick();
-          }
-          onPressed();
-        },
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 32,
-          height: 32,
-          margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: isLocked
-                ? Colors.green.withValues(alpha: 0.2)
-                : Colors.grey.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isLocked ? Colors.green : Colors.grey.shade400,
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            isLocked ? Icons.lock : Icons.lock_open_outlined,
-            color: isLocked ? Colors.green : Colors.grey.shade600,
-            size: 14,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiniSwapButton() {
-    return SizedBox(
-      height: 20,
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              height: 1,
-              color: Colors.grey.withValues(alpha: 0.3),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Material(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(15),
-              child: InkWell(
-                onTap: _swapStartAndDestination,
-                borderRadius: BorderRadius.circular(15),
+        children: quickActions.map((action) {
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              child: GestureDetector(
+                onTap: () => _onQuickActionTap(action.$2, action.$3),
                 child: Container(
-                  width: 30,
-                  height: 30,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(15),
+                    color: Colors.white.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(6),
                     border:
-                        Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                        Border.all(color: Colors.grey.withValues(alpha: 0.1)),
                   ),
-                  child: const Icon(
-                    Icons.swap_vert,
-                    color: Colors.grey,
-                    size: 16,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        action.$1,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      Text(
+                        action.$3,
+                        style: TextStyle(
+                          fontSize: 6,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: Container(
-              height: 1,
-              color: Colors.grey.withValues(alpha: 0.3),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompactQuickAccessSection() {
-    const quickActions = [
-      ('🅿️', 'parkplatz', 'Parking'),
-      ('👨‍👩‍👧‍👦', 'spielplatz', 'Familie'),
-      ('🏖️', 'beach pool', 'Beach'),
-      ('🍽️', 'restaurant', 'Essen'),
-    ];
-
-    return Container(
-      margin: EdgeInsets.only(top: _verticalMargin),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-            child: Text(
-              'Beliebte Ziele',
-              style: TextStyle(
-                fontSize: _bodyFontSize,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 50,
-            child: Row(
-              children: quickActions.map((action) {
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Material(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      child: InkWell(
-                        onTap: () => _onQuickActionTap(action.$2, action.$3),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                                color: Colors.grey.withValues(alpha: 0.2)),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                action.$1,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                action.$3,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey.shade700,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -888,18 +751,18 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     );
   }
 
-  Widget _buildMinimalExpandHint() {
+  Widget _buildExpandHint() {
     if (_currentState == SearchInterfaceState.navigationMode) {
       return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.black.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -907,14 +770,14 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                   const Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.white,
-                    size: 14,
+                    size: 10,
                   ),
                   const SizedBox(width: 2),
                   Text(
-                    'Bearbeiten',
+                    'Edit',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: _isSmallScreen ? 10 : 11,
+                      fontSize: 8,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
