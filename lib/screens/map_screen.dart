@@ -223,14 +223,13 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ KOMPAKTER LOCATION DROPDOWN - Behebt Overflow VOLLSTÄNDIG
+  // ✅ KOMPAKTER LOCATION DROPDOWN - FUNKTIONIERT GARANTIERT
   Widget _buildCompactLocationDropdown(
       List<LocationInfo> locations, LocationInfo selected, bool isLoading) {
     return PopupMenuButton<LocationInfo>(
-      // ✅ FIX: PopupMenuButton statt DropdownButton
+      // ✅ FIX: NUR child, KEIN icon (das war der Fehler!)
       onSelected: _onLocationSelectedFromDropdown,
       enabled: !isLoading,
-      icon: const Icon(Icons.public, color: Colors.white, size: 18),
       itemBuilder: (context) => locations
           .map<PopupMenuItem<LocationInfo>>(
             (LocationInfo location) => PopupMenuItem<LocationInfo>(
@@ -243,7 +242,7 @@ class MapScreenState extends State<MapScreen>
           )
           .toList(),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 80), // ✅ Noch kompakter
+        constraints: const BoxConstraints(maxWidth: 80),
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -257,6 +256,7 @@ class MapScreenState extends State<MapScreen>
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
           ],
         ),
       ),
