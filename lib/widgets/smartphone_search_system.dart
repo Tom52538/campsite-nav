@@ -1081,9 +1081,9 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                     fontWeight: FontWeight.w700,
                     color: Color.fromARGB(
                       204, // 80% opacity (0.8 * 255)
-                      (action.$4.value >> 16) & 0xFF, // red
-                      (action.$4.value >> 8) & 0xFF,  // green
-                      action.$4.value & 0xFF,          // blue
+                      (action.$4.toARGB32() >> 16) & 0xFF, // red
+                      (action.$4.toARGB32() >> 8) & 0xFF,  // green
+                      action.$4.toARGB32() & 0xFF,          // blue
                     ),
                   ),
                   textAlign: TextAlign.center,
