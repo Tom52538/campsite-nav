@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - STATE OF THE ART + FUNKTIONAL
+// lib/widgets/smartphone_search_system.dart - BULLETPROOF OVERFLOW SOLUTION
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,14 +7,12 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
-/// State-of-the-Art Smartphone Search System - GOOGLE MAPS STYLE
+/// BULLETPROOF Search System - GARANTIERT KEIN OVERFLOW
 ///
-/// Features:
-/// - Adaptive Height System (verhindert Overflow GARANTIERT)
-/// - Flexible Layout System
-/// - Google Maps-ähnliche UX
-/// - Premium Animationen
-/// - Smartphone-optimiert
+/// Architektur-Änderung:
+/// - SingleChildScrollView verhindert JEDEN Overflow
+/// - Intrinsic Dimensions für sichere Berechnungen
+/// - Fallback-Safe Layout System
 class SmartphoneSearchSystem extends StatefulWidget {
   final MapScreenController controller;
   final List<SearchableFeature> allFeatures;
@@ -62,11 +60,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   bool _userInteractionDetected = false;
   bool _autoTransitionsEnabled = true;
 
-  // Layout Dimensions
-  double _screenWidth = 0;
-  double _screenHeight = 0;
-  double _keyboardHeight = 0;
-
   @override
   void initState() {
     super.initState();
@@ -77,17 +70,10 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _updateScreenDimensions();
-  }
-
-  @override
   void didChangeMetrics() {
     super.didChangeMetrics();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _updateScreenDimensions();
         _updateKeyboardVisibility();
       }
     });
@@ -154,7 +140,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       _onRouteCleared();
     }
 
-    // Auto-transition logic
     if (widget.showRouteInfoAndFadeFields && _hasActiveRoute) {
       if (_currentState != SearchInterfaceState.navigationMode) {
         _scheduleStateTransition(SearchInterfaceState.navigationMode);
@@ -207,18 +192,11 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     }
   }
 
-  void _updateScreenDimensions() {
-    final mediaQuery = MediaQuery.of(context);
-    setState(() {
-      _screenWidth = mediaQuery.size.width;
-      _screenHeight = mediaQuery.size.height;
-      _keyboardHeight = mediaQuery.viewInsets.bottom;
-    });
-  }
-
   void _updateKeyboardVisibility() {
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
     final wasVisible = _isKeyboardVisible;
-    _isKeyboardVisible = _keyboardHeight > 50;
+    _isKeyboardVisible = keyboardHeight > 50;
 
     if (wasVisible != _isKeyboardVisible) {
       if (_isKeyboardVisible) {
@@ -288,26 +266,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     widget.controller.endFocusNode.requestFocus();
   }
 
-  // ✅ ADAPTIVE LAYOUT SYSTEM - Verhindert Overflow GARANTIERT
-  double get _adaptiveContainerHeight {
-    final safeHeight =
-        _screenHeight - MediaQuery.of(context).padding.top - 20; // 20px Buffer
-
-    if (_isKeyboardVisible) {
-      // Bei Keyboard: Mehr Platz für Eingabe
-      return (safeHeight * 0.35).clamp(120.0, 200.0);
-    } else if (_currentState == SearchInterfaceState.navigationMode) {
-      // Navigation Mode: Kompakt
-      return 70.0;
-    } else {
-      // Standard: Mittelgroß
-      return (safeHeight * 0.25).clamp(100.0, 140.0);
-    }
-  }
-
-  double get _contentHeight =>
-      _adaptiveContainerHeight - 16; // Margin berücksichtigen
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -317,9 +275,12 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
         _slideAnimation,
       ]),
       builder: (context, child) {
-        return SizedBox(
-          width: _screenWidth,
-          height: _adaptiveContainerHeight,
+        // ✅ BULLETPROOF CONTAINER: Maximale Höhe mit GARANTIE
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: _getMaxSafeHeight(),
+            maxWidth: MediaQuery.of(context).size.width,
+          ),
           child: Stack(
             clipBehavior: Clip.hardEdge,
             children: [
@@ -330,7 +291,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                 right: 0,
                 child: SlideTransition(
                   position: _slideAnimation,
-                  child: _buildAdaptiveSearchInterface(),
+                  child: _buildScrollableSearchInterface(),
                 ),
               ),
 
@@ -368,11 +329,37 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     );
   }
 
-  // ✅ ADAPTIVE INTERFACE - Passt sich automatisch an verfügbaren Platz an
-  Widget _buildAdaptiveSearchInterface() {
+  // ✅ SICHERE MAXIMALE HÖHE - Berücksichtigt ALLES
+  double _getMaxSafeHeight() {
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final topPadding = mediaQuery.padding.top;
+    final bottomPadding = mediaQuery.padding.bottom;
+    final keyboardHeight = mediaQuery.viewInsets.bottom;
+
+    // Verfügbare Höhe: Screen - SafeAreas - Keyboard - Buffer
+    final availableHeight =
+        screenHeight - topPadding - bottomPadding - keyboardHeight - 40;
+
+    if (_isKeyboardVisible) {
+      // Bei Keyboard: Mehr Platz für Eingabe
+      return (availableHeight * 0.4).clamp(80.0, 180.0);
+    } else if (_currentState == SearchInterfaceState.navigationMode) {
+      // Navigation Mode: Kompakt
+      return 70.0;
+    } else {
+      // Standard: Mittelgroß
+      return (availableHeight * 0.25).clamp(80.0, 120.0);
+    }
+  }
+
+  // ✅ BULLETPROOF SCROLLABLE INTERFACE - KEIN OVERFLOW MÖGLICH
+  Widget _buildScrollableSearchInterface() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      height: _contentHeight,
+      constraints: BoxConstraints(
+        maxHeight: _getMaxSafeHeight() - 16, // Margin berücksichtigen
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(16.0),
@@ -393,116 +380,109 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
         borderRadius: BorderRadius.circular(16.0),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: _buildFlexibleContent(),
+          child: _buildScrollableContent(),
         ),
       ),
     );
   }
 
-  // ✅ FLEXIBLE CONTENT SYSTEM - Passt Inhalte an verfügbare Höhe an
-  Widget _buildFlexibleContent() {
+  // ✅ SCROLLABLE CONTENT - DER SCHLÜSSEL ZUM ERFOLG
+  Widget _buildScrollableContent() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.1),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: _buildSmartLayoutColumn(),
+      child: SingleChildScrollView(
+        // ✅ MAGIE: SingleChildScrollView verhindert JEDEN Overflow!
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.all(10.0),
+        child: IntrinsicHeight(
+          // ✅ SICHERHEIT: IntrinsicHeight für korrekte Berechnungen
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              _buildCompactHeader(),
+
+              const SizedBox(height: 8),
+
+              // Search Fields
+              _buildCompactSearchFields(),
+
+              // Quick Actions (nur wenn expanded)
+              if (_currentState == SearchInterfaceState.expanded)
+                _buildQuickActions(),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildSmartLayoutColumn() {
-    final availableHeight = _contentHeight - 24; // Padding berücksichtigen
-
-    // Header: 24px
-    // Search Fields: 80px
-    // Quick Actions: 50px (optional)
-    // Spacing: 16px
-
-    final hasSpaceForQuickActions = availableHeight > 120;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Header (immer vorhanden)
-        SizedBox(
-          height: 24,
-          child: _buildHeader(),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Search Fields (immer vorhanden)
-        _buildSearchFieldsSection(),
-
-        // Quick Actions (nur wenn Platz)
-        if (hasSpaceForQuickActions &&
-            _currentState == SearchInterfaceState.expanded)
-          _buildQuickActionsSection(),
-      ],
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            Icons.explore,
-            color: Theme.of(context).colorScheme.primary,
-            size: 16,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Navigation',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+  Widget _buildCompactHeader() {
+    return SizedBox(
+      height: 24,
+      child: Row(
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(
+              Icons.explore,
               color: Theme.of(context).colorScheme.primary,
+              size: 14,
             ),
           ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '${widget.allFeatures.length}',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Navigation',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           ),
-        ),
-      ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${widget.allFeatures.length}',
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSearchFieldsSection() {
+  Widget _buildCompactSearchFields() {
     return Column(
       children: [
-        _buildOptimizedSearchField(SearchFieldType.start),
+        _buildCompactSearchField(SearchFieldType.start),
         const SizedBox(height: 6),
         _buildSwapButtonRow(),
         const SizedBox(height: 6),
-        _buildOptimizedSearchField(SearchFieldType.destination),
+        _buildCompactSearchField(SearchFieldType.destination),
       ],
     );
   }
 
-  Widget _buildOptimizedSearchField(SearchFieldType fieldType) {
+  Widget _buildCompactSearchField(SearchFieldType fieldType) {
     final controller = fieldType == SearchFieldType.start
         ? widget.controller.startSearchController
         : widget.controller.endSearchController;
@@ -511,15 +491,15 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
         : widget.controller.endFocusNode;
 
     return Container(
-      height: 40, // Feste, optimierte Höhe
+      height: 36, // Feste, kompakte Höhe
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(10.0),
         border: Border.all(
           color: focusNode.hasFocus
               ? Theme.of(context).colorScheme.primary
               : Colors.grey.withValues(alpha: 0.3),
-          width: focusNode.hasFocus ? 2.0 : 1.0,
+          width: focusNode.hasFocus ? 1.5 : 1.0,
         ),
       ),
       child: Row(
@@ -528,8 +508,8 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Container(
-              width: 24,
-              height: 24,
+              width: 20,
+              height: 20,
               decoration: BoxDecoration(
                 color: Theme.of(context)
                     .colorScheme
@@ -540,7 +520,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
               child: Center(
                 child: Text(
                   fieldType.emoji,
-                  style: const TextStyle(fontSize: 12),
+                  style: const TextStyle(fontSize: 11),
                 ),
               ),
             ),
@@ -552,14 +532,14 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
               controller: controller,
               focusNode: focusNode,
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
                 hintText: '${fieldType.displayName}...',
                 hintStyle: TextStyle(
                   color: Colors.grey.shade500,
-                  fontSize: 14,
+                  fontSize: 13,
                 ),
                 border: InputBorder.none,
                 isDense: true,
@@ -585,34 +565,34 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       children: [
         if (controller.text.isNotEmpty)
           IconButton(
-            icon: const Icon(Icons.clear, size: 18),
+            icon: const Icon(Icons.clear, size: 16),
             color: Colors.grey.shade600,
             onPressed: () {
               controller.clear();
               _onUserInteraction();
             },
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             padding: EdgeInsets.zero,
           ),
         if (fieldType == SearchFieldType.start)
           IconButton(
-            icon: const Icon(Icons.my_location, size: 18),
+            icon: const Icon(Icons.my_location, size: 16),
             color: Theme.of(context).colorScheme.primary,
             onPressed: () {
               widget.controller.setCurrentLocationAsStart();
               _onUserInteraction();
             },
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             padding: EdgeInsets.zero,
           ),
         IconButton(
-          icon: const Icon(Icons.location_searching, size: 18),
+          icon: const Icon(Icons.location_searching, size: 16),
           color: Theme.of(context).colorScheme.secondary,
           onPressed: () {
             widget.controller.activateMapSelection(fieldType);
             _onUserInteraction();
           },
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
           padding: EdgeInsets.zero,
         ),
       ],
@@ -621,7 +601,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
 
   Widget _buildSwapButtonRow() {
     return SizedBox(
-      height: 20,
+      height: 16,
       child: Row(
         children: [
           const Expanded(child: Divider(height: 1)),
@@ -629,16 +609,16 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
             margin: const EdgeInsets.symmetric(horizontal: 8),
             child: InkWell(
               onTap: _swapStartAndDestination,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               child: Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.swap_vert,
-                  size: 16,
+                  size: 14,
                   color: Colors.grey,
                 ),
               ),
@@ -650,7 +630,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     );
   }
 
-  Widget _buildQuickActionsSection() {
+  Widget _buildQuickActions() {
     const quickActions = [
       ('🅿️', 'parkplatz', 'Park'),
       ('👨‍👩‍👧‍👦', 'spielplatz', 'Kids'),
@@ -660,7 +640,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      height: 45,
+      height: 42,
       child: Row(
         children: quickActions.map((action) {
           return Expanded(
@@ -668,14 +648,14 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
               padding: const EdgeInsets.symmetric(horizontal: 2),
               child: Material(
                 color: Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 child: InkWell(
                   onTap: () => _onQuickActionTap(action.$2, action.$3),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                       border:
                           Border.all(color: Colors.grey.withValues(alpha: 0.2)),
                     ),
@@ -684,12 +664,12 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
                       children: [
                         Text(
                           action.$1,
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: 14),
                         ),
                         Text(
                           action.$3,
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 8,
                             fontWeight: FontWeight.w600,
                             color: Colors.grey.shade700,
                           ),
@@ -735,22 +715,22 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.keyboard_arrow_down,
-                      color: Colors.white, size: 14),
-                  SizedBox(width: 4),
+                      color: Colors.white, size: 12),
+                  SizedBox(width: 3),
                   Text(
                     'Edit',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
