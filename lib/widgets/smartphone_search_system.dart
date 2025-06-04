@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - EINFACH UND FUNKTIONAL
+// lib/widgets/smartphone_search_system.dart - OVERFLOW KOMPLETT BEHOBEN
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
@@ -7,7 +7,7 @@ import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 
-/// EINFACHES, FUNKTIONALES Search System
+/// OVERFLOW-FREIES Search System - Dynamische Höhenberechnung
 class SmartphoneSearchSystem extends StatefulWidget {
   final MapScreenController controller;
   final List<SearchableFeature> allFeatures;
@@ -81,106 +81,160 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ EINFACHE LÖSUNG: Feste Höhe, die GARANTIERT funktioniert
-    return SizedBox(
-      height: 160, // Feste, sichere Höhe
-      child: widget.showRouteInfoAndFadeFields && _hasActiveRoute
-          ? _buildRouteInfoMode()
-          : _buildSearchMode(),
-    );
-  }
+    // ✅ LÖSUNG: Responsive Container statt feste Höhe
+    final screenHeight = MediaQuery.of(context).size.height;
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardVisible = keyboardHeight > 50;
+    final isSmallScreen =
+        MediaQuery.of(context).size.width < SmartphoneBreakpoints.small;
 
-  Widget _buildSearchMode() {
-    return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    // Dynamische Höhenberechnung
+    final maxHeight = _calculateMaxHeight(
+        screenHeight, keyboardHeight, isKeyboardVisible, isSmallScreen);
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: maxHeight,
+        minHeight: 60, // Minimum für CompactRouteWidget
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header
-          Row(
-            children: [
-              Icon(
-                Icons.explore,
-                color: Theme.of(context).colorScheme.primary,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Navigation',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${widget.allFeatures.length}',
-                  style: const TextStyle(fontSize: 10, color: Colors.blue),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Search Fields - KOMPAKT
-          _buildCompactSearchFields(),
-        ],
+      child: IntrinsicHeight(
+        child: widget.showRouteInfoAndFadeFields && _hasActiveRoute
+            ? _buildRouteInfoMode()
+            : _buildSearchMode(isSmallScreen),
       ),
     );
   }
 
-  Widget _buildCompactSearchFields() {
-    return Column(
-      children: [
-        // Start Field
-        _buildSingleSearchField(SearchFieldType.start),
+  // ✅ INTELLIGENTE HÖHENBERECHNUNG
+  double _calculateMaxHeight(double screenHeight, double keyboardHeight,
+      bool isKeyboardVisible, bool isSmallScreen) {
+    if (widget.showRouteInfoAndFadeFields && _hasActiveRoute) {
+      // Route Info Mode: Minimal
+      return isSmallScreen ? 100 : 120;
+    }
 
-        const SizedBox(height: 8),
+    if (isKeyboardVisible) {
+      // Keyboard sichtbar: Kompakter
+      final availableHeight =
+          screenHeight - keyboardHeight - 100; // 100px für andere UI Elemente
+      return (availableHeight * 0.6).clamp(120, 200);
+    }
 
-        // Swap Button
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            IconButton(
-              icon: const Icon(Icons.swap_vert, size: 18),
-              onPressed: () {
-                if (widget.enableHapticFeedback) {
-                  HapticFeedback.mediumImpact();
-                }
-                widget.controller.swapStartAndDestination();
-              },
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+    // Normal Mode: Responsive basierend auf Bildschirmgröße
+    if (isSmallScreen) {
+      return (screenHeight * 0.25).clamp(140, 180);
+    } else {
+      return (screenHeight * 0.3).clamp(160, 220);
+    }
+  }
+
+  Widget _buildSearchMode(bool isSmallScreen) {
+    return SingleChildScrollView(
+      child: Container(
+        margin: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.95),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            const Expanded(child: Divider()),
           ],
         ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min, // ✅ KRITISCH: Minimale Größe
+          children: [
+            // Header - Kompakter
+            Row(
+              children: [
+                Icon(
+                  Icons.explore,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: isSmallScreen ? 14 : 16,
+                ),
+                SizedBox(width: isSmallScreen ? 6 : 8),
+                const Expanded(
+                  child: Text(
+                    'Navigation',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${widget.allFeatures.length}',
+                    style: const TextStyle(fontSize: 10, color: Colors.blue),
+                  ),
+                ),
+              ],
+            ),
 
-        const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 8 : 12),
+
+            // Search Fields - Noch kompakter
+            _buildUltraCompactSearchFields(isSmallScreen),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ ULTRA-KOMPAKTE SEARCH FIELDS
+  Widget _buildUltraCompactSearchFields(bool isSmallScreen) {
+    final fieldHeight = isSmallScreen ? 36.0 : 40.0;
+    final iconSize = isSmallScreen ? 14.0 : 16.0;
+    final fontSize = isSmallScreen ? 13.0 : 14.0;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min, // ✅ KRITISCH
+      children: [
+        // Start Field
+        _buildUltraCompactField(
+            SearchFieldType.start, fieldHeight, iconSize, fontSize),
+
+        // Swap Button - Minimaler
+        SizedBox(
+          height: isSmallScreen ? 24 : 28,
+          child: Row(
+            children: [
+              const Expanded(child: Divider()),
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  icon: Icon(Icons.swap_vert, size: iconSize),
+                  onPressed: () {
+                    if (widget.enableHapticFeedback) {
+                      HapticFeedback.mediumImpact();
+                    }
+                    widget.controller.swapStartAndDestination();
+                  },
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+        ),
 
         // Destination Field
-        _buildSingleSearchField(SearchFieldType.destination),
+        _buildUltraCompactField(
+            SearchFieldType.destination, fieldHeight, iconSize, fontSize),
       ],
     );
   }
 
-  Widget _buildSingleSearchField(SearchFieldType fieldType) {
+  // ✅ ULTRA-KOMPAKTES EINZELFELD
+  Widget _buildUltraCompactField(SearchFieldType fieldType, double height,
+      double iconSize, double fontSize) {
     final controller = fieldType == SearchFieldType.start
         ? widget.controller.startSearchController
         : widget.controller.endSearchController;
@@ -189,31 +243,31 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
         : widget.controller.endFocusNode;
 
     return Container(
-      height: 40, // Feste Höhe
+      height: height,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         children: [
-          // Icon
+          // Icon - Kompakter
           Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Icon(
               fieldType == SearchFieldType.start
                   ? Icons.trip_origin
                   : Icons.flag_outlined,
-              size: 16,
+              size: iconSize,
               color: Colors.grey.shade600,
             ),
           ),
 
-          // TextField
+          // TextField - Kompakter
           Expanded(
             child: TextField(
               controller: controller,
               focusNode: focusNode,
-              style: const TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: fontSize),
               decoration: InputDecoration(
                 hintText: '${fieldType.displayName}...',
                 border: InputBorder.none,
@@ -223,19 +277,27 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
             ),
           ),
 
-          // Actions
+          // Actions - Kompakter
           if (controller.text.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.clear, size: 16),
-              onPressed: () => controller.clear(),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: IconButton(
+                icon: Icon(Icons.clear, size: iconSize),
+                onPressed: () => controller.clear(),
+                padding: EdgeInsets.zero,
+              ),
             ),
 
           if (fieldType == SearchFieldType.start)
-            IconButton(
-              icon: const Icon(Icons.my_location, size: 16),
-              onPressed: () => widget.controller.setCurrentLocationAsStart(),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: IconButton(
+                icon: Icon(Icons.my_location, size: iconSize),
+                onPressed: () => widget.controller.setCurrentLocationAsStart(),
+                padding: EdgeInsets.zero,
+              ),
             ),
         ],
       ),
@@ -246,6 +308,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
     return Container(
       margin: const EdgeInsets.all(8),
       child: Column(
+        mainAxisSize: MainAxisSize.min, // ✅ KRITISCH
         children: [
           CompactRouteWidget(
             destinationName: widget.controller.endSearchController.text,
@@ -256,21 +319,20 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
             isNavigating: widget.controller.followGps &&
                 widget.controller.currentGpsPosition != null,
             onEditPressed: () {
-              // Zurück zum Search Mode
               widget.controller.setRouteInfoAndFadeFields(false);
             },
             onClosePressed: _clearRouteAndReset,
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6), // Reduziert
 
-          // Edit Button
+          // Edit Button - Kompakter
           GestureDetector(
             onTap: () {
               widget.controller.setRouteInfoAndFadeFields(false);
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
@@ -278,11 +340,11 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.edit, color: Colors.white, size: 14),
+                  Icon(Icons.edit, color: Colors.white, size: 12),
                   SizedBox(width: 4),
                   Text(
                     'Bearbeiten',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(color: Colors.white, fontSize: 11),
                   ),
                 ],
               ),
