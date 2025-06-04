@@ -449,19 +449,9 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
     }
 
     if (widget.controller.currentGpsPosition != null) {
-      // Set GPS as start location
-      widget.controller.startSearchController.text = "Mein Standort";
+      // ✅ FIX: Verwende Controller-Methode direkt
+      widget.controller.setCurrentLocationAsStart();
       _isStartUsingGPS = true;
-
-      // Create GPS feature
-      final gpsFeature = SearchableFeature(
-        id: "gps_location",
-        name: "Mein Standort",
-        type: "GPS Position",
-        center: widget.controller.currentGpsPosition!,
-      );
-
-      widget.controller.setStartLocation(gpsFeature);
       setState(() {});
 
       // Show feedback
@@ -474,17 +464,10 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   // ✅ Silent version for initialization
   void _setGPSAsStartSilent() {
     if (widget.controller.currentGpsPosition != null) {
-      widget.controller.startSearchController.text = "Mein Standort";
+      // ✅ FIX: Verwende Controller-Methode direkt
+      widget.controller.setCurrentLocationAsStart();
       _isStartUsingGPS = true;
 
-      final gpsFeature = SearchableFeature(
-        id: "gps_location",
-        name: "Mein Standort",
-        type: "GPS Position",
-        center: widget.controller.currentGpsPosition!,
-      );
-
-      widget.controller.setStartLocation(gpsFeature);
       if (mounted) {
         setState(() {});
       }
@@ -504,28 +487,38 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
       HapticFeedback.mediumImpact();
     }
 
+    // ✅ FIX: Verwende Controller-Methode direkt
     widget.controller.activateMapSelection(fieldType);
     _showSnackbar(
         "Tippen Sie auf die Karte um ${fieldType.displayName} zu wählen");
   }
 
   void _swapStartAndDestination() {
+    // ✅ FIX: Verwende Controller-Methode direkt
+    widget.controller.swapStartAndDestination();
+
     // Reset GPS state when swapping
     _isStartUsingGPS = false;
-    widget.controller.swapStartAndDestination();
     setState(() {});
   }
 
   void _showSnackbar(String message, {bool isError = false}) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          duration: const Duration(seconds: 2),
-          backgroundColor: isError ? Colors.red : Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      // Use ScaffoldMessenger.of(context) safely
+      try {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 2),
+            backgroundColor: isError ? Colors.red : Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+          ),
+        );
+      } catch (e) {
+        // Fallback: Print to console if SnackBar fails
+        print("SnackBar Error: $message");
+      }
     }
   }
 
