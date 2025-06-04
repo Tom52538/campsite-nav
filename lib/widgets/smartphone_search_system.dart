@@ -1,5 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - FUNKTIONIERT WIEDER!
-import 'dart:ui' show ImageFilter;
+// lib/widgets/smartphone_search_system.dart - EINFACH UND FUNKTIONAL
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
@@ -8,7 +7,7 @@ import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 
-/// FUNKTIONALES Search System - ALLES FUNKTIONIERT WIEDER!
+/// EINFACHES, FUNKTIONALES Search System
 class SmartphoneSearchSystem extends StatefulWidget {
   final MapScreenController controller;
   final List<SearchableFeature> allFeatures;
@@ -37,20 +36,12 @@ class SmartphoneSearchSystem extends StatefulWidget {
   State<SmartphoneSearchSystem> createState() => _SmartphoneSearchSystemState();
 }
 
-class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
-    with TickerProviderStateMixin {
-  late AnimationController _masterController;
-  late AnimationController _routeInfoController;
-
-  late Animation<double> _masterAnimation;
-  late Animation<double> _routeInfoAnimation;
-
+class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   bool _hasActiveRoute = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
     _setupControllerListeners();
     _evaluateInitialState();
   }
@@ -58,33 +49,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   @override
   void dispose() {
     widget.controller.removeListener(_handleControllerChanges);
-    _masterController.dispose();
-    _routeInfoController.dispose();
     super.dispose();
-  }
-
-  void _initializeAnimations() {
-    _masterController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _routeInfoController = AnimationController(
-      duration: const Duration(milliseconds: 250),
-      vsync: this,
-    );
-
-    _masterAnimation = CurvedAnimation(
-      parent: _masterController,
-      curve: Curves.easeInOutCubic,
-    );
-
-    _routeInfoAnimation = CurvedAnimation(
-      parent: _routeInfoController,
-      curve: Curves.easeInOut,
-    );
-
-    _masterController.forward();
   }
 
   void _setupControllerListeners() {
@@ -99,23 +64,11 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       if (widget.enableHapticFeedback) {
         HapticFeedback.mediumImpact();
       }
-    } else if (wasActiveRoute && !_hasActiveRoute) {
-      // Route wurde gelöscht
-    }
-
-    // Route Info Animation
-    if (widget.showRouteInfoAndFadeFields && _hasActiveRoute) {
-      _routeInfoController.forward();
-    } else {
-      _routeInfoController.reverse();
     }
   }
 
   void _evaluateInitialState() {
     _hasActiveRoute = widget.controller.routePolyline != null;
-    if (_hasActiveRoute && widget.showRouteInfoAndFadeFields) {
-      _routeInfoController.value = 1.0;
-    }
   }
 
   void _clearRouteAndReset() {
@@ -128,171 +81,92 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: Listenable.merge([
-        _masterAnimation,
-        _routeInfoAnimation,
-      ]),
-      builder: (context, child) {
-        return Container(
-          // ✅ SICHERE HÖHE: Maximal 40% der Bildschirmhöhe
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.4,
-            maxWidth: MediaQuery.of(context).size.width,
-          ),
-          child: Stack(
-            children: [
-              // Main Search Interface
-              if (_routeInfoAnimation.value < 0.5)
-                FadeTransition(
-                  opacity: Tween<double>(begin: 1.0, end: 0.0)
-                      .animate(_routeInfoAnimation),
-                  child: _buildMainSearchInterface(),
-                ),
-
-              // Route Info Overlay
-              if (_hasActiveRoute)
-                FadeTransition(
-                  opacity: _routeInfoAnimation,
-                  child: _buildCompactRouteInfoOverlay(),
-                ),
-            ],
-          ),
-        );
-      },
+    // ✅ EINFACHE LÖSUNG: Feste Höhe, die GARANTIERT funktioniert
+    return SizedBox(
+      height: 160, // Feste, sichere Höhe
+      child: widget.showRouteInfoAndFadeFields && _hasActiveRoute
+          ? _buildRouteInfoMode()
+          : _buildSearchMode(),
     );
   }
 
-  Widget _buildMainSearchInterface() {
+  Widget _buildSearchMode() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.8),
-          width: 1.0,
-        ),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            spreadRadius: 0,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16.0),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 12),
-                  _buildSearchFields(),
-                ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.explore,
+                color: Theme.of(context).colorScheme.primary,
+                size: 16,
               ),
-            ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Navigation',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${widget.allFeatures.length}',
+                  style: const TextStyle(fontSize: 10, color: Colors.blue),
+                ),
+              ),
+            ],
           ),
-        ),
+
+          const SizedBox(height: 12),
+
+          // Search Fields - KOMPAKT
+          _buildCompactSearchFields(),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            Icons.explore,
-            color: Theme.of(context).colorScheme.primary,
-            size: 16,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Navigation',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '${widget.allFeatures.length}',
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchFields() {
+  Widget _buildCompactSearchFields() {
     return Column(
       children: [
-        // ✅ START SEARCH FIELD - FUNKTIONIERT!
-        CampsiteSearchInput(
-          fieldType: SearchFieldType.start,
-          controller: widget.controller.startSearchController,
-          focusNode: widget.controller.startFocusNode,
-          allFeatures: widget.allFeatures,
-          onFeatureSelected: (feature) {
-            widget.controller.setStartLocation(feature);
-          },
-          onCurrentLocationTap: () {
-            widget.controller.setCurrentLocationAsStart();
-          },
-          onMapSelectionTap: () {
-            widget.controller.activateMapSelection(SearchFieldType.start);
-          },
-          context: widget.context,
-        ),
+        // Start Field
+        _buildSingleSearchField(SearchFieldType.start),
 
         const SizedBox(height: 8),
 
-        // ✅ SWAP BUTTON
+        // Swap Button
         Row(
           children: [
             const Expanded(child: Divider()),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              child: IconButton(
-                icon: const Icon(Icons.swap_vert, size: 20),
-                color: Theme.of(context).colorScheme.primary,
-                onPressed: () {
-                  if (widget.enableHapticFeedback) {
-                    HapticFeedback.mediumImpact();
-                  }
-                  widget.controller.swapStartAndDestination();
-                },
-                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              ),
+            IconButton(
+              icon: const Icon(Icons.swap_vert, size: 18),
+              onPressed: () {
+                if (widget.enableHapticFeedback) {
+                  HapticFeedback.mediumImpact();
+                }
+                widget.controller.swapStartAndDestination();
+              },
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
             const Expanded(child: Divider()),
           ],
@@ -300,30 +174,78 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
 
         const SizedBox(height: 8),
 
-        // ✅ DESTINATION SEARCH FIELD - FUNKTIONIERT!
-        CampsiteSearchInput(
-          fieldType: SearchFieldType.destination,
-          controller: widget.controller.endSearchController,
-          focusNode: widget.controller.endFocusNode,
-          allFeatures: widget.allFeatures,
-          onFeatureSelected: (feature) {
-            widget.controller.setDestination(feature);
-          },
-          onMapSelectionTap: () {
-            widget.controller.activateMapSelection(SearchFieldType.destination);
-          },
-          context: widget.context,
-          showQuickAccess: true,
-        ),
+        // Destination Field
+        _buildSingleSearchField(SearchFieldType.destination),
       ],
     );
   }
 
-  Widget _buildCompactRouteInfoOverlay() {
+  Widget _buildSingleSearchField(SearchFieldType fieldType) {
+    final controller = fieldType == SearchFieldType.start
+        ? widget.controller.startSearchController
+        : widget.controller.endSearchController;
+    final focusNode = fieldType == SearchFieldType.start
+        ? widget.controller.startFocusNode
+        : widget.controller.endFocusNode;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      height: 40, // Feste Höhe
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          // Icon
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              fieldType == SearchFieldType.start
+                  ? Icons.trip_origin
+                  : Icons.flag_outlined,
+              size: 16,
+              color: Colors.grey.shade600,
+            ),
+          ),
+
+          // TextField
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              style: const TextStyle(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: '${fieldType.displayName}...',
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+
+          // Actions
+          if (controller.text.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.clear, size: 16),
+              onPressed: () => controller.clear(),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+
+          if (fieldType == SearchFieldType.start)
+            IconButton(
+              icon: const Icon(Icons.my_location, size: 16),
+              onPressed: () => widget.controller.setCurrentLocationAsStart(),
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRouteInfoMode() {
+    return Container(
+      margin: const EdgeInsets.all(8),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           CompactRouteWidget(
             destinationName: widget.controller.endSearchController.text,
@@ -334,41 +256,35 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
             isNavigating: widget.controller.followGps &&
                 widget.controller.currentGpsPosition != null,
             onEditPressed: () {
-              _routeInfoController.reverse();
+              // Zurück zum Search Mode
+              widget.controller.setRouteInfoAndFadeFields(false);
             },
             onClosePressed: _clearRouteAndReset,
           ),
 
-          // ✅ EXPAND HINT
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            child: GestureDetector(
-              onTap: () {
-                _routeInfoController.reverse();
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.keyboard_arrow_down,
-                        color: Colors.white, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      'Search bearbeiten',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+          const SizedBox(height: 8),
+
+          // Edit Button
+          GestureDetector(
+            onTap: () {
+              widget.controller.setRouteInfoAndFadeFields(false);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.edit, color: Colors.white, size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    'Bearbeiten',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ],
               ),
             ),
           ),
