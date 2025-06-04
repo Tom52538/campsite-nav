@@ -223,39 +223,41 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
-  // ✅ KOMPAKTER LOCATION DROPDOWN - Behebt Overflow
+  // ✅ KOMPAKTER LOCATION DROPDOWN - Behebt Overflow VOLLSTÄNDIG
   Widget _buildCompactLocationDropdown(
       List<LocationInfo> locations, LocationInfo selected, bool isLoading) {
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 100), // ✅ Maximale Breite
-      margin: const EdgeInsets.only(right: 4.0),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<LocationInfo>(
-          value: selected,
-          icon: const Icon(Icons.public, color: Colors.white, size: 18),
-          dropdownColor: Colors.deepOrange[700],
-          style: const TextStyle(
-              color: Colors.white, fontSize: 12), // ✅ Kleinere Schrift
-          items: locations
-              .map<DropdownMenuItem<LocationInfo>>(
-                (LocationInfo location) => DropdownMenuItem<LocationInfo>(
-                  value: location,
-                  child: Container(
-                    constraints: const BoxConstraints(
-                        maxWidth: 90), // ✅ Begrenzte Breite
-                    child: Text(
-                      _shortenLocationName(location.name), // ✅ Verkürzen
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: !isLoading ? _onLocationSelectedFromDropdown : null,
-          hint: const Text("Select location",
-              style: TextStyle(color: Colors.white70, fontSize: 12)),
+    return PopupMenuButton<LocationInfo>(
+      // ✅ FIX: PopupMenuButton statt DropdownButton
+      onSelected: _onLocationSelectedFromDropdown,
+      enabled: !isLoading,
+      icon: const Icon(Icons.public, color: Colors.white, size: 18),
+      itemBuilder: (context) => locations
+          .map<PopupMenuItem<LocationInfo>>(
+            (LocationInfo location) => PopupMenuItem<LocationInfo>(
+              value: location,
+              child: Text(
+                _shortenLocationName(location.name),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          )
+          .toList(),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 80), // ✅ Noch kompakter
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.public, color: Colors.white, size: 16),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                _shortenLocationName(selected.name),
+                style: const TextStyle(color: Colors.white, fontSize: 11),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -283,15 +285,14 @@ class MapScreenState extends State<MapScreen>
       'Roompot Beach Resort Kamperland': 'Kamperland',
       'Testgelände Sittard': 'Sittard',
       'Umgebung Zuhause (Gangelt)': 'Gangelt',
-      'Kamperland (Basic POIs)': 'Kamperland B',
     };
 
     if (abbreviations.containsKey(name)) {
       return abbreviations[name]!;
     }
 
-    // Fallback: Erste 10 Zeichen
-    return name.length > 10 ? '${name.substring(0, 10)}...' : name;
+    // Fallback: Erste 8 Zeichen
+    return name.length > 8 ? '${name.substring(0, 8)}...' : name;
   }
 
   // ✅ FIX: Context Icon Helper
