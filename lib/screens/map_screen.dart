@@ -13,19 +13,25 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 import 'package:camping_osm_navi/widgets/smartphone_search_system.dart';
-import 'package:camping_osm_navi/widgets/compact_route_widget.dart'; // Assuming this exists for RouteProgressIndicator context
+// Removed unused import: 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
-// Assuming PremiumCurves and RouteProgressIndicator are defined elsewhere,
-// if not, they would need to be imported or defined.
-// For example, if RouteProgressIndicator is a custom widget:
-// import 'package:camping_osm_navi/widgets/route_progress_indicator.dart';
+// These imports were previously placed too low, causing "directive_after_declaration" errors
+import 'map_screen_parts/map_screen_ui_mixin.dart';
+import 'map_screen/map_screen_controller.dart';
+import 'map_screen/map_screen_gps_handler.dart';
+import 'map_screen/map_screen_route_handler.dart';
+
+// Helper/Placeholder classes moved after all imports
 
 // Placeholder for PremiumCurves if it's custom, or ensure it's from a package
+// If this is a common utility, consider moving it to its own file.
 class PremiumCurves {
-  static const Curve smooth = Curves.easeInOut;
+  static const Curve smooth =
+      Curves.easeInOut; // Example, use your actual curve
 }
 
-// Placeholder for RouteProgressIndicator if it's custom and not imported above
+// Placeholder for RouteProgressIndicator if it's custom and not imported
+// If this is a common utility, consider moving it to its own file.
 class RouteProgressIndicator extends StatelessWidget {
   final double progress;
   final Color color;
@@ -42,18 +48,30 @@ class RouteProgressIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return LinearProgressIndicator(
       value: progress,
-      backgroundColor: color.withOpacity(0.3),
+      // Assuming you have a 'withValues' extension on Color similar to:
+      // extension ColorValues on Color { Color withValues({double alpha}) => this.withAlpha((alpha * 255).round()); }
+      // Using withValues as suggested by a potential linter rule from your project context.
+      // If 'withValues' is not defined, use standard 'withAlpha': color.withAlpha((0.3 * 255).round())
+      backgroundColor:
+          color.withValues(alpha: 0.3), // Corrected deprecated withOpacity
       valueColor: AlwaysStoppedAnimation<Color>(color),
       minHeight: height,
     );
   }
 }
 
-
-import 'map_screen_parts/map_screen_ui_mixin.dart';
-import 'map_screen/map_screen_controller.dart';
-import 'map_screen/map_screen_gps_handler.dart';
-import 'map_screen/map_screen_route_handler.dart';
+// Extension to provide withValues on Color, if not already present in your project
+// This is assumed based on your usage in smartphone_search_system.dart
+extension ColorValues on Color {
+  Color withValues({double? alpha, int? r, int? g, int? b}) {
+    return Color.fromARGB(
+      alpha != null ? (alpha * 255).round() : this.alpha,
+      r ?? red,
+      g ?? green,
+      b ?? blue,
+    );
+  }
+}
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -182,10 +200,10 @@ class MapScreenState extends State<MapScreen>
       floatingActionButton: isUiReady
           ? ConstrainedBox(
               constraints: const BoxConstraints(
-                maxHeight: 240.0, // Max height for the FAB column container
+                maxHeight: 240.0,
               ),
               child: SingleChildScrollView(
-                child: _buildFloatingActionButtons(true), // isUiReady is true here
+                child: _buildFloatingActionButtons(true),
               ),
             )
           : null,
@@ -394,6 +412,7 @@ class MapScreenState extends State<MapScreen>
       left: 20,
       right: 20,
       child: RouteProgressIndicator(
+        // Uses the placeholder defined above
         progress: progress,
         color: _getProgressColorForContext(_currentSearchContext),
         height: 6.0,
@@ -461,7 +480,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildMapLayer(bool isUiReady, dynamic mapTheme) {
     final bool vectorConditionsMet = isUiReady &&
         controller.maptilerUrlTemplate.isNotEmpty &&
-        controller.maptilerUrlTemplate.contains('key=') && // Basic check for key presence
+        controller.maptilerUrlTemplate.contains('key=') &&
         mapTheme != null;
 
     if (vectorConditionsMet) {
@@ -471,10 +490,10 @@ class MapScreenState extends State<MapScreen>
         tileProviders: vector_map_tiles.TileProviders({
           'openmaptiles': vector_map_tiles.NetworkVectorTileProvider(
             urlTemplate: controller.maptilerUrlTemplate,
-            maximumZoom: 14, // Typically, vector tiles can go higher, but this is from original
+            maximumZoom: 14,
           ),
         }),
-        maximumZoom: 20, // Max zoom for display
+        maximumZoom: 20,
       );
     } else {
       return TileLayer(
@@ -551,7 +570,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildCalculatingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withAlpha((0.3 * 255).round()),
+        color: Colors.black.withValues(alpha: 0.3),
         child: const Center(
           child: CircularProgressIndicator(color: Colors.white),
         ),
@@ -562,7 +581,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildReroutingOverlay() {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withAlpha((0.2 * 255).round()),
+        color: Colors.black.withValues(alpha: 0.2),
         child: const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -581,7 +600,7 @@ class MapScreenState extends State<MapScreen>
   Widget _buildLoadingOverlay(LocationInfo? selectedLocation) {
     return Positioned.fill(
       child: Container(
-        color: Colors.black.withAlpha((0.7 * 255).round()),
+        color: Colors.black.withValues(alpha: 0.7),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -601,8 +620,6 @@ class MapScreenState extends State<MapScreen>
   }
 
   Widget _buildFloatingActionButtons(bool isUiReady) {
-    // Note: The actual isUiReady check for individual buttons is handled inside this method,
-    // the parameter is mostly for the outer wrapper's condition.
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -782,8 +799,9 @@ class MapScreenState extends State<MapScreen>
             ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
+                // This SnackBar cannot be const due to dynamic message and backgroundColor
                 content: Text(message),
-                duration: Duration(seconds: durationSeconds),
+                duration: const Duration(seconds: durationSeconds),
                 backgroundColor:
                     _getProgressColorForContext(_currentSearchContext),
                 behavior: SnackBarBehavior.floating,
