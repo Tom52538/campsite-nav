@@ -1,9 +1,9 @@
-// lib/providers/location_provider.dart
+// lib/providers/location_provider.dart - VOLLSTÄNDIG KORRIGIERT
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:vector_tile_renderer/vector_tile_renderer.dart'; // Theme kommt von hier
+import 'package:vector_tile_renderer/vector_tile_renderer.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
 import 'package:camping_osm_navi/models/routing_graph.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
@@ -11,14 +11,13 @@ import 'package:camping_osm_navi/services/geojson_parser_service.dart';
 import 'package:camping_osm_navi/services/style_caching_service.dart';
 
 class LocationProvider with ChangeNotifier {
-  final List<LocationInfo> _availableLocations = []; // final hinzugefügt
+  final List<LocationInfo> _availableLocations = [];
   LocationInfo? _selectedLocation;
   bool _isLoadingLocationData = false;
 
-  Theme? _mapTheme; // Theme aus vector_tile_renderer
+  Theme? _mapTheme;
   RoutingGraph? _currentRoutingGraph;
-  final List<SearchableFeature> _currentSearchableFeatures =
-      []; // final hinzugefügt
+  final List<SearchableFeature> _currentSearchableFeatures = [];
 
   List<LocationInfo> get availableLocations => _availableLocations;
   LocationInfo? get selectedLocation => _selectedLocation;
@@ -34,10 +33,21 @@ class LocationProvider with ChangeNotifier {
   }
 
   Future<void> _loadAvailableLocations() async {
-    // TEST: MapTiler mit einfacherem Style (streets statt dataviz)
+    // ✅ KAMPERLAND ENHANCED MIT 214 POIs ALS ERSTES (WIRD DEFAULT)
     _availableLocations.addAll([
       LocationInfo(
-        // Removed const
+        id: "kamperland_enhanced",
+        name: "Roompot Beach Resort Kamperland",
+        geojsonAssetPath:
+            "assets/data/export_kamperland_enhanced_with_converted_pois.geojson",
+        initialLatitude: 51.5898,
+        initialLongitude: 3.7221,
+        radiusInMeters: 2000.0,
+        styleId: "maptiler_dataviz_kamperland_enhanced",
+        styleUrl:
+            "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
+      ),
+      LocationInfo(
         id: "sittard",
         name: "Testgelände Sittard",
         geojsonAssetPath: "assets/data/export.geojson",
@@ -45,24 +55,21 @@ class LocationProvider with ChangeNotifier {
         initialLongitude: 5.858832278816441,
         radiusInMeters: 1000.0,
         styleId: "maptiler_streets_sittard",
-        // TEST: Verwende einfacheren streets-Style statt dataviz
         styleUrl:
             "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
       LocationInfo(
-        // Removed const
-        id: "kamperland",
-        name: "Camping Resort Kamperland",
+        id: "kamperland_basic",
+        name: "Kamperland (Basic POIs)",
         geojsonAssetPath: "assets/data/export_kamperland.geojson",
-        initialLatitude: 51.58986626085254, // ✅ KORRIGIERT
-        initialLongitude: 3.7213346769915763, // ✅ KORRIGIERT
+        initialLatitude: 51.590186,
+        initialLongitude: 3.722494,
         radiusInMeters: 1500.0,
-        styleId: "maptiler_streets_kamperland",
+        styleId: "maptiler_dataviz_kamperland_basic",
         styleUrl:
             "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
       LocationInfo(
-        // Removed const
         id: "gangelt",
         name: "Umgebung Zuhause (Gangelt)",
         geojsonAssetPath: "assets/data/zuhause_umgebung.geojson",
@@ -75,8 +82,12 @@ class LocationProvider with ChangeNotifier {
       ),
     ]);
 
+    // ✅ KAMPERLAND ENHANCED ALS DEFAULT AUSWÄHLEN
     if (_availableLocations.isNotEmpty) {
-      _selectedLocation = _availableLocations.first;
+      _selectedLocation = _availableLocations.firstWhere(
+        (loc) => loc.id == "kamperland_enhanced",
+        orElse: () => _availableLocations.first,
+      );
       await _loadLocationData(_selectedLocation!);
     }
   }
@@ -95,7 +106,7 @@ class LocationProvider with ChangeNotifier {
     try {
       if (kDebugMode) {
         print(
-            "MAPTILER TEST: ${DateTime.now()}: LocationProvider: Lade Vector-Theme für ${newLocationInfo.name} von ${newLocationInfo.styleUrl}");
+            "MAPTILER: ${DateTime.now()}: LocationProvider: Lade Vector-Theme für ${newLocationInfo.name} von ${newLocationInfo.styleUrl}");
       }
 
       _mapTheme =
@@ -103,12 +114,12 @@ class LocationProvider with ChangeNotifier {
 
       if (kDebugMode) {
         print(
-            "MAPTILER TEST: ${DateTime.now()}: LocationProvider: Vector-Theme erfolgreich geladen von: ${newLocationInfo.styleUrl}");
+            "MAPTILER: ${DateTime.now()}: LocationProvider: Vector-Theme erfolgreich geladen von: ${newLocationInfo.styleUrl}");
       }
 
       if (kDebugMode) {
         print(
-            "MAPTILER TEST: ${DateTime.now()}: LocationProvider: Lade GeoJSON-String für ${newLocationInfo.name}.");
+            "MAPTILER: ${DateTime.now()}: LocationProvider: Lade GeoJSON-String für ${newLocationInfo.name}.");
       }
 
       final String geojsonString =
@@ -116,10 +127,9 @@ class LocationProvider with ChangeNotifier {
 
       if (kDebugMode) {
         print(
-            "MAPTILER TEST: ${DateTime.now()}: LocationProvider: GeoJSON-String für ${newLocationInfo.name} geladen.");
+            "MAPTILER: ${DateTime.now()}: LocationProvider: GeoJSON-String für ${newLocationInfo.name} geladen.");
       }
 
-      // KORREKTUR: await entfernt, da parseGeoJsonToGraphAndFeatures kein Future zurückgibt
       final ({RoutingGraph graph, List<SearchableFeature> features}) result =
           GeojsonParserService.parseGeoJsonToGraphAndFeatures(geojsonString);
 
@@ -129,19 +139,17 @@ class LocationProvider with ChangeNotifier {
 
       if (kDebugMode) {
         print(
-            "MAPTILER TEST: ${DateTime.now()}: LocationProvider: Daten für ${newLocationInfo.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}");
+            "MAPTILER: ${DateTime.now()}: LocationProvider: Daten für ${newLocationInfo.name} erfolgreich verarbeitet. Theme geladen: ${_mapTheme != null}, Features: ${_currentSearchableFeatures.length}");
       }
     } catch (e, stacktrace) {
       if (kDebugMode) {
         print(
-            "MAPTILER TEST FEHLER: ${DateTime.now()}: LocationProvider: Fehler beim Laden der Standortdaten für ${newLocationInfo.name}: $e");
+            "MAPTILER FEHLER: ${DateTime.now()}: LocationProvider: Fehler beim Laden der Standortdaten für ${newLocationInfo.name}: $e");
         print("Stack trace: $stacktrace");
       }
       _mapTheme = null;
       _currentRoutingGraph = null;
       _currentSearchableFeatures.clear();
-
-      // Nicht-kritische Fehler: App läuft weiter, aber ohne erweiterte Features
     } finally {
       _isLoadingLocationData = false;
       notifyListeners();
