@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - LAYOUT-FIX VERSION
+// lib/widgets/smartphone_search_system.dart - FINAL LINT FIX VERSION
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +8,7 @@ import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 
-/// Premium Smartphone Search System - LAYOUT CRASH FIX
+/// Premium Smartphone Search System - FINAL LINT FIX
 ///
 /// MISSION: Maximale Karten-Sicht mit stabiler Layout-Performance
 ///
@@ -635,7 +635,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
   // ✅ SEARCH INPUT mit EXPLIZITEN CONSTRAINTS
   Widget _buildConstrainedSearchInput(SearchFieldType fieldType) {
     return Container(
-      constraints: BoxConstraints(
+      constraints: const BoxConstraints(
         maxHeight: 120, // ✅ KRITISCH: Maximale Höhe für Search + Results
         maxWidth: double.infinity,
       ),
