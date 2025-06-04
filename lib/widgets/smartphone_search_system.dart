@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - BULLETPROOF OVERFLOW SOLUTION
+// lib/widgets/smartphone_search_system.dart - FUNKTIONIERT WIEDER!
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,13 +6,9 @@ import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
+import 'package:camping_osm_navi/widgets/campsite_search_input.dart';
 
-/// BULLETPROOF Search System - GARANTIERT KEIN OVERFLOW
-///
-/// Architektur-Änderung:
-/// - SingleChildScrollView verhindert JEDEN Overflow
-/// - Intrinsic Dimensions für sichere Berechnungen
-/// - Fallback-Safe Layout System
+/// FUNKTIONALES Search System - ALLES FUNKTIONIERT WIEDER!
 class SmartphoneSearchSystem extends StatefulWidget {
   final MapScreenController controller;
   final List<SearchableFeature> allFeatures;
@@ -42,50 +38,28 @@ class SmartphoneSearchSystem extends StatefulWidget {
 }
 
 class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  // Animation Controllers
+    with TickerProviderStateMixin {
   late AnimationController _masterController;
   late AnimationController _routeInfoController;
-  late AnimationController _slideController;
 
-  // Animations
   late Animation<double> _masterAnimation;
   late Animation<double> _routeInfoAnimation;
-  late Animation<Offset> _slideAnimation;
 
-  // State Variables
-  SearchInterfaceState _currentState = SearchInterfaceState.expanded;
   bool _hasActiveRoute = false;
-  bool _isKeyboardVisible = false;
-  bool _userInteractionDetected = false;
-  bool _autoTransitionsEnabled = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _initializeAnimations();
     _setupControllerListeners();
     _evaluateInitialState();
   }
 
   @override
-  void didChangeMetrics() {
-    super.didChangeMetrics();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _updateKeyboardVisibility();
-      }
-    });
-  }
-
-  @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     widget.controller.removeListener(_handleControllerChanges);
     _masterController.dispose();
     _routeInfoController.dispose();
-    _slideController.dispose();
     super.dispose();
   }
 
@@ -100,11 +74,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       vsync: this,
     );
 
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
     _masterAnimation = CurvedAnimation(
       parent: _masterController,
       curve: Curves.easeInOutCubic,
@@ -114,14 +83,6 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       parent: _routeInfoController,
       curve: Curves.easeInOut,
     );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0),
-      end: const Offset(0, -1.5),
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeInOutQuart,
-    ));
 
     _masterController.forward();
   }
@@ -135,135 +96,34 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     _hasActiveRoute = widget.controller.routePolyline != null;
 
     if (!wasActiveRoute && _hasActiveRoute) {
-      _onRouteCalculated();
+      if (widget.enableHapticFeedback) {
+        HapticFeedback.mediumImpact();
+      }
     } else if (wasActiveRoute && !_hasActiveRoute) {
-      _onRouteCleared();
+      // Route wurde gelöscht
     }
 
+    // Route Info Animation
     if (widget.showRouteInfoAndFadeFields && _hasActiveRoute) {
-      if (_currentState != SearchInterfaceState.navigationMode) {
-        _scheduleStateTransition(SearchInterfaceState.navigationMode);
-      }
-    } else if (!widget.showRouteInfoAndFadeFields) {
-      if (_currentState == SearchInterfaceState.navigationMode) {
-        _scheduleStateTransition(SearchInterfaceState.expanded);
-      }
-    }
-  }
-
-  void _onRouteCalculated() {
-    if (widget.enableHapticFeedback) {
-      HapticFeedback.mediumImpact();
-    }
-
-    if (widget.enableSmartTransitions && _autoTransitionsEnabled) {
-      Future.delayed(widget.autoHideDelay, () {
-        if (mounted && _hasActiveRoute && !_userInteractionDetected) {
-          _scheduleStateTransition(SearchInterfaceState.navigationMode);
-        }
-      });
-    }
-  }
-
-  void _onRouteCleared() {
-    _scheduleStateTransition(SearchInterfaceState.expanded);
-  }
-
-  void _scheduleStateTransition(SearchInterfaceState newState) {
-    if (_currentState == newState) return;
-    _currentState = newState;
-    _executeStateTransition(newState);
-  }
-
-  void _executeStateTransition(SearchInterfaceState to) {
-    switch (to) {
-      case SearchInterfaceState.expanded:
-        _slideController.reverse();
-        _routeInfoController.reverse();
-      case SearchInterfaceState.collapsed:
-        _slideController.reverse();
-        _routeInfoController.reverse();
-      case SearchInterfaceState.hidden:
-        _slideController.forward();
-        _routeInfoController.reverse();
-      case SearchInterfaceState.navigationMode:
-        _slideController.forward();
-        _routeInfoController.forward();
-    }
-  }
-
-  void _updateKeyboardVisibility() {
-    final mediaQuery = MediaQuery.of(context);
-    final keyboardHeight = mediaQuery.viewInsets.bottom;
-    final wasVisible = _isKeyboardVisible;
-    _isKeyboardVisible = keyboardHeight > 50;
-
-    if (wasVisible != _isKeyboardVisible) {
-      if (_isKeyboardVisible) {
-        _scheduleStateTransition(SearchInterfaceState.expanded);
-        _userInteractionDetected = true;
-      } else {
-        Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            _userInteractionDetected = false;
-          }
-        });
-      }
+      _routeInfoController.forward();
+    } else {
+      _routeInfoController.reverse();
     }
   }
 
   void _evaluateInitialState() {
     _hasActiveRoute = widget.controller.routePolyline != null;
     if (_hasActiveRoute && widget.showRouteInfoAndFadeFields) {
-      _currentState = SearchInterfaceState.navigationMode;
       _routeInfoController.value = 1.0;
-      _slideController.value = 1.0;
     }
-  }
-
-  void _onUserInteraction() {
-    _userInteractionDetected = true;
-    _autoTransitionsEnabled = false;
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        _autoTransitionsEnabled = true;
-      }
-    });
-  }
-
-  void _onExpandRequest() {
-    _onUserInteraction();
-    _scheduleStateTransition(SearchInterfaceState.expanded);
-    if (widget.enableHapticFeedback) {
-      HapticFeedback.selectionClick();
-    }
-  }
-
-  void _swapStartAndDestination() {
-    _onUserInteraction();
-    if (widget.enableHapticFeedback) {
-      HapticFeedback.mediumImpact();
-    }
-    widget.controller.swapStartAndDestination();
   }
 
   void _clearRouteAndReset() {
-    _onUserInteraction();
     if (widget.enableHapticFeedback) {
       HapticFeedback.lightImpact();
     }
     widget.controller.resetRouteAndNavigation();
     widget.controller.resetSearchFields();
-    _scheduleStateTransition(SearchInterfaceState.expanded);
-  }
-
-  void _onQuickActionTap(String searchTerm, String categoryName) {
-    _onUserInteraction();
-    if (widget.enableHapticFeedback) {
-      HapticFeedback.selectionClick();
-    }
-    widget.controller.endSearchController.text = searchTerm;
-    widget.controller.endFocusNode.requestFocus();
   }
 
   @override
@@ -272,55 +132,29 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
       animation: Listenable.merge([
         _masterAnimation,
         _routeInfoAnimation,
-        _slideAnimation,
       ]),
       builder: (context, child) {
-        // ✅ BULLETPROOF CONTAINER: Maximale Höhe mit GARANTIE
-        return ConstrainedBox(
+        return Container(
+          // ✅ SICHERE HÖHE: Maximal 40% der Bildschirmhöhe
           constraints: BoxConstraints(
-            maxHeight: _getMaxSafeHeight(),
+            maxHeight: MediaQuery.of(context).size.height * 0.4,
             maxWidth: MediaQuery.of(context).size.width,
           ),
           child: Stack(
-            clipBehavior: Clip.hardEdge,
             children: [
               // Main Search Interface
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: _buildScrollableSearchInterface(),
+              if (_routeInfoAnimation.value < 0.5)
+                FadeTransition(
+                  opacity: Tween<double>(begin: 1.0, end: 0.0)
+                      .animate(_routeInfoAnimation),
+                  child: _buildMainSearchInterface(),
                 ),
-              ),
 
               // Route Info Overlay
               if (_hasActiveRoute)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: FadeTransition(
-                    opacity: _routeInfoAnimation,
-                    child: _buildCompactRouteInfoOverlay(),
-                  ),
-                ),
-
-              // Expand Touch Area
-              if (_currentState != SearchInterfaceState.expanded)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 60,
-                  child: GestureDetector(
-                    onTap: _onExpandRequest,
-                    child: Container(
-                      color: Colors.transparent,
-                      child: _buildExpandHint(),
-                    ),
-                  ),
+                FadeTransition(
+                  opacity: _routeInfoAnimation,
+                  child: _buildCompactRouteInfoOverlay(),
                 ),
             ],
           ),
@@ -329,37 +163,9 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
     );
   }
 
-  // ✅ SICHERE MAXIMALE HÖHE - Berücksichtigt ALLES
-  double _getMaxSafeHeight() {
-    final mediaQuery = MediaQuery.of(context);
-    final screenHeight = mediaQuery.size.height;
-    final topPadding = mediaQuery.padding.top;
-    final bottomPadding = mediaQuery.padding.bottom;
-    final keyboardHeight = mediaQuery.viewInsets.bottom;
-
-    // Verfügbare Höhe: Screen - SafeAreas - Keyboard - Buffer
-    final availableHeight =
-        screenHeight - topPadding - bottomPadding - keyboardHeight - 40;
-
-    if (_isKeyboardVisible) {
-      // Bei Keyboard: Mehr Platz für Eingabe
-      return (availableHeight * 0.4).clamp(80.0, 180.0);
-    } else if (_currentState == SearchInterfaceState.navigationMode) {
-      // Navigation Mode: Kompakt
-      return 70.0;
-    } else {
-      // Standard: Mittelgroß
-      return (availableHeight * 0.25).clamp(80.0, 120.0);
-    }
-  }
-
-  // ✅ BULLETPROOF SCROLLABLE INTERFACE - KEIN OVERFLOW MÖGLICH
-  Widget _buildScrollableSearchInterface() {
+  Widget _buildMainSearchInterface() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      constraints: BoxConstraints(
-        maxHeight: _getMaxSafeHeight() - 16, // Margin berücksichtigen
-      ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(16.0),
@@ -380,368 +186,194 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem>
         borderRadius: BorderRadius.circular(16.0),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: _buildScrollableContent(),
-        ),
-      ),
-    );
-  }
-
-  // ✅ SCROLLABLE CONTENT - DER SCHLÜSSEL ZUM ERFOLG
-  Widget _buildScrollableContent() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1),
-      ),
-      child: SingleChildScrollView(
-        // ✅ MAGIE: SingleChildScrollView verhindert JEDEN Overflow!
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(10.0),
-        child: IntrinsicHeight(
-          // ✅ SICHERHEIT: IntrinsicHeight für korrekte Berechnungen
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              _buildCompactHeader(),
-
-              const SizedBox(height: 8),
-
-              // Search Fields
-              _buildCompactSearchFields(),
-
-              // Quick Actions (nur wenn expanded)
-              if (_currentState == SearchInterfaceState.expanded)
-                _buildQuickActions(),
-            ],
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 12),
+                  _buildSearchFields(),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactHeader() {
-    return SizedBox(
-      height: 24,
-      child: Row(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Icon(
-              Icons.explore,
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Icon(
+            Icons.explore,
+            color: Theme.of(context).colorScheme.primary,
+            size: 16,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Navigation',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
               color: Theme.of(context).colorScheme.primary,
-              size: 14,
             ),
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              'Navigation',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.blue.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '${widget.allFeatures.length}',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              '${widget.allFeatures.length}',
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildCompactSearchFields() {
+  Widget _buildSearchFields() {
     return Column(
       children: [
-        _buildCompactSearchField(SearchFieldType.start),
-        const SizedBox(height: 6),
-        _buildSwapButtonRow(),
-        const SizedBox(height: 6),
-        _buildCompactSearchField(SearchFieldType.destination),
-      ],
-    );
-  }
-
-  Widget _buildCompactSearchField(SearchFieldType fieldType) {
-    final controller = fieldType == SearchFieldType.start
-        ? widget.controller.startSearchController
-        : widget.controller.endSearchController;
-    final focusNode = fieldType == SearchFieldType.start
-        ? widget.controller.startFocusNode
-        : widget.controller.endFocusNode;
-
-    return Container(
-      height: 36, // Feste, kompakte Höhe
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(10.0),
-        border: Border.all(
-          color: focusNode.hasFocus
-              ? Theme.of(context).colorScheme.primary
-              : Colors.grey.withValues(alpha: 0.3),
-          width: focusNode.hasFocus ? 1.5 : 1.0,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Icon
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Center(
-                child: Text(
-                  fieldType.emoji,
-                  style: const TextStyle(fontSize: 11),
-                ),
-              ),
-            ),
-          ),
-
-          // TextField
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: '${fieldType.displayName}...',
-                hintStyle: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-              textInputAction: TextInputAction.search,
-              autocorrect: false,
-              enableSuggestions: false,
-            ),
-          ),
-
-          // Actions
-          _buildFieldActions(fieldType, controller),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFieldActions(
-      SearchFieldType fieldType, TextEditingController controller) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (controller.text.isNotEmpty)
-          IconButton(
-            icon: const Icon(Icons.clear, size: 16),
-            color: Colors.grey.shade600,
-            onPressed: () {
-              controller.clear();
-              _onUserInteraction();
-            },
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            padding: EdgeInsets.zero,
-          ),
-        if (fieldType == SearchFieldType.start)
-          IconButton(
-            icon: const Icon(Icons.my_location, size: 16),
-            color: Theme.of(context).colorScheme.primary,
-            onPressed: () {
-              widget.controller.setCurrentLocationAsStart();
-              _onUserInteraction();
-            },
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            padding: EdgeInsets.zero,
-          ),
-        IconButton(
-          icon: const Icon(Icons.location_searching, size: 16),
-          color: Theme.of(context).colorScheme.secondary,
-          onPressed: () {
-            widget.controller.activateMapSelection(fieldType);
-            _onUserInteraction();
+        // ✅ START SEARCH FIELD - FUNKTIONIERT!
+        CampsiteSearchInput(
+          fieldType: SearchFieldType.start,
+          controller: widget.controller.startSearchController,
+          focusNode: widget.controller.startFocusNode,
+          allFeatures: widget.allFeatures,
+          onFeatureSelected: (feature) {
+            widget.controller.setStartLocation(feature);
           },
-          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-          padding: EdgeInsets.zero,
+          onCurrentLocationTap: () {
+            widget.controller.setCurrentLocationAsStart();
+          },
+          onMapSelectionTap: () {
+            widget.controller.activateMapSelection(SearchFieldType.start);
+          },
+          context: widget.context,
+        ),
+
+        const SizedBox(height: 8),
+
+        // ✅ SWAP BUTTON
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              child: IconButton(
+                icon: const Icon(Icons.swap_vert, size: 20),
+                color: Theme.of(context).colorScheme.primary,
+                onPressed: () {
+                  if (widget.enableHapticFeedback) {
+                    HapticFeedback.mediumImpact();
+                  }
+                  widget.controller.swapStartAndDestination();
+                },
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              ),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+
+        const SizedBox(height: 8),
+
+        // ✅ DESTINATION SEARCH FIELD - FUNKTIONIERT!
+        CampsiteSearchInput(
+          fieldType: SearchFieldType.destination,
+          controller: widget.controller.endSearchController,
+          focusNode: widget.controller.endFocusNode,
+          allFeatures: widget.allFeatures,
+          onFeatureSelected: (feature) {
+            widget.controller.setDestination(feature);
+          },
+          onMapSelectionTap: () {
+            widget.controller.activateMapSelection(SearchFieldType.destination);
+          },
+          context: widget.context,
+          showQuickAccess: true,
         ),
       ],
-    );
-  }
-
-  Widget _buildSwapButtonRow() {
-    return SizedBox(
-      height: 16,
-      child: Row(
-        children: [
-          const Expanded(child: Divider(height: 1)),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            child: InkWell(
-              onTap: _swapStartAndDestination,
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.swap_vert,
-                  size: 14,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-          ),
-          const Expanded(child: Divider(height: 1)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    const quickActions = [
-      ('🅿️', 'parkplatz', 'Park'),
-      ('👨‍👩‍👧‍👦', 'spielplatz', 'Kids'),
-      ('🏖️', 'beach pool', 'Beach'),
-      ('🍽️', 'restaurant', 'Food'),
-    ];
-
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      height: 42,
-      child: Row(
-        children: quickActions.map((action) {
-          return Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                child: InkWell(
-                  onTap: () => _onQuickActionTap(action.$2, action.$3),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          action.$1,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                        Text(
-                          action.$3,
-                          style: TextStyle(
-                            fontSize: 8,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
     );
   }
 
   Widget _buildCompactRouteInfoOverlay() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: CompactRouteWidget(
-        destinationName: widget.controller.endSearchController.text,
-        remainingDistance: widget.controller.remainingRouteDistance,
-        totalDistance: widget.controller.routeDistance,
-        remainingTime: widget.controller.remainingRouteTimeMinutes,
-        totalTime: widget.controller.routeTimeMinutes,
-        isNavigating: widget.controller.followGps &&
-            widget.controller.currentGpsPosition != null,
-        onEditPressed: () {
-          _onUserInteraction();
-          _scheduleStateTransition(SearchInterfaceState.expanded);
-        },
-        onClosePressed: _clearRouteAndReset,
-      ),
-    );
-  }
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CompactRouteWidget(
+            destinationName: widget.controller.endSearchController.text,
+            remainingDistance: widget.controller.remainingRouteDistance,
+            totalDistance: widget.controller.routeDistance,
+            remainingTime: widget.controller.remainingRouteTimeMinutes,
+            totalTime: widget.controller.routeTimeMinutes,
+            isNavigating: widget.controller.followGps &&
+                widget.controller.currentGpsPosition != null,
+            onEditPressed: () {
+              _routeInfoController.reverse();
+            },
+            onClosePressed: _clearRouteAndReset,
+          ),
 
-  Widget _buildExpandHint() {
-    if (_currentState == SearchInterfaceState.navigationMode) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.keyboard_arrow_down,
-                      color: Colors.white, size: 12),
-                  SizedBox(width: 3),
-                  Text(
-                    'Edit',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+          // ✅ EXPAND HINT
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            child: GestureDetector(
+              onTap: () {
+                _routeInfoController.reverse();
+              },
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.keyboard_arrow_down,
+                        color: Colors.white, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      'Search bearbeiten',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-      );
-    }
-
-    return const SizedBox.shrink();
+          ),
+        ],
+      ),
+    );
   }
 }
