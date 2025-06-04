@@ -13,9 +13,7 @@ import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/widgets/turn_instruction_card.dart';
 import 'package:camping_osm_navi/widgets/smartphone_search_system.dart';
-// Removed unused import: 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
-// These imports were previously placed too low, causing "directive_after_declaration" errors
 import 'map_screen_parts/map_screen_ui_mixin.dart';
 import 'map_screen/map_screen_controller.dart';
 import 'map_screen/map_screen_gps_handler.dart';
@@ -23,15 +21,10 @@ import 'map_screen/map_screen_route_handler.dart';
 
 // Helper/Placeholder classes moved after all imports
 
-// Placeholder for PremiumCurves if it's custom, or ensure it's from a package
-// If this is a common utility, consider moving it to its own file.
 class PremiumCurves {
-  static const Curve smooth =
-      Curves.easeInOut; // Example, use your actual curve
+  static const Curve smooth = Curves.easeInOut;
 }
 
-// Placeholder for RouteProgressIndicator if it's custom and not imported
-// If this is a common utility, consider moving it to its own file.
 class RouteProgressIndicator extends StatelessWidget {
   final double progress;
   final Color color;
@@ -48,27 +41,20 @@ class RouteProgressIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return LinearProgressIndicator(
       value: progress,
-      // Assuming you have a 'withValues' extension on Color similar to:
-      // extension ColorValues on Color { Color withValues({double alpha}) => this.withAlpha((alpha * 255).round()); }
-      // Using withValues as suggested by a potential linter rule from your project context.
-      // If 'withValues' is not defined, use standard 'withAlpha': color.withAlpha((0.3 * 255).round())
-      backgroundColor:
-          color.withValues(alpha: 0.3), // Corrected deprecated withOpacity
+      backgroundColor: color.withValues(alpha: 0.3),
       valueColor: AlwaysStoppedAnimation<Color>(color),
       minHeight: height,
     );
   }
 }
 
-// Extension to provide withValues on Color, if not already present in your project
-// This is assumed based on your usage in smartphone_search_system.dart
 extension ColorValues on Color {
   Color withValues({double? alpha, int? r, int? g, int? b}) {
     return Color.fromARGB(
-      alpha != null ? (alpha * 255).round() : this.alpha,
-      r ?? red,
-      g ?? green,
-      b ?? blue,
+      alpha != null ? (alpha * 255).round() : this.a, // Corrected: .alpha to .a
+      r ?? this.r, // Corrected: .red to .r
+      g ?? this.g, // Corrected: .green to .g
+      b ?? this.b, // Corrected: .blue to .b
     );
   }
 }
@@ -412,7 +398,6 @@ class MapScreenState extends State<MapScreen>
       left: 20,
       right: 20,
       child: RouteProgressIndicator(
-        // Uses the placeholder defined above
         progress: progress,
         color: _getProgressColorForContext(_currentSearchContext),
         height: 6.0,
@@ -799,13 +784,13 @@ class MapScreenState extends State<MapScreen>
             ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                // This SnackBar cannot be const due to dynamic message and backgroundColor
                 content: Text(message),
-                duration: const Duration(seconds: durationSeconds),
-                backgroundColor:
+                // Corrected: Removed 'const' because durationSeconds is not a compile-time constant.
+                duration: Duration(seconds: durationSeconds),
+                backgroundColor: // This is dynamic, so SnackBar cannot be const.
                     _getProgressColorForContext(_currentSearchContext),
                 behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.all(16),
+                margin: const EdgeInsets.all(16), // This part can be const
               ),
             );
           } catch (e) {
