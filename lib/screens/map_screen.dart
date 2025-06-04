@@ -795,13 +795,16 @@ class MapScreenState extends State<MapScreen>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && context.mounted) {
           try {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context)
+                .clearSnackBars(); // ✅ FIX: Clear zuerst
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(message),
                 duration: Duration(seconds: durationSeconds),
                 backgroundColor:
                     _getProgressColorForContext(_currentSearchContext),
+                behavior: SnackBarBehavior.floating, // ✅ FIX: Floating behavior
+                margin: const EdgeInsets.all(16), // ✅ FIX: Safe margins
               ),
             );
           } catch (e) {
