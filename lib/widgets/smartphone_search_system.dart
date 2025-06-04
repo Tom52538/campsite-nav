@@ -75,10 +75,12 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
 
   // ✅ SCHRITT 1: Initialisiere Start-Feld mit GPS (Google Standard)
   void _initializeStartField() {
-    // Auto-set GPS location if available
-    if (widget.controller.currentGpsPosition != null) {
-      _setGPSAsStart();
-    }
+    // Auto-set GPS location if available - AFTER build completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && widget.controller.currentGpsPosition != null) {
+        _setGPSAsStartSilent(); // Silent version without snackbar
+      }
+    });
   }
 
   void _clearRouteAndReset() {
@@ -466,6 +468,26 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
       _showSnackbar("GPS-Position als Startpunkt gesetzt");
     } else {
       _showSnackbar("GPS-Position nicht verfügbar", isError: true);
+    }
+  }
+
+  // ✅ Silent version for initialization
+  void _setGPSAsStartSilent() {
+    if (widget.controller.currentGpsPosition != null) {
+      widget.controller.startSearchController.text = "Mein Standort";
+      _isStartUsingGPS = true;
+
+      final gpsFeature = SearchableFeature(
+        id: "gps_location",
+        name: "Mein Standort",
+        type: "GPS Position",
+        center: widget.controller.currentGpsPosition!,
+      );
+
+      widget.controller.setStartLocation(gpsFeature);
+      if (mounted) {
+        setState(() {});
+      }
     }
   }
 
