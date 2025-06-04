@@ -7,10 +7,9 @@ import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
 // Assuming ColorValues extension and SmartphoneBreakpoints are defined/imported elsewhere
-// (e.g. from map_screen.dart or their own utility files)
-// If map_screen.dart (which now contains ColorValues) is not otherwise imported,
-// you might need to add: import '../screens/map_screen.dart'; (adjust path as needed)
-// or duplicate/move the ColorValues extension.
+// For instance, ColorValues is now defined in map_screen.dart. If this file needs it,
+// an import like: import '../screens/map_screen.dart'; // (adjust path) might be necessary
+// or the ColorValues extension could be moved to a shared utility file.
 
 // Placeholder for SmartphoneBreakpoints if not defined/imported
 class SmartphoneBreakpoints {
@@ -148,6 +147,8 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   }
 
   Widget _buildSearchMode(bool isSmallScreen) {
+    // Assuming ColorValues extension is accessible here
+    // e.g. by importing the file where it's defined like map_screen.dart
     return SingleChildScrollView(
       child: Container(
         margin: const EdgeInsets.all(8),
@@ -477,16 +478,13 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   void _showSnackbar(String message, {bool isError = false}) {
     if (mounted) {
       try {
-        // This SnackBar cannot be 'const' because 'message' and 'backgroundColor' (due to 'isError') are dynamic.
-        // The 'prefer_const_constructors' lint is a suggestion for when all arguments *could* be constant.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
-            duration: const Duration(seconds: 2), // This part can be const
+            duration: const Duration(seconds: 2),
             backgroundColor: isError ? Colors.red : Colors.green,
             behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.only(
-                bottom: 80, left: 16, right: 16), // This part can be const
+            margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
           ),
         );
       } catch (e) {
@@ -496,6 +494,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
   }
 
   Widget _buildRouteInfoMode() {
+    // Assuming ColorValues extension is accessible here
     return Container(
       margin: const EdgeInsets.all(8),
       child: Column(
