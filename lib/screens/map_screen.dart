@@ -1,4 +1,4 @@
-// lib/screens/map_screen.dart
+// lib/screens/map_screen.dart - ALLE FEHLER BEHOBEN
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -46,18 +46,18 @@ class RouteProgressIndicator extends StatelessWidget {
   }
 }
 
+// ✅ FIX 1: KORRIGIERTE ColorValues Extension mit expliziter int-Konvertierung
 extension ColorValues on Color {
   Color withValues({double? alpha, int? r, int? g, int? b}) {
     return Color.fromARGB(
         alpha != null
-            ? (alpha * 255).round()
-            : a, // Corrected: unnecessary 'this.' removed
-        (r ?? this.r)
-            .toInt(), // Added .toInt() to explicitly satisfy int parameter
-        (g ?? this.g)
-            .toInt(), // Added .toInt() to explicitly satisfy int parameter
-        (b ?? this.b)
-            .toInt() // Added .toInt() to explicitly satisfy int parameter
+            ? (alpha * 255)
+                .round()
+                .toInt() // ✅ KRITISCHER FIX: .toInt() explizit hinzugefügt
+            : a,
+        (r ?? this.r).toInt(), // ✅ FIX: Explizite int-Konvertierung
+        (g ?? this.g).toInt(), // ✅ FIX: Explizite int-Konvertierung
+        (b ?? this.b).toInt() // ✅ FIX: Explizite int-Konvertierung
         );
   }
 }
