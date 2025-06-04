@@ -1,4 +1,4 @@
-// lib/providers/location_provider.dart - VOLLSTÄNDIG KORRIGIERT
+// lib/providers/location_provider.dart - KAMPERLAND DUPLICATE ENTFERNT
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -33,8 +33,9 @@ class LocationProvider with ChangeNotifier {
   }
 
   Future<void> _loadAvailableLocations() async {
-    // ✅ KAMPERLAND ENHANCED MIT 214 POIs ALS ERSTES (WIRD DEFAULT)
+    // ✅ BEREINIGT: Nur noch EINE Kamperland-Version (Enhanced mit 270 POIs)
     _availableLocations.addAll([
+      // ✅ HAUPT-LOCATION: Kamperland Enhanced (270 POIs)
       LocationInfo(
         id: "kamperland_enhanced",
         name: "Roompot Beach Resort Kamperland",
@@ -47,6 +48,8 @@ class LocationProvider with ChangeNotifier {
         styleUrl:
             "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
+
+      // ✅ TEST-LOCATIONS: Andere Standorte
       LocationInfo(
         id: "sittard",
         name: "Testgelände Sittard",
@@ -58,17 +61,7 @@ class LocationProvider with ChangeNotifier {
         styleUrl:
             "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
       ),
-      LocationInfo(
-        id: "kamperland_basic",
-        name: "Kamperland (Basic POIs)",
-        geojsonAssetPath: "assets/data/export_kamperland.geojson",
-        initialLatitude: 51.590186,
-        initialLongitude: 3.722494,
-        radiusInMeters: 1500.0,
-        styleId: "maptiler_dataviz_kamperland_basic",
-        styleUrl:
-            "https://api.maptiler.com/maps/streets/style.json?key=${dotenv.env['MAPTILER_API_KEY']}",
-      ),
+
       LocationInfo(
         id: "gangelt",
         name: "Umgebung Zuhause (Gangelt)",
