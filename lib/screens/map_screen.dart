@@ -19,8 +19,6 @@ import 'map_screen/map_screen_controller.dart';
 import 'map_screen/map_screen_gps_handler.dart';
 import 'map_screen/map_screen_route_handler.dart';
 
-// Helper/Placeholder classes moved after all imports
-
 class PremiumCurves {
   static const Curve smooth = Curves.easeInOut;
 }
@@ -51,11 +49,16 @@ class RouteProgressIndicator extends StatelessWidget {
 extension ColorValues on Color {
   Color withValues({double? alpha, int? r, int? g, int? b}) {
     return Color.fromARGB(
-      alpha != null ? (alpha * 255).round() : this.a, // Corrected: .alpha to .a
-      r ?? this.r, // Corrected: .red to .r
-      g ?? this.g, // Corrected: .green to .g
-      b ?? this.b, // Corrected: .blue to .b
-    );
+        alpha != null
+            ? (alpha * 255).round()
+            : a, // Corrected: unnecessary 'this.' removed
+        (r ?? this.r)
+            .toInt(), // Added .toInt() to explicitly satisfy int parameter
+        (g ?? this.g)
+            .toInt(), // Added .toInt() to explicitly satisfy int parameter
+        (b ?? this.b)
+            .toInt() // Added .toInt() to explicitly satisfy int parameter
+        );
   }
 }
 
@@ -785,12 +788,11 @@ class MapScreenState extends State<MapScreen>
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(message),
-                // Corrected: Removed 'const' because durationSeconds is not a compile-time constant.
                 duration: Duration(seconds: durationSeconds),
-                backgroundColor: // This is dynamic, so SnackBar cannot be const.
+                backgroundColor:
                     _getProgressColorForContext(_currentSearchContext),
                 behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.all(16), // This part can be const
+                margin: const EdgeInsets.all(16),
               ),
             );
           } catch (e) {
