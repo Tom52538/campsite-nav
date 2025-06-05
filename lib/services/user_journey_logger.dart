@@ -1,4 +1,4 @@
-// lib/services/user_journey_logger.dart - ENHANCED USER JOURNEY LOGGING
+// lib/services/user_journey_logger.dart - ENHANCED USER JOURNEY LOGGING - FIXED UNUSED VARIABLE
 import 'package:flutter/foundation.dart';
 
 /// Strukturiertes Logging-System für User Journey Tracking
@@ -219,14 +219,15 @@ class UserJourneyLogger {
   static void performanceMetric(
       String operation, int durationMs, String status) {
     String performanceRating;
-    if (durationMs < 100)
+    if (durationMs < 100) {
       performanceRating = 'EXCELLENT';
-    else if (durationMs < 500)
+    } else if (durationMs < 500) {
       performanceRating = 'GOOD';
-    else if (durationMs < 1000)
+    } else if (durationMs < 1000) {
       performanceRating = 'OK';
-    else
+    } else {
       performanceRating = 'SLOW';
+    }
 
     _logWithIcon("⏱️", "PERFORMANCE", "$operation Performance", {
       'operation': operation,
@@ -246,7 +247,7 @@ class UserJourneyLogger {
       String icon, String category, String message, Map<String, dynamic> data) {
     if (!kDebugMode) return;
 
-    final timestamp = DateTime.now();
+    // ✅ FIX: Verwende DateTime.now() direkt ohne separate Variable
     final stepNum = _stepCounter.toString().padLeft(2, '0');
 
     // ✅ STRUCTURED LOG OUTPUT
