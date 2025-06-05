@@ -1,4 +1,4 @@
-// lib/widgets/smartphone_search_system.dart - CONST CONSTRUCTOR FIX
+// lib/widgets/smartphone_search_system.dart - ALLE FEHLER BEHOBEN
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
@@ -6,11 +6,17 @@ import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/screens/map_screen/map_screen_controller.dart';
 import 'package:camping_osm_navi/widgets/compact_route_widget.dart';
 
-// ✅ ColorValues Extension für smartphone_search_system.dart
+// ✅ FIX: KORRIGIERTE ColorValues Extension für smartphone_search_system.dart
 extension ColorValues on Color {
   Color withValues({double? alpha, int? r, int? g, int? b}) {
-    return Color.fromARGB(alpha != null ? (alpha * 255).round().toInt() : a,
-        (r ?? this.r).toInt(), (g ?? this.g).toInt(), (b ?? this.b).toInt());
+    return Color.fromARGB(
+        alpha != null
+            ? (alpha * 255).round().toInt()
+            : this.a.toInt(), // ✅ FIX: this.a.toInt()
+        (r ?? this.r).toInt(), // ✅ FIX: Explizite int-Konvertierung
+        (g ?? this.g).toInt(), // ✅ FIX: Explizite int-Konvertierung
+        (b ?? this.b).toInt() // ✅ FIX: Explizite int-Konvertierung
+        );
   }
 }
 
@@ -527,7 +533,7 @@ class _SmartphoneSearchSystemState extends State<SmartphoneSearchSystem> {
                 color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
               ),
-              // ✅ FIX: CONST CONSTRUCTOR hinzugefügt
+              // ✅ FIX: CONST CONSTRUCTOR hinzugefügt für Row Widget
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

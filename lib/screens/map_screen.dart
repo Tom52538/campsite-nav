@@ -46,15 +46,13 @@ class RouteProgressIndicator extends StatelessWidget {
   }
 }
 
-// ✅ FIX 1: KORRIGIERTE ColorValues Extension mit expliziter int-Konvertierung
+// ✅ FIX: KORRIGIERTE ColorValues Extension mit expliziter int-Konvertierung
 extension ColorValues on Color {
   Color withValues({double? alpha, int? r, int? g, int? b}) {
     return Color.fromARGB(
         alpha != null
-            ? (alpha * 255)
-                .round()
-                .toInt() // ✅ KRITISCHER FIX: .toInt() explizit hinzugefügt
-            : a,
+            ? (alpha * 255).round().toInt() // ✅ KORREKT: .toInt() explizit
+            : this.a.toInt(), // ✅ FIX: this.a.toInt() statt nur a
         (r ?? this.r).toInt(), // ✅ FIX: Explizite int-Konvertierung
         (g ?? this.g).toInt(), // ✅ FIX: Explizite int-Konvertierung
         (b ?? this.b).toInt() // ✅ FIX: Explizite int-Konvertierung
