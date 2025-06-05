@@ -1,16 +1,17 @@
-// lib/screens/map_screen/map_screen_controller.dart - IMPORT FIXES & SMARTPHONE OPTIMIERT
+// lib/screens/map_screen/map_screen_controller.dart - MIT ENHANCED LOGGING
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:camping_osm_navi/models/location_info.dart';
-import 'package:camping_osm_navi/models/search_types.dart'; // ✅ FIX: SearchFieldType Import
+import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/providers/location_provider.dart';
 import 'package:camping_osm_navi/models/maneuver.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/widgets/modern_map_markers.dart';
 import 'package:camping_osm_navi/services/tts_service.dart';
 import 'package:camping_osm_navi/services/routing_service.dart';
+import 'package:camping_osm_navi/services/user_journey_logger.dart'; // ✅ NEUES LOGGING
 
 class MapScreenController with ChangeNotifier {
   final MapController mapController = MapController();
@@ -30,7 +31,7 @@ class MapScreenController with ChangeNotifier {
   bool _isStartLocked = false;
   bool _isDestinationLocked = false;
   bool _isMapSelectionMode = false;
-  SearchFieldType? _mapSelectionFor; // ✅ FIX: Type verfügbar
+  SearchFieldType? _mapSelectionFor;
 
   final TextEditingController startSearchController = TextEditingController();
   final TextEditingController endSearchController = TextEditingController();
@@ -68,9 +69,12 @@ class MapScreenController with ChangeNotifier {
   double? lastSpokenDistance;
   int? lastSpokenTime;
 
-  // ✅ Smartphone UX States
   SearchInterfaceState _searchInterfaceState = SearchInterfaceState.expanded;
   bool _autoHideAfterRoute = true;
+
+  // ✅ LOGGING: Performance Tracking
+  DateTime? _routeCalculationStartTime;
+  int _navigationSteps = 0;
 
   // Getters
   Marker? get startMarker => _startMarker;
@@ -82,7 +86,7 @@ class MapScreenController with ChangeNotifier {
   bool get isStartLocked => _isStartLocked;
   bool get isDestinationLocked => _isDestinationLocked;
   bool get isMapSelectionActive => _isMapSelectionMode;
-  SearchFieldType? get mapSelectionFor => _mapSelectionFor; // ✅ FIX: Type verfügbar
+  SearchFieldType? get mapSelectionFor => _mapSelectionFor;
 
   static const double followGpsZoomLevel = 17.5;
   static const LatLng fallbackInitialCenter =
@@ -99,39 +103,42 @@ class MapScreenController with ChangeNotifier {
   double get keyboardHeight => _keyboardHeight;
   bool get compactSearchMode => _compactSearchMode;
 
-  // ✅ Smartphone UX Getters
   SearchInterfaceState get searchInterfaceState => _searchInterfaceState;
   bool get shouldAutoHideInterface => _autoHideAfterRoute && hasActiveRoute;
 
-  bool get hasActiveRoute => routePolyline != null &&
-                            _selectedStart != null &&
-                            _selectedDestination != null;
+  bool get hasActiveRoute =>
+      routePolyline != null &&
+      _selectedStart != null &&
+      _selectedDestination != null;
 
-  bool get shouldShowCompactMode => hasActiveRoute &&
-                                    isStartLocked &&
-                                    isDestinationLocked;
+  bool get shouldShowCompactMode =>
+      hasActiveRoute && isStartLocked && isDestinationLocked;
 
   MapScreenController(this._locationProvider) {
     ttsService = TtsService();
     _initializeListeners();
+
+    // ✅ LOGGING: Controller initialisiert
+    UserJourneyLogger.startSession();
   }
 
   void _initializeListeners() {
-    // Listeners für Smartphone UX
     startSearchController.addListener(_onSearchTextChanged);
     endSearchController.addListener(_onSearchTextChanged);
   }
 
   void _onSearchTextChanged() {
-    // Auto-expand Interface wenn User tippt
     if (_searchInterfaceState != SearchInterfaceState.expanded) {
       setSearchInterfaceState(SearchInterfaceState.expanded);
     }
   }
 
-  // ✅ Smartphone UX Methods
   void setSearchInterfaceState(SearchInterfaceState newState) {
     if (_searchInterfaceState != newState) {
+      // ✅ LOGGING: Interface State Change
+      UserJourneyLogger.logContextSwitch(
+          _searchInterfaceState.value, newState.value);
+
       _searchInterfaceState = newState;
       notifyListeners();
     }
@@ -145,9 +152,16 @@ class MapScreenController with ChangeNotifier {
   void initializeMaptilerUrl(String? apiKey) {
     if (apiKey == null || apiKey.isEmpty) {
       _maptilerUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+      // ✅ LOGGING: Fallback auf OSM
+      UserJourneyLogger.warning(
+          "MAP_TILES", "Kein MapTiler API Key - Fallback auf OSM");
     } else {
       _maptilerUrlTemplate =
           'https://api.maptiler.com/tiles/v3/{z}/{x}/{y}.pbf?key=$apiKey';
+
+      // ✅ LOGGING: MapTiler aktiviert
+      UserJourneyLogger.mapReady(_maptilerUrlTemplate, true);
     }
   }
 
@@ -157,14 +171,12 @@ class MapScreenController with ChangeNotifier {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _isKeyboardVisible = visible;
         _keyboardHeight = height;
-        
-        // ✅ Smartphone UX: Interface erweitern bei Keyboard
+
         if (visible) {
           setCompactSearchMode(true);
           setSearchInterfaceState(SearchInterfaceState.expanded);
         } else if (!visible) {
           setCompactSearchMode(false);
-          // Auto-hide nur wenn Route aktiv und Auto-Hide aktiviert
           if (shouldAutoHideInterface) {
             setSearchInterfaceState(SearchInterfaceState.navigationMode);
           }
@@ -183,30 +195,40 @@ class MapScreenController with ChangeNotifier {
 
   void setMapReady() {
     isMapReady = true;
+
+    // ✅ LOGGING: Map ist bereit für Interaktionen
+    UserJourneyLogger.mapReady("Flutter Map Ready", false);
+
     notifyListeners();
   }
 
   void setRouteOverviewMode(bool isOverview) {
     _isInRouteOverviewMode = isOverview;
+
+    // ✅ LOGGING: Route Overview Mode
+    UserJourneyLogger.buttonPressed("Route Overview",
+        isOverview ? "Vollroute anzeigen" : "Zurück zur Navigation");
+
     notifyListeners();
   }
 
-  // ✅ MODERNISIERTE START LOCATION METHODE
   void setStartLocation(SearchableFeature feature) {
     _selectedStart = feature;
     _isStartLocked = false;
     startSearchController.text = feature.name;
     showRouteInfoAndFadeFields = false;
-    
-    // ✅ NEU: Erstelle modernen Start Marker
+
+    // ✅ LOGGING: Start location gesetzt
+    UserJourneyLogger.buttonPressed(
+        "Set Start Location", "Start: ${feature.name}");
+
     _startMarker = ModernMapMarkers.createStartMarker(
       feature.center,
       label: feature.name,
     );
-    
+
     _tryCalculateRoute();
-    
-    // ✅ Smartphone UX: Auto-collapse nach Auswahl
+
     if (_selectedDestination != null) {
       Future.delayed(const Duration(milliseconds: 800), () {
         if (hasActiveRoute) {
@@ -214,26 +236,26 @@ class MapScreenController with ChangeNotifier {
         }
       });
     }
-    
+
     notifyListeners();
   }
 
-  // ✅ MODERNISIERTE DESTINATION METHODE
   void setDestination(SearchableFeature feature) {
     _selectedDestination = feature;
     _isDestinationLocked = false;
     endSearchController.text = feature.name;
     showRouteInfoAndFadeFields = false;
-    
-    // ✅ NEU: Erstelle modernen Destination Marker
+
+    // ✅ LOGGING: Destination gesetzt
+    UserJourneyLogger.buttonPressed("Set Destination", "Ziel: ${feature.name}");
+
     _destinationMarker = ModernMapMarkers.createDestinationMarker(
       feature.center,
       label: feature.name,
     );
-    
+
     _tryCalculateRoute();
-    
-    // ✅ Smartphone UX: Auto-collapse nach Auswahl
+
     if (_selectedStart != null) {
       Future.delayed(const Duration(milliseconds: 800), () {
         if (hasActiveRoute) {
@@ -241,18 +263,28 @@ class MapScreenController with ChangeNotifier {
         }
       });
     }
-    
+
     notifyListeners();
   }
 
   void toggleStartLock() {
     _isStartLocked = !_isStartLocked;
+
+    // ✅ LOGGING: Start Lock Toggle
+    UserJourneyLogger.buttonPressed("Toggle Start Lock",
+        _isStartLocked ? "Start gesperrt" : "Start entsperrt");
+
     attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
 
   void toggleDestinationLock() {
     _isDestinationLocked = !_isDestinationLocked;
+
+    // ✅ LOGGING: Destination Lock Toggle
+    UserJourneyLogger.buttonPressed("Toggle Destination Lock",
+        _isDestinationLocked ? "Ziel gesperrt" : "Ziel entsperrt");
+
     attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
@@ -262,12 +294,20 @@ class MapScreenController with ChangeNotifier {
         isDestinationLocked &&
         _selectedStart != null &&
         _selectedDestination != null) {
+      // ✅ LOGGING: Route-Berechnung startet
+      _routeCalculationStartTime = DateTime.now();
+      UserJourneyLogger.routeCalculationStarted(
+          _selectedStart!.name, _selectedDestination!.name);
 
       setCalculatingRoute(true);
       notifyListeners();
 
       final graph = _locationProvider.currentRoutingGraph;
       if (graph == null) {
+        // ✅ LOGGING: Kein Graph verfügbar
+        UserJourneyLogger.routeCalculationFailed(
+            "Routing-Graph nicht verfügbar");
+
         setCalculatingRoute(false);
         notifyListeners();
         return;
@@ -283,10 +323,8 @@ class MapScreenController with ChangeNotifier {
 
         if (path != null && path.isNotEmpty) {
           final maneuvers = RoutingService.analyzeRouteForTurns(path);
-          
-          // ✅ NEU: Erstelle moderne Route mit Gradient
+
           _setModernRoutePolylines(path);
-          
           setCurrentManeuvers(maneuvers);
           updateRouteMetrics(path);
 
@@ -294,22 +332,42 @@ class MapScreenController with ChangeNotifier {
             updateCurrentDisplayedManeuver(maneuvers.first);
           }
 
+          // ✅ LOGGING: Route erfolgreich berechnet
+          if (_routeCalculationStartTime != null) {
+            final calculationTime = DateTime.now()
+                .difference(_routeCalculationStartTime!)
+                .inMilliseconds;
+
+            UserJourneyLogger.routeCalculated(routeDistance ?? 0,
+                routeTimeMinutes ?? 0, path.length, maneuvers.length);
+
+            UserJourneyLogger.performanceMetric(
+                "Route Calculation", calculationTime, "SUCCESS");
+          }
+
           showRouteInfoAndFadeFields = true;
-          
-          // ✅ Smartphone UX: Auto-transition zu Navigation Mode
+
           Future.delayed(const Duration(milliseconds: 1500), () {
             if (shouldAutoHideInterface) {
               setSearchInterfaceState(SearchInterfaceState.navigationMode);
             }
           });
-          
-          ttsService.speakImmediate("Route calculated. ${formatDistance(routeDistance)} in about $routeTimeMinutes minutes.");
 
+          ttsService.speakImmediate(
+              "Route calculated. ${formatDistance(routeDistance)} in about $routeTimeMinutes minutes.");
         } else {
+          // ✅ LOGGING: Route-Berechnung fehlgeschlagen - kein Pfad
+          UserJourneyLogger.routeCalculationFailed(
+              "Kein Pfad zwischen Start und Ziel gefunden");
+
           resetRouteAndNavigation();
           showRouteInfoAndFadeFields = false;
         }
       } else {
+        // ✅ LOGGING: Route-Berechnung fehlgeschlagen - keine Knoten
+        UserJourneyLogger.routeCalculationFailed(
+            "Start- oder Endknoten nicht im Routing-Graph gefunden");
+
         resetRouteAndNavigation();
         showRouteInfoAndFadeFields = false;
       }
@@ -322,14 +380,11 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ NEU: Moderne Route Polylines erstellen
   void _setModernRoutePolylines(List<LatLng> path) {
     if (followGps && currentGpsPosition != null) {
-      // Während Navigation: Gradient Route
       _routePolylines = ModernRoutePolyline.createGradientRoute(path);
       routePolyline = ModernRoutePolyline.createNavigationRoute(path);
     } else {
-      // Normal: Einfache moderne Route
       _routePolylines = [ModernRoutePolyline.createModernRoute(path)];
       routePolyline = ModernRoutePolyline.createModernRoute(path);
     }
@@ -343,6 +398,11 @@ class MapScreenController with ChangeNotifier {
         type: "Current Location",
         center: currentGpsPosition!,
       );
+
+      // ✅ LOGGING: GPS Position als Start
+      UserJourneyLogger.buttonPressed("Use GPS as Start",
+          "GPS Position: ${currentGpsPosition!.latitude.toStringAsFixed(4)}, ${currentGpsPosition!.longitude.toStringAsFixed(4)}");
+
       setStartLocation(currentLocationFeature);
     }
     notifyListeners();
@@ -361,13 +421,16 @@ class MapScreenController with ChangeNotifier {
     endSearchController.text = tempText;
     _destinationMarker = tempMarker;
 
-    // ✅ NEU: Marker Types nach Swap anpassen
     if (_selectedStart != null) {
       _startMarker = ModernMapMarkers.createStartMarker(_selectedStart!.center);
     }
     if (_selectedDestination != null) {
-      _destinationMarker = ModernMapMarkers.createDestinationMarker(_selectedDestination!.center);
+      _destinationMarker = ModernMapMarkers.createDestinationMarker(
+          _selectedDestination!.center);
     }
+
+    // ✅ LOGGING: Start/Ziel getauscht
+    UserJourneyLogger.swapStartDestination();
 
     showRouteInfoAndFadeFields = false;
     _tryCalculateRoute();
@@ -377,10 +440,13 @@ class MapScreenController with ChangeNotifier {
   void activateMapSelection(SearchFieldType fieldType) {
     _isMapSelectionMode = true;
     _mapSelectionFor = fieldType;
-    
-    // ✅ Smartphone UX: Interface verstecken für Karten-Selektion
+
     setSearchInterfaceState(SearchInterfaceState.hidden);
-    
+
+    // ✅ LOGGING: Map Selection aktiviert
+    UserJourneyLogger.buttonPressed(
+        "Map Selection", "Karten-Auswahl für ${fieldType.displayName}");
+
     notifyListeners();
   }
 
@@ -395,6 +461,10 @@ class MapScreenController with ChangeNotifier {
       center: tappedPoint,
     );
 
+    // ✅ LOGGING: Punkt auf Karte gewählt
+    UserJourneyLogger.buttonPressed("Map Point Selected",
+        "Koordinaten: ${tappedPoint.latitude.toStringAsFixed(4)}, ${tappedPoint.longitude.toStringAsFixed(4)}");
+
     if (_mapSelectionFor == SearchFieldType.start) {
       setStartLocation(mapSelectedFeature);
     } else {
@@ -403,10 +473,9 @@ class MapScreenController with ChangeNotifier {
 
     _isMapSelectionMode = false;
     _mapSelectionFor = null;
-    
-    // ✅ Smartphone UX: Interface wieder anzeigen
+
     setSearchInterfaceState(SearchInterfaceState.expanded);
-    
+
     notifyListeners();
   }
 
@@ -418,12 +487,21 @@ class MapScreenController with ChangeNotifier {
     _isRerouting = rerouting;
     if (rerouting) {
       _lastRerouteTime = DateTime.now();
+
+      // ✅ LOGGING: Rerouting gestartet
+      UserJourneyLogger.warning(
+          "NAVIGATION", "Rerouting gestartet - Benutzer ist off-route");
     }
     notifyListeners();
   }
 
   void togglePOILabels() {
     showPOILabels = !showPOILabels;
+
+    // ✅ LOGGING: POI Labels Toggle
+    UserJourneyLogger.buttonPressed("Toggle POI Labels",
+        showPOILabels ? "POI Labels aktiviert" : "POI Labels deaktiviert");
+
     notifyListeners();
   }
 
@@ -435,6 +513,15 @@ class MapScreenController with ChangeNotifier {
 
   void updateCurrentGpsPosition(LatLng newPosition) {
     currentGpsPosition = newPosition;
+
+    // ✅ LOGGING: GPS Position Update (nur jede 5. Position loggen)
+    _navigationSteps++;
+    if (_navigationSteps % 5 == 0) {
+      UserJourneyLogger.gpsPositionUpdate(
+          newPosition.latitude, newPosition.longitude, 10.0 // Mock accuracy
+          );
+    }
+
     notifyListeners();
   }
 
@@ -443,14 +530,21 @@ class MapScreenController with ChangeNotifier {
     remainingRouteTimeMinutes = timeMinutes;
 
     if (distance != null && timeMinutes != null) {
-      if (lastSpokenDistance == null || lastSpokenTime == null ||
+      if (lastSpokenDistance == null ||
+          lastSpokenTime == null ||
           (distance - lastSpokenDistance!).abs() > 100 ||
           (timeMinutes - lastSpokenTime!).abs() >= 1) {
-
+        String announcement = "";
         if (timeMinutes <= 1) {
-          ttsService.speakImmediate("Destination almost reached.");
+          announcement = "Destination almost reached.";
         } else if (timeMinutes <= 5) {
-          ttsService.speakImmediate("About $timeMinutes minutes to destination.");
+          announcement = "About $timeMinutes minutes to destination.";
+        }
+
+        if (announcement.isNotEmpty) {
+          // ✅ LOGGING: Entfernungsansage
+          UserJourneyLogger.turnInstructionIssued(announcement, distance);
+          ttsService.speakImmediate(announcement);
         }
 
         lastSpokenDistance = distance;
@@ -463,21 +557,33 @@ class MapScreenController with ChangeNotifier {
 
   void setCalculatingRoute(bool calculating) {
     isCalculatingRoute = calculating;
+
+    if (calculating) {
+      // ✅ LOGGING: Route-Berechnung UI State
+      UserJourneyLogger.performanceMetric("Route Calculation UI", 0, "STARTED");
+    }
+
     notifyListeners();
   }
 
   void setFollowGps(bool follow) {
     followGps = follow;
-    // ✅ NEU: Route Style ändern bei GPS Follow
+
     if (routePolyline != null && _routePolylines.isNotEmpty) {
       _setModernRoutePolylines(routePolyline!.points);
     }
-    
-    // ✅ Smartphone UX: Navigation Mode aktivieren
+
     if (follow && hasActiveRoute) {
       setSearchInterfaceState(SearchInterfaceState.navigationMode);
+
+      // ✅ LOGGING: Navigation gestartet
+      UserJourneyLogger.navigationStarted(follow, "de-DE");
+    } else if (!follow) {
+      // ✅ LOGGING: GPS Following deaktiviert
+      UserJourneyLogger.buttonPressed(
+          "Disable GPS Follow", "Follow-GPS Modus deaktiviert");
     }
-    
+
     notifyListeners();
   }
 
@@ -486,10 +592,10 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ MODERNISIERTE GPS MARKER METHODE
   void updateCurrentLocationMarker() {
     if (currentGpsPosition != null) {
-      currentLocationMarker = ModernMapMarkers.createGpsMarker(currentGpsPosition!);
+      currentLocationMarker =
+          ModernMapMarkers.createGpsMarker(currentGpsPosition!);
       notifyListeners();
     }
   }
@@ -508,11 +614,24 @@ class MapScreenController with ChangeNotifier {
 
   void updateCurrentDisplayedManeuver(Maneuver? maneuver) {
     currentDisplayedManeuver = maneuver;
+
+    if (maneuver != null) {
+      // ✅ LOGGING: Neue Turn Instruction
+      UserJourneyLogger.turnInstructionIssued(
+          maneuver.instructionText ?? "Turn instruction",
+          50.0 // Default distance
+          );
+    }
+
     notifyListeners();
   }
 
   void setCurrentManeuvers(List<Maneuver> maneuvers) {
     currentManeuvers = maneuvers;
+
+    // ✅ LOGGING: Manöver generiert
+    UserJourneyLogger.performanceMetric("Turn Instructions", 0, "GENERATED");
+
     notifyListeners();
   }
 
@@ -524,7 +643,6 @@ class MapScreenController with ChangeNotifier {
     notifyListeners();
   }
 
-  // ✅ ERWEITERTE RESET METHODE
   void resetRouteAndNavigation() {
     routePolyline = null;
     _routePolylines.clear();
@@ -542,10 +660,13 @@ class MapScreenController with ChangeNotifier {
     _isRerouting = false;
     _lastRerouteTime = null;
     showRouteInfoAndFadeFields = false;
-    
-    // ✅ Smartphone UX: Interface zurück zu expanded
+    _navigationSteps = 0;
+
+    // ✅ LOGGING: Route zurückgesetzt
+    UserJourneyLogger.clearRoute();
+
     setSearchInterfaceState(SearchInterfaceState.expanded);
-    
+
     notifyListeners();
   }
 
@@ -565,10 +686,13 @@ class MapScreenController with ChangeNotifier {
     if (endFocusNode.hasFocus) endFocusNode.unfocus();
 
     showRouteInfoAndFadeFields = false;
-    
-    // ✅ Smartphone UX: Interface zurück zu expanded
+
+    // ✅ LOGGING: Suchfelder zurückgesetzt
+    UserJourneyLogger.buttonPressed(
+        "Reset Search Fields", "Alle Eingabefelder geleert");
+
     setSearchInterfaceState(SearchInterfaceState.expanded);
-    
+
     attemptRouteCalculationOrClearRoute();
     notifyListeners();
   }
@@ -579,6 +703,10 @@ class MapScreenController with ChangeNotifier {
         Provider.of<LocationProvider>(context, listen: false).selectedLocation;
     if (isMapReady && locationToCenterOn != null) {
       mapController.move(locationToCenterOn.initialCenter, 17.0);
+
+      // ✅ LOGGING: Initiale Karten-Position
+      UserJourneyLogger.buttonPressed("Initial Map Move",
+          "Karte zentriert auf: ${locationToCenterOn.name}");
     }
   }
 
@@ -586,33 +714,40 @@ class MapScreenController with ChangeNotifier {
     useMockLocation = !useMockLocation;
     followGps = false;
     resetRouteAndNavigation();
+
+    // ✅ LOGGING: Mock Location Toggle
+    UserJourneyLogger.buttonPressed("Toggle Mock GPS",
+        useMockLocation ? "Mock GPS aktiviert" : "Real GPS aktiviert");
+
     notifyListeners();
   }
 
   void toggleSearchInterfaceMode() {
     showRouteInfoAndFadeFields = !showRouteInfoAndFadeFields;
-    
-    // ✅ Smartphone UX: State entsprechend anpassen
+
     if (showRouteInfoAndFadeFields && hasActiveRoute) {
       setSearchInterfaceState(SearchInterfaceState.navigationMode);
     } else {
       setSearchInterfaceState(SearchInterfaceState.expanded);
     }
-    
+
+    // ✅ LOGGING: Interface Mode Toggle
+    UserJourneyLogger.buttonPressed("Toggle Interface Mode",
+        showRouteInfoAndFadeFields ? "Route Info Modus" : "Such Modus");
+
     notifyListeners();
   }
 
   void setRouteInfoAndFadeFields(bool value) {
     if (showRouteInfoAndFadeFields != value) {
       showRouteInfoAndFadeFields = value;
-      
-      // ✅ Smartphone UX: State entsprechend anpassen
+
       if (value && hasActiveRoute) {
         setSearchInterfaceState(SearchInterfaceState.navigationMode);
       } else {
         setSearchInterfaceState(SearchInterfaceState.expanded);
       }
-      
+
       notifyListeners();
     }
   }
@@ -629,6 +764,10 @@ class MapScreenController with ChangeNotifier {
 
   @override
   void dispose() {
+    // ✅ LOGGING: Session Ende
+    UserJourneyLogger.generateJourneySummary();
+    UserJourneyLogger.endSession();
+
     mapController.dispose();
     ttsService.stop();
     startSearchController.dispose();
