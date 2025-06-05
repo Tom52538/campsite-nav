@@ -1,20 +1,14 @@
+// lib/widgets/campsite_search_input.dart - MIT ENHANCED USER JOURNEY LOGGING
 import 'dart:developer' as developer;
-// lib/widgets/campsite_search_input.dart - KOMPLETTE DATEI FIXED
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camping_osm_navi/models/search_types.dart';
 import 'package:camping_osm_navi/models/searchable_feature.dart';
 import 'package:camping_osm_navi/models/camping_search_categories.dart';
+import 'package:camping_osm_navi/services/user_journey_logger.dart'; // ✅ NEUES LOGGING
 
-/// Premium Campsite Search Input - Smartphone-First Design
-///
-/// Features:
-/// - Touch-optimierte Größen (44px+ targets)
-/// - Intelligente Keyboard-Behandlung
-/// - Resort-spezifische Quick-Actions
-/// - Automatisches Verschwinden nach Eingabe
-/// - Accessibility-optimiert
+/// Premium Campsite Search Input mit detailliertem User Journey Logging
 class CampsiteSearchInput extends StatefulWidget {
   final SearchFieldType fieldType;
   final TextEditingController controller;
@@ -57,13 +51,19 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   bool _isSearching = false;
   Timer? _debounceTimer;
 
+  // ✅ LOGGING: Performance Tracking
+  DateTime? _searchStartTime;
+
   @override
   void initState() {
     super.initState();
 
-    // ✅ DEBUG: Prüfe ob Features verfügbar sind
+    // ✅ LOGGING: Search Interface bereit
+    UserJourneyLogger.searchInterfaceReady(widget.allFeatures.length);
+
     developer.log('[POI-DEBUG] === CAMPSITE SEARCH INPUT INIT ===');
-    developer.log('[POI-DEBUG] Available features: ${widget.allFeatures.length}');
+    developer
+        .log('[POI-DEBUG] Available features: ${widget.allFeatures.length}');
 
     if (widget.allFeatures.isNotEmpty) {
       for (int i = 0; i < widget.allFeatures.take(5).length; i++) {
@@ -72,6 +72,12 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
       }
     } else {
       developer.log('[POI-DEBUG] ❌ NO FEATURES AVAILABLE!');
+      // ✅ LOGGING: Fehler wenn keine Features
+      UserJourneyLogger.error(
+          "SEARCH_INPUT", "Keine POIs verfügbar für Suche", {
+        'expected_features': '>0',
+        'actual_features': 0,
+      });
     }
 
     _quickAccessController = AnimationController(
@@ -132,14 +138,17 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
       return;
     }
 
+    // ✅ LOGGING: Suche gestartet
+    _searchStartTime = DateTime.now();
+    UserJourneyLogger.searchStarted(query, widget.fieldType.value);
+
     setState(() {
       _isSearching = true;
     });
 
-    // ✅ FIX: Proper debounce with immediate search for short queries
     final delay = query.length <= 2
-        ? const Duration(milliseconds: 100) // Fast for short queries
-        : const Duration(milliseconds: 300); // Normal for longer queries
+        ? const Duration(milliseconds: 100)
+        : const Duration(milliseconds: 300);
 
     _debounceTimer = Timer(delay, () {
       if (mounted) {
@@ -152,7 +161,6 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
     if (widget.focusNode.hasFocus && widget.controller.text.isNotEmpty) {
       _showSearchResults();
     } else if (!widget.focusNode.hasFocus) {
-      // ✅ FIX: Delay hiding to allow result selection
       Future.delayed(const Duration(milliseconds: 150), () {
         if (mounted && !widget.focusNode.hasFocus) {
           _hideSearchResults();
@@ -164,10 +172,15 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   void _performActualSearch(String query) {
     developer.log('[POI-DEBUG] === PERFORMING SEARCH ===');
     developer.log('[POI-DEBUG] Query: "$query"');
-    developer.log('[POI-DEBUG] Available features: ${widget.allFeatures.length}');
+    developer
+        .log('[POI-DEBUG] Available features: ${widget.allFeatures.length}');
 
     if (widget.allFeatures.isEmpty) {
       developer.log('[POI-DEBUG] ❌ No features available for search!');
+
+      // ✅ LOGGING: Keine Features
+      UserJourneyLogger.searchNoResults(query);
+
       setState(() {
         _searchResults.clear();
         _showResults = false;
@@ -193,7 +206,8 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
         if (feature.type.toLowerCase().contains(cleanQuery) &&
             !results.any((r) => r.id == feature.id)) {
           results.add(feature);
-          developer.log('[POI-DEBUG] Type match: "${feature.name}" (${feature.type})');
+          developer.log(
+              '[POI-DEBUG] Type match: "${feature.name}" (${feature.type})');
         }
       }
     }
@@ -229,7 +243,12 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
     // ✅ STEP 5: Emoji Shortcuts
     final shortcutQuery = CampingSearchCategories.quickSearchShortcuts[query];
     if (shortcutQuery != null) {
-      developer.log('[POI-DEBUG] Emoji shortcut detected: $query -> $shortcutQuery');
+      developer
+          .log('[POI-DEBUG] Emoji shortcut detected: $query -> $shortcutQuery');
+
+      // ✅ LOGGING: Quick Action
+      UserJourneyLogger.logQuickAction(query, shortcutQuery);
+
       _performActualSearch(shortcutQuery);
       return;
     }
@@ -267,18 +286,32 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
 
     // ✅ Sortiere nach Relevanz
     results.sort((a, b) {
-      // Exakte Name-Matches zuerst
       final aExact = a.name.toLowerCase() == cleanQuery;
       final bExact = b.name.toLowerCase() == cleanQuery;
       if (aExact && !bExact) return -1;
       if (!aExact && bExact) return 1;
-
-      // Dann nach Name-Länge (kürzere Namen zuerst)
       return a.name.length.compareTo(b.name.length);
     });
 
+    // ✅ LOGGING: Suchergebnisse mit Performance-Tracking
+    if (_searchStartTime != null) {
+      final searchDuration =
+          DateTime.now().difference(_searchStartTime!).inMilliseconds;
+
+      if (results.isNotEmpty) {
+        UserJourneyLogger.searchCompleted(
+            query, results.length, searchDuration);
+        UserJourneyLogger.performanceMetric(
+            "Search", searchDuration, "SUCCESS");
+      } else {
+        UserJourneyLogger.searchNoResults(query);
+        UserJourneyLogger.performanceMetric(
+            "Search", searchDuration, "NO_RESULTS");
+      }
+    }
+
     setState(() {
-      _searchResults = results.take(8).toList(); // Max 8 für Smartphone
+      _searchResults = results.take(8).toList();
       _showResults = _searchResults.isNotEmpty;
       _isSearching = false;
     });
@@ -305,6 +338,17 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   void _onFeatureSelected(SearchableFeature feature) {
     developer.log('[POI-DEBUG] Feature selected: "${feature.name}"');
 
+    // ✅ LOGGING: Restaurant/Feature ausgewählt
+    if (feature.type.toLowerCase().contains('restaurant') ||
+        feature.type.toLowerCase().contains('cafe') ||
+        feature.type.toLowerCase().contains('bar')) {
+      UserJourneyLogger.restaurantSelected(feature.name, feature.type,
+          feature.center.latitude, feature.center.longitude);
+    } else {
+      UserJourneyLogger.buttonPressed(
+          "Feature Selection", "POI gewählt: ${feature.name}");
+    }
+
     // Haptic Feedback für Premium Feel
     HapticFeedback.lightImpact();
 
@@ -317,14 +361,17 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
   }
 
   void _onQuickActionTap(String searchTerm, String categoryName) {
-    developer.log('[POI-DEBUG] Quick action tapped: "$searchTerm" ($categoryName)');
+    developer
+        .log('[POI-DEBUG] Quick action tapped: "$searchTerm" ($categoryName)');
+
+    // ✅ LOGGING: Quick Action verwendet
+    UserJourneyLogger.logQuickAction(searchTerm, categoryName);
 
     HapticFeedback.selectionClick();
 
     widget.controller.text = searchTerm;
-    _performActualSearch(searchTerm); // ✅ Direkte Suche statt Text Change
+    _performActualSearch(searchTerm);
 
-    // Quick feedback
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -453,6 +500,10 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
             icon: const Icon(Icons.clear, size: 20),
             color: Colors.grey.shade600,
             onPressed: () {
+              // ✅ LOGGING: Clear Button gedrückt
+              UserJourneyLogger.buttonPressed(
+                  "Clear Search", "Suchfeld geleert");
+
               widget.controller.clear();
               _hideSearchResults();
             },
@@ -468,7 +519,12 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
           IconButton(
             icon: const Icon(Icons.my_location, size: 20),
             color: Theme.of(context).colorScheme.primary,
-            onPressed: widget.onCurrentLocationTap,
+            onPressed: () {
+              // ✅ LOGGING: Current Location Button
+              UserJourneyLogger.buttonPressed(
+                  "Current Location", "GPS Position als Start");
+              widget.onCurrentLocationTap!();
+            },
             tooltip: 'Aktueller Standort',
             constraints: const BoxConstraints(
               minWidth: SmartphoneTouchTargets.minimumSize,
@@ -481,7 +537,12 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
           IconButton(
             icon: const Icon(Icons.location_searching, size: 20),
             color: Theme.of(context).colorScheme.secondary,
-            onPressed: widget.onMapSelectionTap,
+            onPressed: () {
+              // ✅ LOGGING: Map Selection Button
+              UserJourneyLogger.buttonPressed(
+                  "Map Selection", "Karten-Selektion aktiviert");
+              widget.onMapSelectionTap!();
+            },
             tooltip: 'Auf Karte wählen',
             constraints: const BoxConstraints(
               minWidth: SmartphoneTouchTargets.minimumSize,
@@ -613,7 +674,6 @@ class _CampsiteSearchInputState extends State<CampsiteSearchInput>
     if (_searchResults.isEmpty &&
         widget.controller.text.isNotEmpty &&
         !_isSearching) {
-      // ✅ FIX: Zeige "No Results" Message
       return Container(
         padding: const EdgeInsets.all(16),
         child: Center(
